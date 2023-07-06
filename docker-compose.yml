@@ -1,0 +1,22 @@
+version: "3"
+
+services:
+
+mysql:
+    build: ./develop/mysql
+    command: mysqld --user=root --verbose
+    ports:
+      - 3306:3306
+    env_file:
+      - ./common/mysql.env
+
+phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    links:
+      - mysql
+    ports:
+      - 8000:80
+    env_file:
+      - ./common/phpmyadmin.env
+    volumes:
+      - ./common/php.ini:/usr/local/etc/php/php.ini
