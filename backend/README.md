@@ -32,14 +32,12 @@ interface EtherspotPaymasterResult {
 export const etherspotPaymaster =
   (paymasterRpc: string, context: any): UserOperationMiddlewareFn =>
   async (ctx) => {
-    const apiUrl = new URL('sign', paymasterRpc).href;
+    const apiUrl = new URL('/', paymasterRpc).href;
     const pm: EtherspotPaymasterResult = await fetch(apiUrl, {
       method: 'POST',
       body: JSON.stringify({
         userOp: OpToJSON(ctx.op),
         entryPoint: ctx.entryPoint,
-        validUntil: '0x00000000deadbeef',
-        validAfter: '0x0000000000001234',
       })
     }).then(res => res.json());
 
@@ -58,7 +56,7 @@ Config file should look like this:
   "rpcUrl": "http://127.0.0.1:14337/1",
   "signingKey": "0x...",
   "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
-  "simpleAccountFactory": "0x9406Cc6185a346906296840746125a0E44976454",
+  "EtherspotWalletFactory": "0x27f11918740060bd9Be146086F6836e18eedBB8C",
   "paymaster": {
     "rpcUrl": "http://127.0.0.1:5050",
     "context": {}
@@ -88,7 +86,7 @@ export default async function main(t: string, amt: string, opts: CLIOpts) {
     new ethers.Wallet(config.signingKey),
     config.rpcUrl,
     config.entryPoint,
-    config.simpleAccountFactory,
+    config.EtherspotWalletFactory,
     paymaster
   );
   const client = await Client.init(config.rpcUrl, config.entryPoint);
