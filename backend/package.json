@@ -10,16 +10,16 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check:types": "tsc --noEmit",
-    "build": "esbuild `find src \\( -name '*.ts' \\)` --platform=node --outdir=build --resolve-extensions=.js && cp -r ./migrations ./build/",
+    "build": "bun build src/index.ts --outdir build --target node && cp -r ./migrations ./build/",
     "build:docker:prod": "docker build . -t my-fastify-app --build-arg APP_ENV=production",
-    "start": "node build",
-    "migrate": "node scripts/migration.cjs",
-    "dev": "tsx watch src | pino-pretty --colorize",
-    "pretest": "npm run build",
-    "test": "jest"
+    "start": "bun build/index.js",
+    "migrate": "bun run scripts/migration.cjs",
+    "dev": "tsx watch src/index.ts | pino-pretty --colorize",
+    "pretest": "bun run build",
+    "test": "bun test"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "bun": ">=1.0.0"
   },
   "keywords": [
     "nodejs",
@@ -48,6 +48,7 @@
     "node-fetch": "3.3.2",
     "node-pg-migrate": "^7.4.0",
     "pg": "^8.12.0",
+    "pg-hstore": "^2.3.4",
     "postgrator": "^7.2.0",
     "sequelize": "^6.37.3",
     "sqlite": "5.1.1",
@@ -55,7 +56,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "umzug": "^3.8.1",
-    "viem": "2.7.6"
+    "viem": "2.27.0"
   },
   "devDependencies": {
     "@babel/core": "7.23.2",

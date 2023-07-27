@@ -1,6 +1,5 @@
 import crypto, { BinaryToTextEncoding } from 'crypto';
 import { KmsKeyringNode, buildClient, CommitmentPolicy } from '@aws-crypto/client-node';
-import { server } from '../server.js';
 
 function createDigest(encodedData: string, format: BinaryToTextEncoding, hmacSecret: string) {
   return crypto
@@ -35,8 +34,8 @@ export function decode(value: string, hmacSecret: string) {
   const decodedData = JSON.parse(json);
   const checkDigest = crypto.createHmac('sha256', hmacSecret).update(encodedData).digest();
   const digestsEqual = crypto.timingSafeEqual(
-    Buffer.from(sourceDigest, 'base64'),
-    checkDigest
+    Uint8Array.from(Buffer.from(sourceDigest, 'base64')),
+    Uint8Array.from(checkDigest)
   );
   if (!digestsEqual) throw new Error('invalid value(s)');
   return decodedData;
@@ -50,8 +49,8 @@ export async function decodeSafe(value: string, hmacSecret: string) {
     const decodedData = JSON.parse(json);
     const checkDigest = crypto.createHmac('sha256', hmacSecret).update(encodedData).digest();
     const digestsEqual = crypto.timingSafeEqual(
-      Buffer.from(sourceDigest, 'base64'),
-      checkDigest
+      Uint8Array.from(Buffer.from(sourceDigest, 'base64')),
+      Uint8Array.from(checkDigest)
     );
     if (!digestsEqual) throw new Error('invalid value(s)');
     return decodedData;

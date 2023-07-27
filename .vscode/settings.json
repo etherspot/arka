@@ -4,5 +4,6 @@
         "Etherspot",
         "sidechains",
         "Sparknet"
-    ]
+    ],
+    "claudeCodeChat.permissions.yoloMode": false
 }

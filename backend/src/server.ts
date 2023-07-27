@@ -3,7 +3,16 @@ import fastify, { FastifyInstance } from 'fastify';
 import fastifyHealthcheck from 'fastify-healthcheck';
 import cors from '@fastify/cors';
 import fastifyCron from 'fastify-cron';
-import { providers, ethers } from 'ethers';
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  parseUnits,
+  getAddress,
+  getContract,
+  encodeFunctionData,
+} from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import fetch from 'node-fetch';
 import sequelizePlugin from './plugins/sequelizePlugin.js';
@@ -11,7 +20,7 @@ import config from './plugins/config.js';
 import EtherspotChainlinkOracleAbi from './abi/EtherspotChainlinkOracleAbi.js';
 import ERC20PaymasterAbi from './abi/ERC20PaymasterAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
-import { getNetworkConfig } from './utils/common.js';
+import { getNetworkConfig, getViemChainDef } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
 import { APIKeyRepository } from './repository/api-key-repository.js';
 import { ArkaConfigRepository } from './repository/arka-config-repository.js';
@@ -22,7 +31,7 @@ import paymasterRoutes from './routes/paymaster-routes.js';
 import tokenRoutes from './routes/token-routes.js';
 import whitelistRoutes from './routes/whitelist-routes.js';
 import sponsorshipPolicyRoutes from './routes/sponsorship-policy-routes.js';
-import SupportedNetworks from "../config.json" assert { type: "json" };
+import SupportedNetworks from "../config.json";
 import { CoingeckoService } from './services/coingecko.js';
 import { CoingeckoTokensRepository } from './repository/coingecko-token-repository.js';
 import { Paymaster } from './paymaster/index.js';
@@ -102,7 +111,7 @@ const initializeServer = async (): Promise<void> => {
     const tokenPrices: any = [];
     if (Object.keys(data).length > 0) {
       records.map(record => {
-        const address = ethers.utils.getAddress(record.address);
+        const address = getAddress(record.address);
         if (data[record.coinId])
           tokenPrices[address] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, chainId: record.chainId, gasToken: address, symbol: record.token }
       })
@@ -175,31 +184,51 @@ const initializeServer = async (): Promise<void> => {
                 const networkConfig = getNetworkConfig(chain, '', server.config.EPV_06);
                 if (networkConfig) {
                   const deployedPaymasters: string[] = DEPLOYED_ERC20_PAYMASTERS[chain];
-                  const provider = new providers.JsonRpcProvider(networkConfig.bundler);
-                  const signer = new ethers.Wallet(process.env.CRON_PRIVATE_KEY ?? '', provider);
+                  const viemChain = getViemChainDef(parseInt(chain));
+                  const publicClient = createPublicClient({
+                    chain: viemChain,
+                    transport: http(networkConfig.bundler),
+                  });
+                  const walletClient = createWalletClient({
+                    chain: viemChain,
+                    transport: http(networkConfig.bundler),
+                    account: privateKeyToAccount(process.env.CRON_PRIVATE_KEY as `0x${string}`),
+                  });
                   deployedPaymasters.forEach(async (deployedPaymaster) => {
-                    const paymasterContract = new ethers.Contract(deployedPaymaster, ERC20PaymasterAbi, signer)
+                    const paymasterContract = getContract({
+                      address: deployedPaymaster as `0x${string}`,
+                      abi: ERC20PaymasterAbi,
+                      client: { public: publicClient, wallet: walletClient }
+                    });
                     const pythMainnetChains = configData?.pythMainnetChainIds?.split(',') ?? [];
                     const pythTestnetChains = configData?.pythTestnetChainIds?.split(',') ?? [];
                     if (pythMainnetChains?.includes(chain) || pythTestnetChains?.includes(chain)) {
                       try {
-                        const oracleAddress = await paymasterContract.tokenOracle();
-                        const oracleContract = new ethers.Contract(oracleAddress, PythOracleAbi, provider)
-                        const priceId = await oracleContract.priceLocator();
+                        const oracleAddress = await paymasterContract.read.tokenOracle();
+                        const oracleContract = getContract({
+                          address: oracleAddress as `0x${string}`,
+                          abi: PythOracleAbi,
+                          client: publicClient
+                        });
+                        const priceId = await oracleContract.read.priceLocator();
                         const TESTNET_API_URL = configData?.pythTestnetUrl;
                         const MAINNET_API_URL = configData?.pythMainnetUrl;
                         const requestURL = `${chain === '5000' ? MAINNET_API_URL : TESTNET_API_URL}${priceId}`;
                         const response = await fetch(requestURL);
                         const vaa: any = await response.json();
                         const priceData = '0x' + Buffer.from(vaa[0], 'base64').toString('hex');
-                        const updateFee = await oracleContract.getUpdateFee([priceData]);
-                        const data = oracleContract.interface.encodeFunctionData('updatePrice', [[priceData]])
-                        const tx = await signer.sendTransaction({
-                          to: oracleAddress,
-                          data: data,
-                          value: updateFee
+                        const updateFee = await oracleContract.read.getUpdateFee([[priceData]]);
+                        const data = encodeFunctionData({
+                          abi: PythOracleAbi,
+                          functionName: 'updatePrice',
+                          args: [[priceData]]
                         });
-                        await tx.wait();
+                        const tx = await walletClient.sendTransaction({
+                          to: oracleAddress as `0x${string}`,
+                          data: data as `0x${string}`,
+                          value: updateFee as bigint
+                        });
+                        await publicClient.waitForTransactionReceipt({ hash: tx });
                       } catch (err) {
                         server.log.error(err);
                       }
@@ -216,16 +245,19 @@ const initializeServer = async (): Promise<void> => {
                         if (customChainlinkDeployments.includes(deployedPaymaster)) {
                           const coingeckoId = coingeckoIds[chain][customChainlinkDeployments.indexOf(deployedPaymaster)]
                           const response: any = await (await fetch(`${configData.coingeckoApiUrl}${coingeckoId}`)).json();
-                          const price = ethers.utils.parseUnits(response[coingeckoId].usd.toString(), 8);
+                          const price = parseUnits(response[coingeckoId].usd.toString(), 8);
                           if (price) {
-                            const oracleAddress = await paymasterContract.tokenOracle();
-                            const oracleContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider)
-                            const data = oracleContract.interface.encodeFunctionData('fulfillPriceData', [price])
-                            const tx = await signer.sendTransaction({
-                              to: oracleAddress,
-                              data: data,
+                            const oracleAddress = await paymasterContract.read.tokenOracle();
+                            const data = encodeFunctionData({
+                              abi: EtherspotChainlinkOracleAbi,
+                              functionName: 'fulfillPriceData',
+                              args: [price]
                             });
-                            await tx.wait();
+                            const tx = await walletClient.sendTransaction({
+                              to: oracleAddress as `0x${string}`,
+                              data: data as `0x${string}`,
+                            });
+                            await publicClient.waitForTransactionReceipt({ hash: tx });
                           }
                         }
                       } catch (err) {
@@ -233,7 +265,7 @@ const initializeServer = async (): Promise<void> => {
                       }
                     }
                     try {
-                      await paymasterContract.updatePrice();
+                      await paymasterContract.write.updatePrice();
                       server.log.info('Price Updated for ' + chain);
                     } catch (err) {
                       server.log.error('Err on updating Price on paymaster' + err);
@@ -334,7 +366,7 @@ const initializeServer = async (): Promise<void> => {
               result.forEach((record: MultiTokenPaymaster) => {
                 const networkConfig = getNetworkConfig(record.chainId, '', server.config.EPV_06);
                 if (networkConfig)
-                  checkDeposit(ethers.utils.getAddress(record.paymasterAddress), networkConfig.bundler, process.env.WEBHOOK_URL ?? '', networkConfig.thresholdValue ?? '0.001', record.chainId, server.log);
+                  checkDeposit(getAddress(record.paymasterAddress), networkConfig.bundler, process.env.WEBHOOK_URL ?? '', networkConfig.thresholdValue ?? '0.001', record.chainId, server.log);
               })
             }
           } catch (err) {
@@ -371,8 +403,10 @@ const initializeServer = async (): Promise<void> => {
                 server.log.error(`Network config not found for updateNativeTokenOracleData chain id: ${chainId} continuing to next chain id`);
                 continue;
               }
-              const provider = new ethers.providers.JsonRpcProvider(networkConfig.bundler);
-              paymaster.getLatestAnswerAndDecimals(provider, NativeOracles[+chainId], +chainId, false)
+              const publicClient = createPublicClient({
+                transport: http(networkConfig.bundler),
+              })
+              paymaster.getLatestAnswerAndDecimals(publicClient, NativeOracles[+chainId], +chainId, false)
                 .then((data) => {
                   server.log.info(`Latest answer and decimals for chain id: ${chainId} is ${data.latestAnswer} and ${data.decimals}`);
                 })
@@ -404,10 +438,12 @@ const initializeServer = async (): Promise<void> => {
                     server.log.error(`Network config not found for updateTokenOracleData chain id: ${chainId} continuing to next chain id`);
                     continue;
                   }
-                  const provider = new ethers.providers.JsonRpcProvider(networkConfig.bundler);
+                  const publicClient = createPublicClient({
+                    transport: http(networkConfig.bundler),
+                  })
                   if (networkConfig.MultiTokenPaymasterOracleUsed === 'chainlink') {
                     paymaster.getLatestAnswerAndDecimals(
-                      provider,
+                      publicClient,
                       NativeOracles[+chainId],
                       +chainId
                     ).then((data) => {
@@ -419,7 +455,7 @@ const initializeServer = async (): Promise<void> => {
                       for (const token of tokens) {
                         paymaster.getPriceFromChainlink(
                           multiTokenOracles[chainId][token],
-                          provider,
+                          publicClient,
                           token,
                           latestAnswer,
                           decimals,
@@ -442,7 +478,7 @@ const initializeServer = async (): Promise<void> => {
                     for (const token of tokens) {
                       paymaster.getPriceFromOrochi(
                         multiTokenOracles[chainId][token],
-                        provider,
+                        publicClient,
                         token,
                         +chainId,
                         false
@@ -457,7 +493,7 @@ const initializeServer = async (): Promise<void> => {
                     for (const token of tokens) {
                       paymaster.getPriceFromEtherspotChainlink(
                         multiTokenOracles[chainId][token],
-                        provider,
+                        publicClient,
                         token,
                         +chainId,
                         false

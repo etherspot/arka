@@ -3,7 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { Paymaster } from "../paymaster/index.js";
-import SupportedNetworks from "../../config.json" assert { type: "json" };
+import SupportedNetworks from "../../config.json";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
