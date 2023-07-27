@@ -7,6 +7,7 @@ import { UserOperationStruct } from '../../typechain/src/interfaces/IEtherspotPa
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils';
 import { getERC20Paymaster, SupportedERC20 } from '@pimlico/erc20-paymaster';
 import { NotPromise } from '@account-abstraction/utils';
+import { logger } from 'server';
 
 interface stackupPaymasterResponse {
   jsonrpc: string;
@@ -33,13 +34,13 @@ export class Paymaster {
     relayerKey: string,
     pimlicoApiKey: string,
     stackupApiKey: string,
-    pimplicoChainId: string,
+    pimlicoChainId: string,
     verificationGasLimit: string,
   ) {
     this.provider = new providers.JsonRpcProvider(bundlerUrl);
     this.paymasterContract = EtherspotPaymaster__factory.connect(contract, this.provider);
     this.signer = new Wallet(relayerKey);
-    this.pimlicoEndpoint = pimlicoApiKey && pimplicoChainId ? `https://api.pimlico.io/v1/${pimplicoChainId}/rpc?apikey=${pimlicoApiKey}` : null;
+    this.pimlicoEndpoint = pimlicoApiKey && pimlicoChainId ? `https://api.pimlico.io/v1/${pimlicoChainId}/rpc?apikey=${pimlicoApiKey}` : null;
     this.stackupEndpoint = stackupApiKey ? `https://api.stackup.sh/v1/paymaster/${stackupApiKey}` : null;
     this.verificationGasLimit = BigNumber.from(verificationGasLimit);
   }
@@ -79,11 +80,11 @@ export class Paymaster {
     }
   }
 
-  async pimplico(userOp: NotPromise<UserOperationStruct>, gasToken: SupportedERC20) {
+  async pimlico(userOp: NotPromise<UserOperationStruct>, gasToken: SupportedERC20) {
     if (this.pimlicoEndpoint) {
       const erc20Paymaster = await getERC20Paymaster(this.provider, gasToken)
 
-      console.log('Pimplico Paymaster Address: ', erc20Paymaster.contract.address)
+      logger.info('Pimlico Paymaster Address: ', erc20Paymaster.contract.address)
 
       await erc20Paymaster.verifyTokenApproval(userOp) // verify if enough USDC is approved to the paymaster
 
@@ -98,17 +99,17 @@ export class Paymaster {
     }
   }
 
-  async stackup(userOp: UserOperationStruct, type: string, gasToken: string) {
+  async stackup(userOp: UserOperationStruct, type: string, gasToken: string, entryPoint: string) {
     if (this.stackupEndpoint) {
 
       userOp.verificationGasLimit = this.verificationGasLimit;
       const provider = new ethers.providers.JsonRpcProvider(this.stackupEndpoint);
       const pm: stackupPaymasterResponse = (await provider.send("pm_sponsorUserOperation", [
         userOp,
-        "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+        entryPoint,
         {type, token: gasToken},
       ]));
-      console.log(pm);
+      logger.info(pm);
       if (pm.error) throw new Error(pm.error.message);
       return {
         paymasterAndData: pm.result?.paymasterAndData,

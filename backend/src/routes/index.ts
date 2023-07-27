@@ -1,5 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
+import { logger } from "server";
 import { Paymaster } from "../paymaster";
 
 const routes: FastifyPluginAsync = async (server) => {
@@ -7,9 +8,9 @@ const routes: FastifyPluginAsync = async (server) => {
     server.config.RPC_URL,
     server.config.PAYMASTER_CONTRACT,
     server.config.PAYMASTER_PRIVATE_KEY,
-    server.config.PIMPLICO_API_KEY,
+    server.config.PIMLICO_API_KEY,
     server.config.STACKUP_API_KEY,
-    server.config.PIMPLICO_CHAIN_ID,
+    server.config.PIMLICO_CHAIN_ID,
     server.config.VERIFICATION_GAS_LIMIT,
   );
 
@@ -34,11 +35,8 @@ const routes: FastifyPluginAsync = async (server) => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
-        console.log('body: ', body);
         const date = new Date();
         const timeOffset = date.getTimezoneOffset() * 60;
-
-        console.log(date.valueOf(), Date.now() + timeOffset);
 
         const userOp = body.params[0];
         const entryPoint = body.params[1];
@@ -54,23 +52,21 @@ const routes: FastifyPluginAsync = async (server) => {
           str += '0';
         }
         str += hex;
-        console.log(str);
         return await paymaster.sign(userOp, str, "0x0000000000001234");
       } catch (err) {
-        console.log(err);
+        logger.error(err);
         return reply.code(400).send({ error: "Invalid data" });
       }
     }
   );
   
   server.post(
-    "/pimplico",
+    "/pimlico",
     ResponseSchema,
     async function (request, reply) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
-        console.log('body: ', body);
 
         const userOp = body.params[0];
         const entryPoint = body.params[1];
@@ -83,9 +79,9 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: "Invalid data" });
         }
-        return await paymaster.pimplico(userOp, gasToken);
+        return await paymaster.pimlico(userOp, gasToken);
       } catch (err) {
-        console.log(err);
+        logger.error(err);
         return reply.code(400).send({ error: "Invalid data" });
       }
     }
@@ -98,7 +94,6 @@ const routes: FastifyPluginAsync = async (server) => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
-        console.log('body: ', body);
 
         const userOp = body.params[0];
         const entryPoint = body.params[1];
@@ -111,9 +106,9 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: "Invalid data" });
         }
-        return await paymaster.stackup(userOp, "erc20token", gasToken);
+        return await paymaster.stackup(userOp, "erc20token", gasToken, entryPoint);
       } catch (err) {
-        console.log(err);
+        logger.error(err);
         return reply.code(400).send({ error: "Invalid data" });
       }
     }

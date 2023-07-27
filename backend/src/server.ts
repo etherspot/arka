@@ -19,4 +19,6 @@ await server.register(config);
 await server.register(routes);
 await server.ready();
 
+export const logger = server.log;
+
 export default server;
