@@ -107,3 +107,10 @@ export default async function main(t: string, amt: string, opts: CLIOpts) {
   console.log(`Transaction hash: ${ev?.transactionHash ?? null}`);
 }
 ```
+
+If you want to contribute,
+1. Create a branch from master
+2. Do the changes you wish to include
+3. Test on your local machine
+4. Sumbit the PR for merging the changes to master and notify us.
+5. Also write the description of the changes made and do tell us why do you think this change is necessary and specify the env vars if needed to add
