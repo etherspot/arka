@@ -111,6 +111,17 @@ export default async function main(t: string, amt: string, opts: CLIOpts) {
 If you want to contribute,
 1. Create a branch from master
 2. Do the changes you wish to include
+  2.1 For adding a new paymaster, add the desired route in the src/routes/index.ts file and add validators. Add the logic of getting a paymasterAndData in src/paymaster/index.ts
+  2.2 For adding a new env var, add the desired variable name in the plugins/config.ts under ConfigSchema such as 
+      ```ts
+      const ConfigSchema = Type.Strict(
+        Type.Object({
+          ...,
+          newEnvVar: Type.String() // change the variable name and type of the desired env var
+        })
+      );
+      ```
+      And use it in routes/index.ts as server.config.newEnvVar inside routes variable
 3. Test on your local machine
 4. Sumbit the PR for merging the changes to master and notify us.
 5. Also write the description of the changes made and do tell us why do you think this change is necessary and specify the env vars if needed to add
