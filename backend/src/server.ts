@@ -1,6 +1,6 @@
 import fastify from 'fastify';
-import config from './plugins/config.js';
-import routes from './routes/index.js';
+import config from './plugins/config';
+import routes from './routes/index';
 
 const server = fastify({
   ajv: {
@@ -18,7 +18,5 @@ const server = fastify({
 await server.register(config);
 await server.register(routes);
 await server.ready();
-
-export const logger = server.log;
 
 export default server;

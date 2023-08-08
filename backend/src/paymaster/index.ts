@@ -7,7 +7,13 @@ import { UserOperationStruct } from '../../typechain/src/interfaces/IEtherspotPa
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils';
 import { getERC20Paymaster, SupportedERC20 } from '@pimlico/erc20-paymaster';
 import { NotPromise } from '@account-abstraction/utils';
-import { logger } from 'server';
+import pino from 'pino';
+
+const logger = pino({
+  transport: {
+    target: 'pino-pretty'
+  },
+})
 
 interface stackupPaymasterResponse {
   jsonrpc: string;
