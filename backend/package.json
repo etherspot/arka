@@ -12,8 +12,8 @@
     "check:types": "tsc --noEmit",
     "build": "esbuild `find src \\( -name '*.ts' \\)` --platform=node --outdir=build --resolve-extensions=.js",
     "build:docker:prod": "docker build . -t my-fastify-app --build-arg APP_ENV=production",
-    "start": "tsx src .env | pino-pretty --colorize",
-    "dev": "tsx watch src .env | pino-pretty --colorize",
+    "start": "tsx src | pino-pretty --colorize",
+    "dev": "tsx watch src | pino-pretty --colorize",
     "pretest": "npm run build",
     "test": "vitest",
     "test:watch": "vitest -w"
