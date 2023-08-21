@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
-import { logger } from "server";
-import { Paymaster } from "../paymaster";
+// import { logger } from "server";
+import { Paymaster } from "../paymaster/index.js";
 
 const routes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(
@@ -54,7 +54,7 @@ const routes: FastifyPluginAsync = async (server) => {
         str += hex;
         return await paymaster.sign(userOp, str, "0x0000000000001234");
       } catch (err) {
-        logger.error(err);
+        // logger.error(err);
         return reply.code(400).send({ error: "Invalid data" });
       }
     }
@@ -81,7 +81,7 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         return await paymaster.pimlico(userOp, gasToken);
       } catch (err) {
-        logger.error(err);
+        // logger.error(err);
         return reply.code(400).send({ error: "Invalid data" });
       }
     }
@@ -108,7 +108,7 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         return await paymaster.stackup(userOp, "erc20token", gasToken, entryPoint);
       } catch (err) {
-        logger.error(err);
+        // logger.error(err);
         return reply.code(400).send({ error: "Invalid data" });
       }
     }
