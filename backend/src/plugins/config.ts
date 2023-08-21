@@ -69,3 +69,5 @@ declare module "fastify" {
 }
 
 export default fp(configPlugin);
+
+export { configPlugin };

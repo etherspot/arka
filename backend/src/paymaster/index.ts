@@ -5,8 +5,14 @@ import { providers, Wallet, BigNumber, ethers, Contract } from 'ethers';
 // } from "../../typechain";
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
 import { getERC20Paymaster, SupportedERC20 } from '@pimlico/erc20-paymaster';
-// import { logger } from 'server';
 import { abi } from "../../abi/EtherspotAbi.js";
+import pino from 'pino';
+
+const logger = pino({
+  transport: {
+    target: 'pino-pretty'
+  },
+})
 
 interface stackupPaymasterResponse {
   jsonrpc: string;
@@ -74,6 +80,8 @@ export class Paymaster {
       sig,
     ]);
 
+    logger.info(`Etherspot paymaster and data: ${paymasterAndData}`);
+
     return {
       paymasterAndData,
       verificationGasLimit: userOp.verificationGasLimit,
@@ -85,7 +93,7 @@ export class Paymaster {
     if (this.pimlicoEndpoint) {
       const erc20Paymaster = await getERC20Paymaster(this.provider, gasToken)
 
-      // logger.info('Pimlico Paymaster Address: ', erc20Paymaster.contract.address)
+      logger.info(`Pimlico Paymaster Address: ${erc20Paymaster.contract.address}`)
 
       await erc20Paymaster.verifyTokenApproval(userOp) // verify if enough USDC is approved to the paymaster
 
@@ -111,7 +119,7 @@ export class Paymaster {
         entryPoint,
         {type, token: gasToken},
       ]));
-      // logger.info(pm);
+      logger.info(pm);
       if (pm.error) throw new Error(pm.error.message);
       return {
         paymasterAndData: pm.result?.paymasterAndData,
