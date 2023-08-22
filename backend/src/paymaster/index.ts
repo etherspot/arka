@@ -5,7 +5,7 @@ import { providers, Wallet, BigNumber, ethers, Contract } from 'ethers';
 // } from "../../typechain";
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
 import { getERC20Paymaster, SupportedERC20 } from '@pimlico/erc20-paymaster';
-import { abi } from "../../abi/EtherspotAbi.js";
+import abi from "../abi/EtherspotAbi.js";
 import pino from 'pino';
 
 const logger = pino({
