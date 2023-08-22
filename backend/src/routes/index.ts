@@ -28,7 +28,7 @@ const routes: FastifyPluginAsync = async (server) => {
   }
 
   server.get(
-    "/",
+    "/healthcheck",
     async function (request, reply) {
       return reply.code(200).send('Arka Service Running...');
     }
