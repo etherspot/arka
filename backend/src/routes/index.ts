@@ -1,7 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
-// import { logger } from "../server";
-import { Paymaster } from "../paymaster";
+import { Paymaster } from "../paymaster/index.js";
 
 const routes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(
@@ -28,6 +27,13 @@ const routes: FastifyPluginAsync = async (server) => {
     },
   }
 
+  server.get(
+    "/healthcheck",
+    async function (request, reply) {
+      return reply.code(200).send('Arka Service Running...');
+    }
+  )
+
   server.post(
     "/",
     ResponseSchema,
@@ -36,7 +42,6 @@ const routes: FastifyPluginAsync = async (server) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
         const date = new Date();
-        const timeOffset = date.getTimezoneOffset() * 60;
         if (!body) return reply.code(400).send({ error: "Empty Body received" });
         const userOp = body.params[0];
         const entryPoint = body.params[1];
@@ -46,7 +51,7 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: "Invalid data" });
         }
-        const hex = (Number((date.valueOf() / 1000).toFixed(0)) + 300 + timeOffset).toString(16);
+        const hex = (Number((date.valueOf() / 1000).toFixed(0)) + 300).toString(16);
         let str = '0x'
         for (let i = 0; i < 14 - hex.length; i++) {
           str += '0';
