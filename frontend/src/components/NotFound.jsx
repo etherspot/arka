@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { UserAuth } from "../context/AuthContext";
 
@@ -7,7 +8,10 @@ const NotFound = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if(!user) navigate('/');
+    if(!user) {
+      toast.error('no such user exists');
+      navigate('/');
+    }
   }, [user, navigate]);
 
   return (

@@ -6,7 +6,8 @@
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "@mui/material": "^5.14.5",
+    "@mui/icons-material": "^5.14.7",
+    "@mui/material": "^5.14.7",
     "add": "^2.0.6",
     "bignumber.js": "^9.1.1",
     "ethers": "5.7.2",
@@ -15,6 +16,7 @@
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.3.0",
     "react-select": "^5.7.4",
+    "styled-components": "^6.0.7",
     "yarn": "^1.22.19"
   },
   "scripts": {
@@ -26,6 +28,9 @@
     "extends": [
       "react-app"
     ]
+  },
+  "resolutions": {
+    "styled-components": "^5"
   },
   "devDependencies": {
     "postcss": "^8.4.12",

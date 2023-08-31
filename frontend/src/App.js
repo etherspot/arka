@@ -1,9 +1,15 @@
 import React from "react";
 import { Route, Routes } from 'react-router-dom';
+
+// components
+import { Toaster } from "react-hot-toast";
 import NotFound from './components/NotFound';
 import Dashboard from "./components/Dashboard";
+
+// context
 import { AuthContextProvider } from "./context/AuthContext";
-import { Toaster } from "react-hot-toast";
+
+// Css
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 

@@ -1,22 +1,35 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import PropTypes from "prop-types";
+import { ethers } from "ethers";
+import { styled } from "styled-components";
+
+// components
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import { UserAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import Header from "./Header";
-import { networks } from "../utils/constant";
-import { ethers } from "ethers";
-import EtherspotLogo from "../assets/internal-36-etherspot@2x.png";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
-// import PlusIcon from "../assets/image-icon-16-dots-n-lines-plus@2x.png";
 import InputAdornment from "@mui/material/InputAdornment";
 import { Switch } from "@mui/material";
+import IconButton from "@mui/material/IconButton";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import TransactionSentToast from "./TransactionSentToast";
+
+// types
+import PropTypes from "prop-types";
+
+// context
+import { UserAuth } from "../context/AuthContext";
+
+// assets
+import EtherspotLogo from "../assets/internal-36-etherspot@2x.png";
+
+// constants
+import { networks } from "../utils/constant";
+import EtherspotPaymasterAbi from "../abi/EtherspotPaymasterAbi.json";
 
 const ITEM_HEIGHT = 48;
 const MenuProps = {
@@ -45,7 +58,7 @@ function CustomTabPanel(props) {
     >
       {value === index && (
         <Box>
-          <Typography component={'span'}>{children}</Typography>
+          <Typography component={"span"}>{children}</Typography>
         </Box>
       )}
     </div>
@@ -65,9 +78,15 @@ function a11yProps(index) {
   };
 }
 
+const DashBoardPage = styled.div`
+    background: "#131313",
+    height: "100%",
+    display: "flex",
+    flex-direction: "column"
+  `;
+
 const Dashboard = ({ logInType }) => {
-  // eslint-disable-next-line no-unused-vars
-  const navigate = useNavigate();
+  // Definitions
   const { user, signIn } = UserAuth();
   const [value, setValue] = React.useState(0);
   const [chainId, setChainId] = useState("5");
@@ -75,27 +94,33 @@ const Dashboard = ({ logInType }) => {
   const [networksSupported] = useState(Object.keys(networks));
   const [isLoading, setIsLoading] = useState(false);
   const [paymasterBalance, setPaymasterBalance] = useState("0");
-  // eslint-disable-next-line no-unused-vars
-  const [useCustomPaymaster, setUseCustomPaymaster] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [customPaymasterAddress, setCustomPaymasterAddress] = useState();
+  const [useCustomPaymaster] = useState(false);
+  const [customPaymasterAddress] = useState();
   const [selectedOption, setSelectedOption] = useState(0);
   const [amount, setAmount] = useState(0);
   const [checked, setChecked] = useState(false);
-  const [ButtonText, setButtonText] = useState("Deposit");
+  const [buttonText, setButtonText] = useState("Deposit");
   const [whiteListAddress, setWhitelistAddress] = useState("");
 
-  const getPaymasterContract = (abi, chainId) => {
-    const provider = new ethers.providers.JsonRpcProvider(networks[chainId].rpcUrl, {
-      name: 'Connected Bundler',
-      chainId: Number(chainId),
-    });
+  // Functions
+  const getPaymasterContract = (chainId) => {
+    const provider = new ethers.providers.JsonRpcProvider(
+      networks[chainId].rpcUrl,
+      {
+        name: "Connected Bundler",
+        chainId: Number(chainId),
+      }
+    );
     if (useCustomPaymaster) {
-      return new ethers.Contract(customPaymasterAddress, abi, provider);
+      return new ethers.Contract(
+        customPaymasterAddress,
+        EtherspotPaymasterAbi,
+        provider
+      );
     } else {
       return new ethers.Contract(
         networks[chainId].paymasterAddress,
-        abi,
+        EtherspotPaymasterAbi,
         provider
       );
     }
@@ -103,15 +128,17 @@ const Dashboard = ({ logInType }) => {
 
   const getPaymasterBalance = async (chainId) => {
     try {
-      const abi = [
-        "function check(address,address) public view returns (bool)",
-        "function getSponsorBalance(address) public view returns (uint256)",
-      ];
-      const PaymasterContract = getPaymasterContract(abi, chainId);
-      const balance = await PaymasterContract.getSponsorBalance(user?.address);
-      setPaymasterBalance(ethers.utils.formatEther(balance));
+      if (!isLoading) {
+        setIsLoading(true);
+        const PaymasterContract = getPaymasterContract(chainId);
+        const balance = await PaymasterContract.getSponsorBalance(
+          user?.address
+        );
+        setPaymasterBalance(ethers.utils.formatEther(balance));
+        setIsLoading(false);
+      }
     } catch (err) {
-      console.log(err);
+      console.error(err);
       setPaymasterBalance("0");
     }
   };
@@ -124,7 +151,7 @@ const Dashboard = ({ logInType }) => {
     }
     setIsLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, isLoading]);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -164,7 +191,6 @@ const Dashboard = ({ logInType }) => {
       setIsLoading(true);
       if (!user?.address) {
         const retUser = await signIn(logInType);
-        console.log("returned Value: ", retUser);
         if (!retUser) {
           toast.error("Please make sure that metamask is installed");
         } else toast.success("Logged in Successfully");
@@ -173,11 +199,7 @@ const Dashboard = ({ logInType }) => {
       if (amount === 0) {
         toast.error("Please enter an amount to be Deposited/Withdrawn");
       }
-      const abi = [
-        { "inputs": [], "name": "depositFunds", "outputs": [], "stateMutability": "payable", "type": "function" },
-        { "inputs": [{ "internalType": "uint256", "name": "_amount", "type": "uint256" }], "name": "withdrawFunds", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-      ];
-      const PaymasterContract = getPaymasterContract(abi, chainId);
+      const PaymasterContract = getPaymasterContract(chainId);
       if (checked) {
         const encodedData = PaymasterContract.interface.encodeFunctionData(
           "withdrawFunds",
@@ -193,8 +215,18 @@ const Dashboard = ({ logInType }) => {
             },
           ],
         });
-        toast.success('transaction successfully submitted');
-        console.log("txHash: ", txHash);
+        toast.loading(
+          (t) => (
+            <TransactionSentToast
+              txHash={txHash}
+              t={t}
+              blockExplorerLink={networks[chainId].blockExplorerLink}
+            />
+          ),
+          {
+            icon: "👏",
+          }
+        );
       } else {
         const encodedData = PaymasterContract.interface.encodeFunctionData(
           "depositFunds",
@@ -211,12 +243,23 @@ const Dashboard = ({ logInType }) => {
             },
           ],
         });
-        toast.success('transaction successfully submitted');
-        console.log("txHash: ", txHash);
+        toast.loading(
+          (t) => (
+            <TransactionSentToast
+              txHash={txHash}
+              t={t}
+              blockExplorerLink={networks[chainId].blockExplorerLink}
+            />
+          ),
+          {
+            icon: "👏",
+          }
+        );
       }
       setIsLoading(false);
     } catch (e) {
-      console.log(e.message);
+      console.error(e.message);
+      toast.error("Something went wrong on MetaMask");
       setIsLoading(false);
     }
   };
@@ -225,16 +268,15 @@ const Dashboard = ({ logInType }) => {
     try {
       setIsLoading(true);
       if (!ethers.utils.isAddress(whiteListAddress)) {
-        toast.error('invalid Address provided');
+        toast.error("Invalid Address provided");
       } else {
-        const abi = [
-          "function check(address,address) public view returns (bool)",
-          "function addToWhitelist(address)",
-        ];
-        const PaymasterContract = getPaymasterContract(abi, chainId);
-        const checkIfAdded = await PaymasterContract.check(user.address, whiteListAddress);
+        const PaymasterContract = getPaymasterContract(chainId);
+        const checkIfAdded = await PaymasterContract.check(
+          user.address,
+          whiteListAddress
+        );
         if (checkIfAdded) {
-          toast.error('The Address has been already added to the whitelist');
+          toast.error("The Address has been already added to the whitelist");
         } else {
           const encodedData = PaymasterContract.interface.encodeFunctionData(
             "addToWhitelist",
@@ -250,31 +292,41 @@ const Dashboard = ({ logInType }) => {
               },
             ],
           });
-          toast.success('transaction successfully submitted');
-          console.log("txHash: ", txHash);
+          toast.loading(
+            (t) => (
+              <TransactionSentToast
+                txHash={txHash}
+                t={t}
+                blockExplorerLink={networks[chainId].blockExplorerLink}
+              />
+            ),
+            {
+              icon: "👏",
+            }
+          );
         }
       }
       setIsLoading(false);
     } catch (err) {
-      console.log(err);
+      console.error(err);
+      toast.error("Something went wrong on MetaMask");
       setIsLoading(false);
     }
   };
 
   return (
     <>
-      <div
-        className={"flex flex-col"}
-        style={{
-          background: "#131313",
-          height: "100%",
-        }}
-      >
+      <DashBoardPage>
         <Header />
         <div className="flex flex-col">
           <Box sx={{ width: "100%" }}>
             <Box
-              sx={{ borderBottom: 1, borderColor: "divider", color: "white", opacity: !signedIn ? '0.5' : '1' }}
+              sx={{
+                borderBottom: 1,
+                borderColor: "divider",
+                color: "white",
+                opacity: !signedIn ? "0.5" : "1",
+              }}
             >
               <Tabs
                 value={value}
@@ -323,7 +375,7 @@ const Dashboard = ({ logInType }) => {
                         minHeight: "50px !important",
                       },
                     },
-                    { opacity: !signedIn ? '0.5' : '1' }
+                    { opacity: !signedIn ? "0.5" : "1" },
                   ]}
                 >
                   {networksSupported.map((network, index) => {
@@ -345,8 +397,16 @@ const Dashboard = ({ logInType }) => {
               <></>
             )}
             {paymasterBalance !== "0" ? (
-              <div className="h-4 justify-center flex text-white mt-8 font-medium text-lg">
+              <div className="justify-center flex text-white mt-8 font-medium text-lg align-middle">
                 Balance: {Number(paymasterBalance).toFixed(5)}{" "}
+                <IconButton
+                  disabled={isLoading}
+                  aria-label="refresh"
+                  color="secondary"
+                  onClick={() => getPaymasterBalance(chainId)}
+                >
+                  <RefreshIcon />
+                </IconButton>
               </div>
             ) : (
               <></>
@@ -354,129 +414,117 @@ const Dashboard = ({ logInType }) => {
             <CustomTabPanel value={value} index={0}>
               <div className="mt-8">
                 <div className="flex flex-col justify-around items-center">
-                  <div className={`${!signedIn ? 'opacity-75' : ''}`}>
-                  <div className="flex flex-col">
-                    <span className="text-md mb-2 ml-2" style={{ color: "#5c5c5c" }}>
-                      Select Paymaster
-                    </span>
-                    <Select
-                      labelId="demo-simple-select-label"
-                      id="demo-simple-select"
-                      value={selectedOption}
-                      label="Select Paymaster"
-                      defaultValue={0}
-                      disabled={!signedIn}
-                      onChange={handleOptionChange}
-                      sx={[
-                        {
-                          ".MuiInputBase-input": {
-                            width: "20rem",
-                            padding: "1rem",
-                            color: "white !important",
-                            backgroundColor: "#1c1c1c",
+                  <div className={`${!signedIn ? "opacity-75" : ""}`}>
+                    <div className="flex flex-col">
+                      <Typography color={"#5c5c5c"} className="text-md mb-2">
+                        Select Paymaster
+                      </Typography>
+                      <Select
+                        className="mt-4"
+                        labelId="demo-simple-select-label"
+                        id="demo-simple-select"
+                        value={selectedOption}
+                        label="Select Paymaster"
+                        defaultValue={0}
+                        disabled={!signedIn}
+                        onChange={handleOptionChange}
+                        sx={[
+                          {
+                            ".MuiInputBase-input": {
+                              width: "20rem",
+                              padding: "1rem",
+                              color: "white !important",
+                              backgroundColor: "#1c1c1c",
+                            },
                           },
-                        },
-                      ]}
-                      MenuProps={MenuProps}
-                    >
-                      <MenuItem value={0}>
-                        <div
-                          className="flex flex-row"
-                          style={{ padding: "1rem" }}
-                        >
-                          <img
-                            src={EtherspotLogo}
-                            alt=""
-                            width={24}
-                            height={24}
-                          />
-                          <span className="ml-4" style={{color:'white !important'}}>Etherspot</span>
-                        </div>
-                      </MenuItem>
-                      {/* Need to do custom Paymaster contract address */}
-                      {/* <MenuItem value={1}>
-                        <div
-                          className="flex flex-row"
-                          style={{ padding: "1rem" }}
-                        >
-                          <img src={PlusIcon} alt="" width={24} height={24} />
-                          <span className="ml-4">Other</span>
-                        </div>
-                      </MenuItem> */}
-                    </Select>
-                  </div>
-                  <div className="w-full mt-4 p-2">
-                    <span className="text-md mb-2" style={{ color: "#5c5c5c" }}>
-                      Enter Amount
-                    </span>
-                    <TextField
-                      fullWidth
-                      style={{ marginTop: "1rem", color: "white !important" }}
-                      id="filled-amount-field"
-                      hiddenLabel
-                      type={"number"}
-                      value={amount}
-                      disabled={!signedIn}
-                      onChange={handleAmountChange}
-                      variant="filled"
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment
-                            position="start"
-                            className="ml-2 justify-center items-center align-middle"
+                        ]}
+                        MenuProps={MenuProps}
+                      >
+                        <MenuItem value={0}>
+                          <div
+                            className="flex flex-row"
+                            style={{ padding: "1rem" }}
                           >
                             <img
-                              src={networks[chainId].networkImg}
+                              src={EtherspotLogo}
+                              alt=""
                               width={24}
                               height={24}
-                              alt=""
                             />
-                          </InputAdornment>
-                        ),
-                      }}
-                      sx={[
-                        {
-                          ".MuiInputBase-input": {
-                            color: "white",
-                          },
-                          ".MuiFormLabel-root": {
-                            color: "#5c5c5c",
-                            fontSize: "1.3rem",
-                          },
-                        },
-                      ]}
-                    />
-                  </div>
-                  <div className="justify-between flex w-full mt-8 p-2 items-center">
-                    <div>
-                      <span
-                        className="text-md mb-2"
-                        style={{ color: "#5c5c5c" }}
-                      >
-                        Deposit/Withdraw
-                      </span>
+                            <span className="ml-4">Etherspot</span>
+                          </div>
+                        </MenuItem>
+                      </Select>
                     </div>
-                    <div>
-                      <Switch
+                    <div className="w-full mt-4 p-2">
+                      <Typography color={"#5c5c5c"} className="text-md mb-2">
+                        Enter Amount
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        style={{ marginTop: "1rem", color: "white !important" }}
+                        id="filled-amount-field"
+                        hiddenLabel
+                        type={"number"}
+                        value={amount}
                         disabled={!signedIn}
-                        checked={checked}
-                        onChange={handleDepositChange}
-                        inputProps={{ "aria-label": "controlled" }}
+                        onChange={handleAmountChange}
+                        variant="filled"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment
+                              position="start"
+                              className="ml-2 justify-center items-center align-middle"
+                            >
+                              <img
+                                src={networks[chainId].networkImg}
+                                width={24}
+                                height={24}
+                                alt=""
+                              />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={[
+                          {
+                            ".MuiInputBase-input": {
+                              color: "white",
+                            },
+                            ".MuiFormLabel-root": {
+                              color: "#5c5c5c",
+                              fontSize: "1.3rem",
+                            },
+                          },
+                        ]}
                       />
                     </div>
-                  </div>
-                  <div className="invisible"></div>
+                    <div className="justify-between flex w-full mt-8 p-2 items-center">
+                      <div className="text-md mb-2 contents">
+                        <Typography color={"#5c5c5c"}>
+                          Deposit/Withdraw
+                        </Typography>
+                      </div>
+                      <div>
+                        <Switch
+                          disabled={!signedIn}
+                          checked={checked}
+                          onChange={handleDepositChange}
+                          inputProps={{ "aria-label": "controlled" }}
+                        />
+                      </div>
+                    </div>
+                    <div className="invisible"></div>
                   </div>
                   <button
                     type="button"
                     className={`${
-                      (isLoading) && "cursor-not-allowed"
+                      isLoading && "cursor-not-allowed"
                     } w-96 font-medium text-sm rounded-full mt-4 px-6 py-4`}
                     style={{ backgroundColor: "#2f2f2f", color: "#fff" }}
                     onClick={handleSubmit}
-                    disabled={(isLoading)}
+                    disabled={isLoading}
                   >
-                    {signedIn ? ButtonText : "Connect Wallet"}
+                    {signedIn ? buttonText : "Connect Wallet"}
                   </button>
                 </div>
               </div>
@@ -492,13 +540,12 @@ const Dashboard = ({ logInType }) => {
               }}
             >
               <div className="flex flex-col mt-16 p-2">
-                <span className="text-md ml-2" style={{ color: "#5c5c5c" }}>
-                  Whitelist Address
-                </span>
+                <div className="mb-2">
+                <Typography color={"#5c5c5c"}>Whitelist Address</Typography>
+                </div>
                 <TextField
                   fullWidth
                   hiddenLabel={whiteListAddress !== ""}
-                  style={{ marginTop: "1rem", color: "white !important" }}
                   id="filled-basic"
                   label={whiteListAddress === "" ? "Enter Address here " : ""}
                   value={whiteListAddress}
@@ -509,7 +556,7 @@ const Dashboard = ({ logInType }) => {
                     {
                       ".MuiInputBase-input": {
                         color: "white",
-                        fontSize: "1rem"
+                        fontSize: "1rem",
                       },
                       ".MuiFormLabel-root": {
                         color: "#5c5c5c",
@@ -518,7 +565,6 @@ const Dashboard = ({ logInType }) => {
                     },
                   ]}
                 />
-                {/* <div className="invisible"></div> */}
                 <button
                   type="button"
                   className={`${
@@ -536,7 +582,7 @@ const Dashboard = ({ logInType }) => {
             <></>
           )}
         </div>
-      </div>
+      </DashBoardPage>
     </>
   );
 };
