@@ -168,10 +168,10 @@ export class Paymaster {
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
       const signer = new Wallet(this.relayerKey, provider)
       const balance = await signer.getBalance();
-      if (ethers.utils.parseEther(amount).gte(balance))
+      if (ethers.utils.parseEther(amount.toString()).gte(balance))
         throw new Error(`${signer.address} Balance is less than the amount to be deposited`)
       const encodedData = paymasterContract.interface.encodeFunctionData('depositFunds', []);
-      const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData, value: ethers.utils.parseEther(amount) });
+      const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData, value: ethers.utils.parseEther(amount.toString()) });
       await tx.wait();
       return {
         message: `Successfully deposited with transaction Hash ${tx.hash}`
