@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
 import { ethers } from "ethers";
 import { Paymaster } from "../paymaster/index.js";
 import { getNetworkConfig } from "../constants/Etherspot.js";
 import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
+import ErrorMessage from "../constants/ErrorMessage.js";
 
 const routes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(
@@ -35,10 +37,9 @@ const routes: FastifyPluginAsync = async (server) => {
     "/",
     async function (request, reply) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
         const date = new Date();
-        if (!body) return reply.code(400).send({ error: "Empty Body received" });
+        if (!body) return reply.code(400).send({ error: ErrorMessage.EMPTY_BODY });
         const userOp = body.params[0];
         const entryPoint = body.params[1];
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -47,15 +48,17 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = body.params[4];
         if (!api_key ||
           (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: "Invalid Api Key" })
+        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !userOp ||
           !entryPoint ||
           !chainId ||
-          isNaN(chainId) ||
-          !getNetworkConfig(chainId)
+          isNaN(chainId)
         ) {
-          return reply.code(400).send({ error: "Invalid data" });
+          return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (!getNetworkConfig(chainId)) {
+          return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const hex = (Number((date.valueOf() / 1000).toFixed(0)) + 6000).toString(16);
         let str = '0x'
@@ -68,9 +71,9 @@ const routes: FastifyPluginAsync = async (server) => {
         if (body.jsonrpc)
           return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(200).send(result);
-      } catch (err) {
+      } catch (err: any) {
         request.log.error(err);
-        return reply.code(400).send({ error: "Invalid data" });
+        return reply.code(400).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
       }
     }
   );
@@ -79,7 +82,6 @@ const routes: FastifyPluginAsync = async (server) => {
     "/pimlico",
     async function (request, reply) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
 
         const userOp = body.params[0];
@@ -90,26 +92,28 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = body.params[4];
         if (!api_key ||
           (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: "Invalid Api Key" })
+        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !userOp ||
           !entryPoint ||
           !gasToken ||
           !chainId ||
-          isNaN(chainId) ||
-          !getNetworkConfig(chainId)
+          isNaN(chainId)
         ) {
-          return reply.code(400).send({ error: "Invalid data" });
+          return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (!getNetworkConfig(chainId)) {
+          return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
-        if (!TOKEN_ADDRESS[chainId][gasToken]) return reply.code(400).send({ error: "Invalid network/token" })
+        if (!TOKEN_ADDRESS[chainId][gasToken]) return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
         const result = await paymaster.pimlico(userOp, gasToken, networkConfig.bundler, entryPoint);
         if (body.jsonrpc)
           return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(200).send(result);
-      } catch (err) {
+      } catch (err: any) {
         request.log.error(err);
-        return reply.code(400).send({ error: "Invalid data" });
+        return reply.code(400).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
       }
     }
   );
@@ -119,7 +123,6 @@ const routes: FastifyPluginAsync = async (server) => {
     whitelistResponseSchema,
     async function (request, reply) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
         const entryPoint = body.params[0];
         const context = body.params[1];
@@ -128,15 +131,17 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = body.params[3];
         if (!api_key ||
           (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: "Invalid Api Key" })
+        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !entryPoint ||
           !gasToken ||
           !chainId ||
-          isNaN(chainId) ||
-          !getNetworkConfig(chainId)
+          isNaN(chainId)
         ) {
-          return reply.code(400).send({ error: "Invalid data" });
+          return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (!getNetworkConfig(chainId)) {
+          return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
         if (!TOKEN_ADDRESS[chainId][gasToken]) return reply.code(400).send({ error: "Invalid network/token" })
@@ -144,10 +149,9 @@ const routes: FastifyPluginAsync = async (server) => {
         if (body.jsonrpc)
           return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, message: result.message, error: null })
         return reply.code(200).send(result);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         request.log.error(err);
-        return reply.code(400).send({ error: "Error: " + err.message });
+        return reply.code(400).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
       }
     }
   )
@@ -156,7 +160,6 @@ const routes: FastifyPluginAsync = async (server) => {
     "/stackup",
     async function (request, reply) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
 
         const userOp = body.params[0];
@@ -166,21 +169,21 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = body.params[3];
         if (!api_key ||
           (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: "Invalid Api Key" })
+        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !userOp ||
           !entryPoint ||
           !gasToken
         ) {
-          return reply.code(400).send({ error: "Invalid data" });
+          return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
         const result = await paymaster.stackup(userOp, "erc20token", gasToken, entryPoint);
         if (body.jsonrpc)
           return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(200).send(result);
-      } catch (err) {
+      } catch (err: any) {
         request.log.error(err);
-        return reply.code(400).send({ error: "Invalid data" });
+        return reply.code(400).send({ error: err.message ?? ErrorMessage.INVALID_DATA });
       }
     }
   );
@@ -190,7 +193,6 @@ const routes: FastifyPluginAsync = async (server) => {
     whitelistResponseSchema,
     async function (request, reply) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
 
         const address = body.params[0];
@@ -198,15 +200,17 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = body.params[2];
         if (!api_key ||
           (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: "Invalid Api Key" })
+        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !Array.isArray(address) ||
           address.length > 10 ||
           !chainId ||
-          isNaN(chainId) ||
-          !getNetworkConfig(chainId)
+          isNaN(chainId)
         ) {
-          return reply.code(400).send({ error: "Invalid data" });
+          return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (!getNetworkConfig(chainId)) {
+          return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
         const validAddresses = await address.every(ethers.utils.isAddress);
@@ -215,9 +219,9 @@ const routes: FastifyPluginAsync = async (server) => {
         if (body.jsonrpc)
           return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(200).send(result);
-      } catch (err) {
+      } catch (err: any) {
         request.log.error(err);
-        return reply.code(400).send({ error: err })
+        return reply.code(400).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
       }
     }
   )
@@ -227,7 +231,6 @@ const routes: FastifyPluginAsync = async (server) => {
     whitelistResponseSchema,
     async function (request, reply) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
 
         const sponsorAddress = body.params[0];
@@ -236,27 +239,28 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = body.params[3];
         if (!api_key ||
           (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: "Invalid Api Key" })
+        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !sponsorAddress ||
           !accountAddress ||
           !ethers.utils.isAddress(sponsorAddress) ||
           !ethers.utils.isAddress(accountAddress) ||
           !chainId ||
-          isNaN(chainId) ||
-          !getNetworkConfig(chainId)
+          isNaN(chainId)
         ) {
-          return reply.code(400).send({ error: "Invalid data" });
+          return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (!getNetworkConfig(chainId)) {
+          return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
         const response = await paymaster.checkWhitelistAddress(sponsorAddress, accountAddress, networkConfig.contracts.paymasterAddress, networkConfig.bundler);
-        // return reply.code(200).send({ message: response === true ? 'Already added' : 'Not added yet' })
         if (body.jsonrpc)
           return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, result: { message: response === true ? 'Already added' : 'Not added yet' }, error: null })
         return reply.code(200).send({ message: response === true ? 'Already added' : 'Not added yet' });
-      } catch (err) {
+      } catch (err: any) {
         request.log.error(err);
-        return reply.code(400).send({ error: err })
+        return reply.code(400).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
       }
     }
   )
@@ -266,7 +270,6 @@ const routes: FastifyPluginAsync = async (server) => {
     whitelistResponseSchema,
     async function (request, reply) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body: any = request.body;
 
         const amount = body.params[0];
@@ -274,20 +277,22 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = body.params[2];
         if (!api_key ||
           (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: "Invalid Api Key" })
+        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           isNaN(amount) ||
           !chainId ||
-          isNaN(chainId) ||
-          !getNetworkConfig(chainId)
+          isNaN(chainId)
         ) {
-          return reply.code(400).send({ error: "Invalid data" });
+          return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (!getNetworkConfig(chainId)) {
+          return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
         return await paymaster.deposit(amount, networkConfig.contracts.paymasterAddress, networkConfig.bundler);
-      } catch (err) {
+      } catch (err: any) {
         request.log.error(err);
-        return reply.code(400).send({ error: err })
+        return reply.code(400).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
       }
     }
   )
