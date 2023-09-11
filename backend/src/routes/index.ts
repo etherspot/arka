@@ -190,7 +190,6 @@ const routes: FastifyPluginAsync = async (server) => {
 
   server.post(
     "/whitelist",
-    whitelistResponseSchema,
     async function (request, reply) {
       try {
         const body: any = request.body;
@@ -228,7 +227,6 @@ const routes: FastifyPluginAsync = async (server) => {
 
   server.post(
     "/checkWhitelist",
-    whitelistResponseSchema,
     async function (request, reply) {
       try {
         const body: any = request.body;
