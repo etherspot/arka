@@ -71,10 +71,6 @@ export class Paymaster {
 
       const paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
 
-      logger.info(`Etherspot paymaster and data: ${paymasterAndData}`);
-
-      console.log('Returned UserOp: ', userOp);
-
       const returnValue = {
         paymasterAndData,
         verificationGasLimit: response.verificationGasLimit,
@@ -151,9 +147,9 @@ export class Paymaster {
       const signer = new Wallet(this.relayerKey, provider)
       const encodedData = paymasterContract.interface.encodeFunctionData('addBatchToWhitelist', [address]);
       const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData });
-      tx.wait();
+      await tx.wait();
       return {
-        message: 'Successfully whitelisted'
+        message: `Successfully whitelisted with transaction Hash ${tx.hash}`
       };
     } catch (err) {
       throw new Error('Error while submitting transaction');
@@ -176,9 +172,9 @@ export class Paymaster {
         throw new Error(`${signer.address} Balance is less than the amount to be deposited`)
       const encodedData = paymasterContract.interface.encodeFunctionData('depositFunds', []);
       const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData, value: ethers.utils.parseEther(amount) });
-      tx.wait();
+      await tx.wait();
       return {
-        message: 'Successfully whitelisted'
+        message: `Successfully deposited with transaction Hash ${tx.hash}`
       };
     } catch (err) {
       throw new Error('Error while submitting transaction');
