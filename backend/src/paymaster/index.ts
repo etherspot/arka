@@ -1,12 +1,8 @@
-import { providers, Wallet, BigNumber, ethers, Contract } from 'ethers';
-// import {
-//   EtherspotPaymaster,
-//   EtherspotPaymaster__factory
-// } from "../../typechain";
+import { providers, Wallet, ethers, Contract } from 'ethers';
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
-import { getERC20Paymaster, SupportedERC20 } from '@pimlico/erc20-paymaster';
 import abi from "../abi/EtherspotAbi.js";
 import pino from 'pino';
+import { getERC20Paymaster } from './pimlico.js';
 
 const logger = pino({
   transport: {
@@ -18,61 +14,39 @@ interface stackupPaymasterResponse {
   jsonrpc: string;
   id: number;
   result: {
-    paymasterAndData: string,  
-    preVerificationGas: string,  
-    verificationGasLimit: string,  
-    callGasLimit: string,  
+    paymasterAndData: string,
+    preVerificationGas: string,
+    verificationGasLimit: string,
+    callGasLimit: string,
   } | null;
-  error: {message: string, code: string} | null;
+  error: { message: string, code: string } | null;
 }
 
 export class Paymaster {
-  private provider: providers.JsonRpcProvider;
-  private paymasterContract: Contract;
-  private signer: Wallet;
-  private pimlicoEndpoint: string | null;
+  private relayerKey: string;
   private stackupEndpoint: string | null;
-  private verificationGasLimit: BigNumber;
+
   constructor(
-    bundlerUrl: string,
-    contract: string,
     relayerKey: string,
-    pimlicoApiKey: string,
     stackupApiKey: string,
-    pimlicoChainId: string,
-    verificationGasLimit: string,
   ) {
-    this.provider = new providers.JsonRpcProvider(bundlerUrl);
-    this.paymasterContract = new ethers.Contract(contract, abi, this.provider);
-    this.signer = new Wallet(relayerKey);
-    this.pimlicoEndpoint = pimlicoApiKey && pimlicoChainId ? `https://api.pimlico.io/v1/${pimlicoChainId}/rpc?apikey=${pimlicoApiKey}` : null;
+    this.relayerKey = relayerKey;
     this.stackupEndpoint = stackupApiKey ? `https://api.stackup.sh/v1/paymaster/${stackupApiKey}` : null;
-    this.verificationGasLimit = BigNumber.from(verificationGasLimit);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async sign(userOp: any, validUntil: string, validAfter: string) {
-    // prefill
-    userOp.paymasterAndData = hexConcat([
-      this.paymasterContract.address,
-      defaultAbiCoder.encode(
-        ['uint48', 'uint48'],
-        [validUntil, validAfter]
-      ),
-      '0x' + '00'.repeat(65),
-    ]);
-    userOp.verificationGasLimit = this.verificationGasLimit;
+  async getPaymasterAndData(userOp: any, validUntil: string, validAfter: string, paymasterContract: Contract, signer: Wallet) {
     // actual signing...
-    const hash = await this.paymasterContract.getHash(
+    const hash = await paymasterContract.getHash(
       userOp,
       validUntil,
       validAfter
     );
 
-    const sig = await this.signer.signMessage(arrayify(hash));
+    const sig = await signer.signMessage(arrayify(hash));
 
     const paymasterAndData = hexConcat([
-      this.paymasterContract.address,
+      paymasterContract.address,
       defaultAbiCoder.encode(
         ['uint48', 'uint48'],
         [validUntil, validAfter]
@@ -80,44 +54,79 @@ export class Paymaster {
       sig,
     ]);
 
-    logger.info(`Etherspot paymaster and data: ${paymasterAndData}`);
-
-    return {
-      paymasterAndData,
-      verificationGasLimit: userOp.verificationGasLimit,
-    }
+    return paymasterAndData;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async pimlico(userOp: any, gasToken: SupportedERC20) {
-    if (this.pimlicoEndpoint) {
-      const erc20Paymaster = await getERC20Paymaster(this.provider, gasToken)
+  async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, bundlerRpc: string) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      const signer = new Wallet(this.relayerKey, provider)
+      userOp.paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
+      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+      userOp.verificationGasLimit = response.verificationGasLimit;
+      userOp.preVerificationGas = response.preVerificationGas;
+      userOp.callGasLimit = response.callGasLimit;
 
-      logger.info(`Pimlico Paymaster Address: ${erc20Paymaster.contract.address}`)
+      const paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
 
-      await erc20Paymaster.verifyTokenApproval(userOp) // verify if enough USDC is approved to the paymaster
+      const returnValue = {
+        paymasterAndData,
+        verificationGasLimit: response.verificationGasLimit,
+        preVerificationGas: response.preVerificationGas,
+        callGasLimit: response.callGasLimit,
+      }
 
-      userOp.verificationGasLimit = this.verificationGasLimit;
-      const paymasterAndData = await erc20Paymaster.generatePaymasterAndData(userOp)
+      return returnValue;
+    } catch (err) {
+      throw new Error('Transaction Execution reverted')
+    }
+  }
+
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async pimlico(userOp: any, gasToken: string, bundlerRpc: string, entryPoint: string) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const erc20Paymaster = await getERC20Paymaster(provider, gasToken, entryPoint)
+
+      let paymasterAndData = await erc20Paymaster.generatePaymasterAndData(userOp)
+      userOp.paymasterAndData = paymasterAndData;
+      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+      userOp.verificationGasLimit = response.verificationGasLimit;
+      userOp.preVerificationGas = response.preVerificationGas;
+      userOp.callGasLimit = response.callGasLimit;
+      paymasterAndData = await erc20Paymaster.generatePaymasterAndData(userOp);
+
       return {
         paymasterAndData,
-        verificationGasLimit: userOp.verificationGasLimit,
+        verificationGasLimit: response.verificationGasLimit,
+        preVerificationGas: response.preVerificationGas,
+        callGasLimit: response.callGasLimit,
       };
-    } else {
-      throw new Error('Invalid Api Key')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      throw new Error('Transaction Execution reverted ' + err.message)
+    }
+  }
+
+  async pimlicoAddress(gasToken: string, bundlerRpc: string, entryPoint: string) {
+    const provider = new providers.JsonRpcProvider(bundlerRpc);
+    const erc20Paymaster = await getERC20Paymaster(provider, gasToken, entryPoint)
+    return {
+      message: erc20Paymaster.paymasterAddress
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async stackup(userOp: any, type: string, gasToken: string, entryPoint: string) {
     if (this.stackupEndpoint) {
-
-      userOp.verificationGasLimit = this.verificationGasLimit;
       const provider = new ethers.providers.JsonRpcProvider(this.stackupEndpoint);
       const pm: stackupPaymasterResponse = (await provider.send("pm_sponsorUserOperation", [
         userOp,
         entryPoint,
-        {type, token: gasToken},
+        { type, token: gasToken },
       ]));
       logger.info(pm);
       if (pm.error) throw new Error(pm.error.message);
@@ -128,6 +137,47 @@ export class Paymaster {
 
     } else {
       throw new Error('Invalid Api Key')
+    }
+  }
+
+  async whitelistAddresses(address: string[], paymasterAddress: string, bundlerRpc: string) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      const signer = new Wallet(this.relayerKey, provider)
+      const encodedData = paymasterContract.interface.encodeFunctionData('addBatchToWhitelist', [address]);
+      const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData });
+      await tx.wait();
+      return {
+        message: `Successfully whitelisted with transaction Hash ${tx.hash}`
+      };
+    } catch (err) {
+      throw new Error('Error while submitting transaction');
+    }
+  }
+
+  async checkWhitelistAddress(sponsorAddress: string, accountAddress: string, paymasterAddress: string, bundlerRpc: string) {
+    const provider = new providers.JsonRpcProvider(bundlerRpc);
+    const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+    return paymasterContract.check(sponsorAddress, accountAddress);
+  }
+
+  async deposit(amount: string, paymasterAddress: string, bundlerRpc: string) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      const signer = new Wallet(this.relayerKey, provider)
+      const balance = await signer.getBalance();
+      if (ethers.utils.parseEther(amount).gte(balance))
+        throw new Error(`${signer.address} Balance is less than the amount to be deposited`)
+      const encodedData = paymasterContract.interface.encodeFunctionData('depositFunds', []);
+      const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData, value: ethers.utils.parseEther(amount) });
+      await tx.wait();
+      return {
+        message: `Successfully deposited with transaction Hash ${tx.hash}`
+      };
+    } catch (err) {
+      throw new Error('Error while submitting transaction');
     }
   }
 }
