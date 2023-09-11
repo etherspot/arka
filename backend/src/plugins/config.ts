@@ -16,13 +16,9 @@ const ConfigSchema = Type.Strict(
     LOG_LEVEL: Type.String(),
     API_HOST: Type.String(),
     API_PORT: Type.String(),
-    RPC_URL: Type.String(),
-    PAYMASTER_CONTRACT: Type.String(),
     PAYMASTER_PRIVATE_KEY: Type.String(),
-    VERIFICATION_GAS_LIMIT: Type.String(),
-    PIMLICO_API_KEY: Type.String() || undefined,
     STACKUP_API_KEY: Type.String() || undefined,
-    PIMLICO_CHAIN_ID: Type.String() || undefined,
+    API_KEY: Type.String(),
   })
 );
 
@@ -50,13 +46,11 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     LOG_LEVEL: process.env.LOG_LEVEL ?? '',
     API_PORT: process.env.API_PORT ?? '',
     API_HOST: process.env.API_HOST ?? '',
-    RPC_URL: process.env.RPC_URL ?? '',
-    PAYMASTER_CONTRACT: process.env.PAYMASTER_CONTRACT ?? '',
+    API_KEY: process.env.API_KEY ?? '',
     PAYMASTER_PRIVATE_KEY: process.env.PAYMASTER_PRIVATE_KEY ?? '',
     PIMLICO_API_KEY: process.env.PIMLICO_API_KEY ?? '',
     STACKUP_API_KEY: process.env.STACKUP_API_KEY ?? '',
     PIMLICO_CHAIN_ID: process.env.PIMLICO_CHAIN_ID ?? '',
-    VERIFICATION_GAS_LIMIT: process.env.VERIFICATION_GAS_LIMIT ?? '120000',
   }
 
   server.decorate("config", config);

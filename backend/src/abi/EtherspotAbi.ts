@@ -164,7 +164,7 @@ export default [
           "type": "address"
         }
       ],
-      "name": "add",
+      "name": "addToWhitelist",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -177,7 +177,7 @@ export default [
           "type": "address[]"
         }
       ],
-      "name": "addBatch",
+      "name": "addBatchToWhitelist",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
