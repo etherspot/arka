@@ -3,9 +3,13 @@ import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
 import { ethers } from "ethers";
 import { Paymaster } from "../paymaster/index.js";
-import { getNetworkConfig } from "../constants/Etherspot.js";
+import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
+
+function getNetworkConfig(key: any) {
+  return SupportedNetworks[key as keyof typeof SupportedNetworks]
+}
 
 const routes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(
