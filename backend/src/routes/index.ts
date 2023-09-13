@@ -7,15 +7,20 @@ import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 
-function getNetworkConfig(key: any) {
-  return SupportedNetworks.find((chain) => chain.chainId == key);
-}
-
 const routes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(
     server.config.PAYMASTER_PRIVATE_KEY,
     server.config.STACKUP_API_KEY,
   );
+
+  function getNetworkConfig(key: any) {
+    if (server.config.SUPPORTED_NETWORKS !== '') {
+      const buffer = Buffer.from(server.config.SUPPORTED_NETWORKS, 'base64');
+      const supportedNetworks = JSON.parse(buffer.toString())
+      return supportedNetworks.find((chain: any) => { chain["chainId"] == key });
+    } else
+      return SupportedNetworks.find((chain) => chain.chainId == key);
+  }
 
   const whitelistResponseSchema = {
     schema: {
@@ -61,7 +66,7 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const hex = (Number((date.valueOf() / 1000).toFixed(0)) + 6000).toString(16);
@@ -107,7 +112,7 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
@@ -146,7 +151,7 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
@@ -215,7 +220,7 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
@@ -256,7 +261,7 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
@@ -292,7 +297,7 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
