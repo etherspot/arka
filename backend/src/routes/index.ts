@@ -6,12 +6,14 @@ import { Paymaster } from "../paymaster/index.js";
 import { getNetworkConfig } from "../constants/Etherspot.js";
 import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
+import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 
 const routes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(
-    server.config.PAYMASTER_PRIVATE_KEY,
     server.config.STACKUP_API_KEY,
   );
+
+  const client = new SecretsManagerClient();
 
   const whitelistResponseSchema = {
     schema: {
@@ -42,17 +44,25 @@ const routes: FastifyPluginAsync = async (server) => {
         if (!body) return reply.code(400).send({ error: ErrorMessage.EMPTY_BODY });
         const userOp = body.params[0];
         const entryPoint = body.params[1];
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const context = body.params[2];
+        const gasToken = context?.token ? context.token : null;
+        const mode = context?.mode ? String(context.mode) : null;
         const chainId = body.params[3];
         const api_key = body.params[4];
-        if (!api_key ||
-          (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
+        const AWSresponse = await client.send(
+          new GetSecretValueCommand({
+            SecretId: 'arka',
+          })
+        );
+        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        if (!api_key || !secrets[api_key]) 
+          return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
+        console.log('mode: ', mode);
         if (
           !userOp ||
           !entryPoint ||
           !chainId ||
+          !mode ||
           isNaN(chainId)
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
@@ -60,54 +70,28 @@ const routes: FastifyPluginAsync = async (server) => {
         if (!getNetworkConfig(chainId)) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const hex = (Number((date.valueOf() / 1000).toFixed(0)) + 6000).toString(16);
-        let str = '0x'
-        for (let i = 0; i < 14 - hex.length; i++) {
-          str += '0';
-        }
-        str += hex;
+        if (mode.toLowerCase() == 'erc20' && !TOKEN_ADDRESS[chainId][gasToken]) return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
         const networkConfig = getNetworkConfig(chainId);
-        const result = await paymaster.sign(userOp, str, "0x0000000000001234", entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler);
-        if (body.jsonrpc)
-          return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
-        return reply.code(200).send(result);
-      } catch (err: any) {
-        request.log.error(err);
-        return reply.code(400).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
-      }
-    }
-  );
-
-  server.post(
-    "/pimlico",
-    async function (request, reply) {
-      try {
-        const body: any = request.body;
-
-        const userOp = body.params[0];
-        const entryPoint = body.params[1];
-        const context = body.params[2];
-        const gasToken = context ? context.token : null;
-        const chainId = body.params[3];
-        const api_key = body.params[4];
-        if (!api_key ||
-          (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
-        if (
-          !userOp ||
-          !entryPoint ||
-          !gasToken ||
-          !chainId ||
-          isNaN(chainId)
-        ) {
-          return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
+        let result;
+        switch (mode.toLowerCase()) {
+          case 'sponsor': {
+            const hex = (Number((date.valueOf() / 1000).toFixed(0)) + 600).toString(16);
+            let str = '0x'
+            for (let i = 0; i < 14 - hex.length; i++) {
+              str += '0';
+            }
+            str += hex;
+            result = await paymaster.sign(userOp, str, "0x0000000000001234", entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets[api_key]);
+            break;
+          }
+          case 'erc20': {
+            result = await paymaster.pimlico(userOp, gasToken, networkConfig.bundler, entryPoint);
+            break;
+          }
+          case 'default': {
+            return reply.code(400).send({ error: ErrorMessage.INVALID_MODE });
+          }
         }
-        if (!getNetworkConfig(chainId)) {
-          return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        }
-        const networkConfig = getNetworkConfig(chainId);
-        if (!TOKEN_ADDRESS[chainId][gasToken]) return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
-        const result = await paymaster.pimlico(userOp, gasToken, networkConfig.bundler, entryPoint);
         if (body.jsonrpc)
           return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(200).send(result);
@@ -129,9 +113,14 @@ const routes: FastifyPluginAsync = async (server) => {
         const gasToken = context ? context.token : null;
         const chainId = body.params[2];
         const api_key = body.params[3];
-        if (!api_key ||
-          (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
+        const AWSresponse = await client.send(
+          new GetSecretValueCommand({
+            SecretId: 'arka',
+          })
+        );
+        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        if (!api_key || !secrets[api_key]) 
+          return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !entryPoint ||
           !gasToken ||
@@ -167,9 +156,14 @@ const routes: FastifyPluginAsync = async (server) => {
         const context = body.params[2];
         const gasToken = context ? context.token : null;
         const api_key = body.params[3];
-        if (!api_key ||
-          (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
+        const AWSresponse = await client.send(
+          new GetSecretValueCommand({
+            SecretId: 'arka',
+          })
+        );
+        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        if (!api_key || !secrets[api_key]) 
+          return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !userOp ||
           !entryPoint ||
@@ -197,9 +191,14 @@ const routes: FastifyPluginAsync = async (server) => {
         const address = body.params[0];
         const chainId = body.params[1];
         const api_key = body.params[2];
-        if (!api_key ||
-          (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
+        const AWSresponse = await client.send(
+          new GetSecretValueCommand({
+            SecretId: 'arka',
+          })
+        );
+        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        if (!api_key || !secrets[api_key]) 
+          return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !Array.isArray(address) ||
           address.length > 10 ||
@@ -214,7 +213,7 @@ const routes: FastifyPluginAsync = async (server) => {
         const networkConfig = getNetworkConfig(chainId);
         const validAddresses = await address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(400).send({ error: "Invalid Address passed" });
-        const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler);
+        const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets[api_key]);
         if (body.jsonrpc)
           return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(200).send(result);
@@ -235,9 +234,14 @@ const routes: FastifyPluginAsync = async (server) => {
         const accountAddress = body.params[1];
         const chainId = body.params[2];
         const api_key = body.params[3];
-        if (!api_key ||
-          (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
+        const AWSresponse = await client.send(
+          new GetSecretValueCommand({
+            SecretId: 'arka',
+          })
+        );
+        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        if (!api_key || !secrets[api_key]) 
+          return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !sponsorAddress ||
           !accountAddress ||
@@ -273,9 +277,14 @@ const routes: FastifyPluginAsync = async (server) => {
         const amount = body.params[0];
         const chainId = body.params[1];
         const api_key = body.params[2];
-        if (!api_key ||
-          (api_key != server.config.API_KEY)
-        ) return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
+        const AWSresponse = await client.send(
+          new GetSecretValueCommand({
+            SecretId: 'arka',
+          })
+        );
+        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        if (!api_key || !secrets[api_key]) 
+          return reply.code(400).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           isNaN(amount) ||
           !chainId ||
@@ -287,7 +296,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
-        return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler);
+        return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets[api_key]);
       } catch (err: any) {
         request.log.error(err);
         return reply.code(400).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })

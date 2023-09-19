@@ -23,14 +23,11 @@ interface stackupPaymasterResponse {
 }
 
 export class Paymaster {
-  private relayerKey: string;
   private stackupEndpoint: string | null;
 
   constructor(
-    relayerKey: string,
     stackupApiKey: string,
   ) {
-    this.relayerKey = relayerKey;
     this.stackupEndpoint = stackupApiKey ? `https://api.stackup.sh/v1/paymaster/${stackupApiKey}` : null;
   }
 
@@ -58,11 +55,11 @@ export class Paymaster {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, bundlerRpc: string) {
+  async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
-      const signer = new Wallet(this.relayerKey, provider)
+      const signer = new Wallet(relayerKey, provider)
       userOp.paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
       userOp.verificationGasLimit = response.verificationGasLimit;
@@ -140,11 +137,11 @@ export class Paymaster {
     }
   }
 
-  async whitelistAddresses(address: string[], paymasterAddress: string, bundlerRpc: string) {
+  async whitelistAddresses(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
-      const signer = new Wallet(this.relayerKey, provider)
+      const signer = new Wallet(relayerKey, provider)
       const encodedData = paymasterContract.interface.encodeFunctionData('addBatchToWhitelist', [address]);
       const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData });
       await tx.wait();
@@ -162,11 +159,11 @@ export class Paymaster {
     return paymasterContract.check(sponsorAddress, accountAddress);
   }
 
-  async deposit(amount: string, paymasterAddress: string, bundlerRpc: string) {
+  async deposit(amount: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
-      const signer = new Wallet(this.relayerKey, provider)
+      const signer = new Wallet(relayerKey, provider)
       const balance = await signer.getBalance();
       if (ethers.utils.parseEther(amount.toString()).gte(balance))
         throw new Error(`${signer.address} Balance is less than the amount to be deposited`)
