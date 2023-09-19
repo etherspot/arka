@@ -17,6 +17,7 @@ npm-debug.log*
 coverage
 
 .env
+config.json
 
 package-lock.json
 pnpm-lock.yaml

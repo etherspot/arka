@@ -17,6 +17,7 @@ const ConfigSchema = Type.Strict(
     API_HOST: Type.String(),
     API_PORT: Type.String(),
     STACKUP_API_KEY: Type.String() || undefined,
+    SUPPORTED_NETWORKS: Type.String() || undefined,
   })
 );
 
@@ -45,6 +46,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     API_PORT: process.env.API_PORT ?? '',
     API_HOST: process.env.API_HOST ?? '',
     STACKUP_API_KEY: process.env.STACKUP_API_KEY ?? '',
+    SUPPORTED_NETWORKS: process.env.SUPPORTED_NETWORKS ?? '',
   }
 
   server.decorate("config", config);
