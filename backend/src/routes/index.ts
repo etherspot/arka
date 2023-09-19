@@ -3,7 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
 import { ethers } from "ethers";
 import { Paymaster } from "../paymaster/index.js";
-import { getNetworkConfig } from "../constants/Etherspot.js";
+import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 
@@ -12,6 +12,15 @@ const routes: FastifyPluginAsync = async (server) => {
     server.config.PAYMASTER_PRIVATE_KEY,
     server.config.STACKUP_API_KEY,
   );
+
+  function getNetworkConfig(key: any) {
+    if (server.config.SUPPORTED_NETWORKS !== '') {
+      const buffer = Buffer.from(server.config.SUPPORTED_NETWORKS, 'base64');
+      const supportedNetworks = JSON.parse(buffer.toString())
+      return supportedNetworks.find((chain: any) => { chain["chainId"] == key });
+    } else
+      return SupportedNetworks.find((chain) => chain.chainId == key);
+  }
 
   const whitelistResponseSchema = {
     schema: {
@@ -57,7 +66,7 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const hex = (Number((date.valueOf() / 1000).toFixed(0)) + 6000).toString(16);
@@ -67,6 +76,7 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         str += hex;
         const networkConfig = getNetworkConfig(chainId);
+        if (!networkConfig) return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const result = await paymaster.sign(userOp, str, "0x0000000000001234", entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler);
         if (body.jsonrpc)
           return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
@@ -102,10 +112,11 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
+        if (!networkConfig) return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         if (!TOKEN_ADDRESS[chainId][gasToken]) return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
         const result = await paymaster.pimlico(userOp, gasToken, networkConfig.bundler, entryPoint);
         if (body.jsonrpc)
@@ -140,10 +151,11 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
+        if (!networkConfig) return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         if (!TOKEN_ADDRESS[chainId][gasToken]) return reply.code(400).send({ error: "Invalid network/token" })
         const result = await paymaster.pimlicoAddress(gasToken, networkConfig.bundler, entryPoint);
         if (body.jsonrpc)
@@ -208,10 +220,11 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
+        if (!networkConfig) return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const validAddresses = await address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(400).send({ error: "Invalid Address passed" });
         const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler);
@@ -248,10 +261,11 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
+        if (!networkConfig) return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const response = await paymaster.checkWhitelistAddress(sponsorAddress, accountAddress, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler);
         if (body.jsonrpc)
           return reply.code(200).send({ jsonrpc: body.jsonrpc, id: body.id, result: { message: response === true ? 'Already added' : 'Not added yet' }, error: null })
@@ -283,10 +297,11 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(400).send({ error: ErrorMessage.INVALID_DATA });
         }
-        if (!getNetworkConfig(chainId)) {
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         const networkConfig = getNetworkConfig(chainId);
+        if (!networkConfig) return reply.code(400).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler);
       } catch (err: any) {
         request.log.error(err);

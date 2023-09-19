@@ -19,6 +19,7 @@ const ConfigSchema = Type.Strict(
     PAYMASTER_PRIVATE_KEY: Type.String(),
     STACKUP_API_KEY: Type.String() || undefined,
     API_KEY: Type.String(),
+    SUPPORTED_NETWORKS: Type.String() || undefined,
   })
 );
 
@@ -48,9 +49,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     API_HOST: process.env.API_HOST ?? '',
     API_KEY: process.env.API_KEY ?? '',
     PAYMASTER_PRIVATE_KEY: process.env.PAYMASTER_PRIVATE_KEY ?? '',
-    PIMLICO_API_KEY: process.env.PIMLICO_API_KEY ?? '',
     STACKUP_API_KEY: process.env.STACKUP_API_KEY ?? '',
-    PIMLICO_CHAIN_ID: process.env.PIMLICO_CHAIN_ID ?? '',
+    SUPPORTED_NETWORKS: process.env.SUPPORTED_NETWORKS ?? '',
   }
 
   server.decorate("config", config);
