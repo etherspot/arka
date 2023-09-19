@@ -18,7 +18,6 @@ const ConfigSchema = Type.Strict(
     API_PORT: Type.String(),
     STACKUP_API_KEY: Type.String() || undefined,
     SUPPORTED_NETWORKS: Type.String() || undefined,
-    AWS_SECRETS_FILENAME: Type.String() || undefined,
   })
 );
 
@@ -48,7 +47,6 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     API_HOST: process.env.API_HOST ?? '',
     STACKUP_API_KEY: process.env.STACKUP_API_KEY ?? '',
     SUPPORTED_NETWORKS: process.env.SUPPORTED_NETWORKS ?? '',
-    AWS_SECRETS_FILENAME: process.env.AWS_SECRETS_FILENAME ?? 'arka',
   }
 
   server.decorate("config", config);

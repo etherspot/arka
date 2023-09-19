@@ -16,11 +16,11 @@ const routes: FastifyPluginAsync = async (server) => {
 
   const client = new SecretsManagerClient();
 
-  function getNetworkConfig(key: any) {
-    if (server.config.SUPPORTED_NETWORKS !== '') {
-      const buffer = Buffer.from(server.config.SUPPORTED_NETWORKS, 'base64');
-      const supportedNetworks = JSON.parse(buffer.toString())
-      return supportedNetworks.find((chain: any) => { chain["chainId"] == key });
+  function getNetworkConfig(key: any, supportedNetworks: any) {
+    if (supportedNetworks !== '') {
+      const buffer = Buffer.from(supportedNetworks, 'base64');
+      const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
+      return SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key });
     } else
       return SupportedNetworks.find((chain) => chain.chainId == key);
   }
@@ -59,14 +59,15 @@ const routes: FastifyPluginAsync = async (server) => {
         const mode = context?.mode ? String(context.mode) : null;
         const chainId = body.params[3];
         const api_key = body.params[4];
+        if (!api_key) 
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: server.config.AWS_SECRETS_FILENAME,
+            SecretId: 'Arka_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!api_key || !secrets[api_key]) 
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !userOp ||
           !entryPoint ||
@@ -80,7 +81,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         if (mode.toLowerCase() == 'erc20' && !TOKEN_ADDRESS[chainId][gasToken]) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
-        const networkConfig = getNetworkConfig(chainId);
+        const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         let result;
         switch (mode.toLowerCase()) {
@@ -91,7 +92,7 @@ const routes: FastifyPluginAsync = async (server) => {
               str += '0';
             }
             str += hex;
-            result = await paymaster.sign(userOp, str, "0x0000000000001234", entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets[api_key]);
+            result = await paymaster.sign(userOp, str, "0x0000000000001234", entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets['PRIVATE_KEY']);
             break;
           }
           case 'erc20': {
@@ -107,6 +108,8 @@ const routes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.SUCCESS).send(result);
       } catch (err: any) {
         request.log.error(err);
+        if (err.name == "ResourceNotFoundException")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
         return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
       }
     }
@@ -123,14 +126,15 @@ const routes: FastifyPluginAsync = async (server) => {
         const gasToken = context ? context.token : null;
         const chainId = body.params[2];
         const api_key = body.params[3];
+        if (!api_key) 
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: server.config.AWS_SECRETS_FILENAME,
+            SecretId: 'Arka_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!api_key || !secrets[api_key]) 
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !entryPoint ||
           !gasToken ||
@@ -142,7 +146,7 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId);
+        const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         if (!TOKEN_ADDRESS[chainId][gasToken]) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid network/token" })
         const result = await paymaster.pimlicoAddress(gasToken, networkConfig.bundler, entryPoint);
@@ -151,6 +155,8 @@ const routes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.SUCCESS).send(result);
       } catch (err: any) {
         request.log.error(err);
+        if (err.name == "ResourceNotFoundException")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
         return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
       }
     }
@@ -167,14 +173,15 @@ const routes: FastifyPluginAsync = async (server) => {
         const context = body.params[2];
         const gasToken = context ? context.token : null;
         const api_key = body.params[3];
+        if (!api_key) 
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: server.config.AWS_SECRETS_FILENAME,
+            SecretId: 'Arka_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!api_key || !secrets[api_key]) 
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !userOp ||
           !entryPoint ||
@@ -188,6 +195,8 @@ const routes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.SUCCESS).send(result);
       } catch (err: any) {
         request.log.error(err);
+        if (err.name == "ResourceNotFoundException")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
         return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.INVALID_DATA });
       }
     }
@@ -202,14 +211,15 @@ const routes: FastifyPluginAsync = async (server) => {
         const address = body.params[0];
         const chainId = body.params[1];
         const api_key = body.params[2];
+        if (!api_key) 
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: server.config.AWS_SECRETS_FILENAME,
+            SecretId: 'Arka_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!api_key || !secrets[api_key]) 
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !Array.isArray(address) ||
           address.length > 10 ||
@@ -221,16 +231,18 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId);
+        const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const validAddresses = await address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
-        const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets[api_key]);
+        const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets['PRIVATE_KEY']);
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(ReturnCode.SUCCESS).send(result);
       } catch (err: any) {
         request.log.error(err);
+        if (err.name == "ResourceNotFoundException")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
         return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
       }
     }
@@ -246,14 +258,15 @@ const routes: FastifyPluginAsync = async (server) => {
         const accountAddress = body.params[1];
         const chainId = body.params[2];
         const api_key = body.params[3];
+        if (!api_key) 
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: server.config.AWS_SECRETS_FILENAME,
+            SecretId: 'Arka_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!api_key || !secrets[api_key]) 
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !sponsorAddress ||
           !accountAddress ||
@@ -267,7 +280,7 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId);
+        const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const response = await paymaster.checkWhitelistAddress(sponsorAddress, accountAddress, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler);
         if (body.jsonrpc)
@@ -275,6 +288,8 @@ const routes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.SUCCESS).send({ message: response === true ? 'Already added' : 'Not added yet' });
       } catch (err: any) {
         request.log.error(err);
+        if (err.name == "ResourceNotFoundException")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
         return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
       }
     }
@@ -290,14 +305,15 @@ const routes: FastifyPluginAsync = async (server) => {
         const amount = body.params[0];
         const chainId = body.params[1];
         const api_key = body.params[2];
+        if (!api_key) 
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: server.config.AWS_SECRETS_FILENAME,
+            SecretId: 'Arka_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!api_key || !secrets[api_key]) 
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           isNaN(amount) ||
           !chainId ||
@@ -308,11 +324,13 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId);
+        const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets[api_key]);
+        return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets['PRIVATE_KEY']);
       } catch (err: any) {
         request.log.error(err);
+        if (err.name == "ResourceNotFoundException")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
         return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
       }
     }
