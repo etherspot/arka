@@ -14,6 +14,8 @@ const routes: FastifyPluginAsync = async (server) => {
     server.config.STACKUP_API_KEY,
   );
 
+  const prefixSecretId = 'arka_';
+
   const client = new SecretsManagerClient();
 
   function getNetworkConfig(key: any, supportedNetworks: any) {
@@ -63,7 +65,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'ARKA_' + api_key,
+            SecretId: prefixSecretId + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
@@ -130,7 +132,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'ARKA_' + api_key,
+            SecretId: prefixSecretId + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
@@ -177,7 +179,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'ARKA_' + api_key,
+            SecretId: prefixSecretId + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
@@ -215,7 +217,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'ARKA_' + api_key,
+            SecretId: prefixSecretId + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
@@ -262,7 +264,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'ARKA_' + api_key,
+            SecretId: prefixSecretId + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
@@ -309,7 +311,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'ARKA_' + api_key,
+            SecretId: prefixSecretId + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
