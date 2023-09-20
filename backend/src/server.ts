@@ -16,27 +16,10 @@ const server = fastify({
   },
 });
 
-await server.register(cors, () => {
-  return (req: { headers: { origin: string; }; }, callback: (arg0: null, arg1: {
-      // This is NOT recommended for production as it enables reflection exploits
-      origin: boolean;
-    }) => void) => {
-    const corsOptions = {
-      // This is NOT recommended for production as it enables reflection exploits
-      origin: true
-    };
-
-    // do not include CORS headers for requests from localhost
-    if (/^localhost$/m.test(req.headers.origin) || /^127.0.0.1$/m.test(req.headers.origin) || /^0.0.0.0$/m.test(req.headers.origin)) {
-      corsOptions.origin = false
-      return
-    }
-
-    // callback expects two parameters: error and options
-    callback(null, corsOptions)
-  }
+await server.register(cors, { 
+  // put your options here
+  preflightContinue: true
 })
-
 
 await server.register(config);
 await server.register(routes);
