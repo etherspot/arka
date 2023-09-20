@@ -63,7 +63,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'Arka_' + api_key,
+            SecretId: 'ARKA_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
@@ -130,7 +130,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'Arka_' + api_key,
+            SecretId: 'ARKA_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
@@ -177,7 +177,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'Arka_' + api_key,
+            SecretId: 'ARKA_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
@@ -215,7 +215,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'Arka_' + api_key,
+            SecretId: 'ARKA_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
@@ -262,7 +262,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'Arka_' + api_key,
+            SecretId: 'ARKA_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
@@ -309,7 +309,7 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
-            SecretId: 'Arka_' + api_key,
+            SecretId: 'ARKA_' + api_key,
           })
         );
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
