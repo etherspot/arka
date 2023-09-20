@@ -1,6 +1,6 @@
 {
   "name": "arka",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "This project was bootstrapped with Fastify-CLI.",
   "type": "module",
   "directories": {
@@ -29,6 +29,7 @@
     "@account-abstraction/contracts": "0.6.0",
     "@account-abstraction/utils": "0.5.0",
     "@aws-sdk/client-secrets-manager": "3.410.0",
+    "@fastify/cors": "^8.4.0",
     "@sinclair/typebox": "0.23.5",
     "ajv": "8.11.2",
     "dotenv": "16.0.3",
