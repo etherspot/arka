@@ -1,4 +1,5 @@
 import fastify from 'fastify';
+import cors from '@fastify/cors'
 import config from './plugins/config.js';
 import routes from './routes/index.js';
 
@@ -14,6 +15,11 @@ const server = fastify({
     level: process.env.LOG_LEVEL,
   },
 });
+
+await server.register(cors, { 
+  // put your options here
+  preflightContinue: true
+})
 
 await server.register(config);
 await server.register(routes);

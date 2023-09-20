@@ -16,9 +16,7 @@ const ConfigSchema = Type.Strict(
     LOG_LEVEL: Type.String(),
     API_HOST: Type.String(),
     API_PORT: Type.String(),
-    PAYMASTER_PRIVATE_KEY: Type.String(),
     STACKUP_API_KEY: Type.String() || undefined,
-    API_KEY: Type.String(),
     SUPPORTED_NETWORKS: Type.String() || undefined,
   })
 );
@@ -47,8 +45,6 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     LOG_LEVEL: process.env.LOG_LEVEL ?? '',
     API_PORT: process.env.API_PORT ?? '',
     API_HOST: process.env.API_HOST ?? '',
-    API_KEY: process.env.API_KEY ?? '',
-    PAYMASTER_PRIVATE_KEY: process.env.PAYMASTER_PRIVATE_KEY ?? '',
     STACKUP_API_KEY: process.env.STACKUP_API_KEY ?? '',
     SUPPORTED_NETWORKS: process.env.SUPPORTED_NETWORKS ?? '',
   }
