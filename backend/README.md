@@ -13,6 +13,26 @@ The API gives `paymasterAndData` and `verificationGasLimit` as a response.
 
 ## How to run
 
+Please have an AWS setup with secrets manager ready and create api access key. Then make sure that the key has enough permissions to access AWS secrets manager
+Also create a secret manager folder with prefix as `arka_` and concatenate any string of your choice which can act as an api_key for calling the endpoints. For eg. `arka_devTest` (api_key would be `devTest`)
+Inside each folder in the secrets manager in our case `arka_devTest` the necessary key values are as follows
+- PRIVATE_KEY - the wallet from which you wish to sponsor from
+- SUPPORTED_NETWORKS - the networks you wish to support. The structure should follow this file config.json which again needs to be converted into `base64` value
+- ERC20_PAYMASTERS - the custom deployed pimlico erc20 paymaster contract addresses. The structure should be as follows
+{
+    "10": {
+        "USDC": "0x99fB8d618F52a42049776899D5c07241D344a8A4",
+        "DAI": "0x3bE5380ec8cfe159f0525d16d11E9Baba516C40c",
+        "USDT": "0x9102889001d0901b3d9123651d492e52ce772C6b"
+    },
+    "420": {
+        "LINK": "0x53F48579309f8dBfFE4edE921C50200861C2482a"
+    },
+    "421613": {
+        "LINK": "0x0a6Aa1Bd30D6954cA525315287AdeeEcbb6eFB59"
+    }
+} which also needs to be converted into `base64` value
+
 `npm install`\
 `npm run dev`
 

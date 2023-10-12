@@ -2,7 +2,7 @@ import { providers, Wallet, ethers, Contract } from 'ethers';
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
 import abi from "../abi/EtherspotAbi.js";
 import pino from 'pino';
-import { getERC20Paymaster } from './pimlico.js';
+import { PimlicoPaymaster, getERC20Paymaster } from './pimlico.js';
 
 const logger = pino({
   transport: {
@@ -61,6 +61,7 @@ export class Paymaster {
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
       const signer = new Wallet(relayerKey, provider)
       userOp.paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
+      userOp.signature = '0x';
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
       userOp.verificationGasLimit = response.verificationGasLimit;
       userOp.preVerificationGas = response.preVerificationGas;
@@ -83,22 +84,25 @@ export class Paymaster {
 
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async pimlico(userOp: any, gasToken: string, bundlerRpc: string, entryPoint: string) {
+  async pimlico(userOp: any, gasToken: string, bundlerRpc: string, entryPoint: string, customPaymasterAddress: string) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const erc20Paymaster = await getERC20Paymaster(provider, gasToken, entryPoint)
+      let erc20Paymaster;
+      if (customPaymasterAddress) erc20Paymaster = new PimlicoPaymaster(customPaymasterAddress, provider)
+      else erc20Paymaster = await getERC20Paymaster(provider, gasToken, entryPoint)
 
       let paymasterAndData = await erc20Paymaster.generatePaymasterAndData(userOp)
       userOp.paymasterAndData = paymasterAndData;
+      userOp.signature = '0x';
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
-      userOp.verificationGasLimit = response.verificationGasLimit;
+      userOp.verificationGasLimit = ethers.BigNumber.from(response.verificationGasLimit).add(100000).toString();
       userOp.preVerificationGas = response.preVerificationGas;
       userOp.callGasLimit = response.callGasLimit;
       paymasterAndData = await erc20Paymaster.generatePaymasterAndData(userOp);
 
       return {
         paymasterAndData,
-        verificationGasLimit: response.verificationGasLimit,
+        verificationGasLimit: userOp.verificationGasLimit,
         preVerificationGas: response.preVerificationGas,
         callGasLimit: response.callGasLimit,
       };
