@@ -79,8 +79,11 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
-        const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
-        const customPaymasters = JSON.parse(buffer.toString());
+        let customPaymasters = [];
+        if (secrets['ERC20_PAYMASTERS']) {
+          const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
+          customPaymasters = JSON.parse(buffer.toString());
+        }
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
@@ -156,8 +159,11 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
-        const customPaymasters = JSON.parse(buffer.toString());
+        let customPaymasters = [];
+        if (secrets['ERC20_PAYMASTERS']) {
+          const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
+          customPaymasters = JSON.parse(buffer.toString());
+        }
         let result;
         if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) result = { message: customPaymasters[chainId][gasToken]}
         else {
