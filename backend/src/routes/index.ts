@@ -79,10 +79,16 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
+        const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
+        const customPaymasters = JSON.parse(buffer.toString());
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        if (mode.toLowerCase() == 'erc20' && !TOKEN_ADDRESS[chainId][gasToken]) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
+        if (
+          mode.toLowerCase() == 'erc20' && 
+          !(TOKEN_ADDRESS[chainId] && TOKEN_ADDRESS[chainId][gasToken]) && 
+          !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
+        ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
         const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         let result;
@@ -98,7 +104,7 @@ const routes: FastifyPluginAsync = async (server) => {
             break;
           }
           case 'erc20': {
-            result = await paymaster.pimlico(userOp, gasToken, networkConfig.bundler, entryPoint);
+            result = await paymaster.pimlico(userOp, gasToken, networkConfig.bundler, entryPoint, customPaymasters[chainId] ? customPaymasters[chainId][gasToken] : null);
             break;
           }
           case 'default': {
@@ -150,8 +156,14 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        if (!TOKEN_ADDRESS[chainId][gasToken]) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid network/token" })
-        const result = await paymaster.pimlicoAddress(gasToken, networkConfig.bundler, entryPoint);
+        const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
+        const customPaymasters = JSON.parse(buffer.toString());
+        let result;
+        if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) result = { message: customPaymasters[chainId][gasToken]}
+        else {
+          if (!(TOKEN_ADDRESS[chainId] && TOKEN_ADDRESS[chainId][gasToken])) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid network/token" })
+          result = await paymaster.pimlicoAddress(gasToken, networkConfig.bundler, entryPoint);
+        }
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, message: result.message, error: null })
         return reply.code(ReturnCode.SUCCESS).send(result);

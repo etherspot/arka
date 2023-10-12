@@ -1,4 +1,4 @@
-import { Contract, BigNumber, providers, utils, Signer } from "ethers";
+import { Contract, BigNumber, providers, utils, Signer, ethers } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts"
 import { NotPromise } from "@account-abstraction/utils"
 import abi from "../abi/PimlicoAbi.js";
@@ -23,6 +23,7 @@ export class PimlicoPaymaster {
     }
 
     /**
+     * NOTE: This calculations only supports erc20 tokens with 6 or 18 decimals.
      * @dev Calculates the token amount required for the UserOperation, setting a reasonable max price for the token
      *
      * @param userOp the user operation to calculate the token amount for (with gas limits already set)
@@ -31,6 +32,7 @@ export class PimlicoPaymaster {
     async calculateTokenAmount(userOp: NotPromise<UserOperationStruct>): Promise<BigNumber> {
         const priceMarkup = await this.contract.priceMarkup()
         const cachedPrice = await this.contract.previousPrice()
+        const tokenDecimals = await this.contract.tokenDecimals();
         if (cachedPrice.eq(0)) {
             throw new Error("ERC20Paymaster: no previous price set")
         }
@@ -38,16 +40,22 @@ export class PimlicoPaymaster {
         const requiredPreFund = BigNumber.from(userOp.preVerificationGas)
             .add(BigNumber.from(userOp.verificationGasLimit).mul(3)) // 3 is for buffer when using paymaster
             .add(BigNumber.from(userOp.callGasLimit))
-            .mul(BigNumber.from(userOp.maxFeePerGas))
-
-        const tokenAmount = requiredPreFund
+            .mul(BigNumber.from(userOp.maxFeePerGas).mul(2))
+        let tokenAmount = requiredPreFund
             .add(BigNumber.from(userOp.maxFeePerGas).mul(40000)) // 40000 is the REFUND_POSTOP_COST constant
             .mul(priceMarkup)
             .mul(cachedPrice)
-            .div(BigNumber.from(10).pow(18))
             .div(1e6) // 1e6 is the priceDenominator constant
 
-        return tokenAmount
+        /**
+         * Don't know why but the below calculation is for tokens with 6 decimals such as USDC, USDT
+         * Pimlico default paymasters uses only USDC
+         * After long testing the below code is neglected for tokens with 18 decimals
+         */
+        if (ethers.utils.parseUnits('1', 6).eq(tokenDecimals)) {
+            tokenAmount = tokenAmount.div(BigNumber.from(10).pow(18));
+        }
+        return tokenAmount;
     }
 
     /**
@@ -167,10 +175,8 @@ export async function getERC20Paymaster(
     options?: Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">
 ): Promise<PimlicoPaymaster> {
     let parsedOptions: Required<Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">>
-
+    const chainId = (await provider.getNetwork()).chainId
     if (options === undefined) {
-        const chainId = (await provider.getNetwork()).chainId
-
         parsedOptions = {
             entrypoint: entryPoint,
             nativeAssetOracle: ORACLE_ADDRESS[chainId][NATIVE_ASSET[chainId]],
@@ -181,7 +187,6 @@ export async function getERC20Paymaster(
     } else {
         parsedOptions = await validatePaymasterOptions(provider, erc20, options)
     }
-
     const address = await calculateERC20PaymasterAddress(parsedOptions)
     if ((await provider.getCode(address)).length <= 2) {
         throw new Error(`ERC20Paymaster not deployed at ${address}`)
