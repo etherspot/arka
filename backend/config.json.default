@@ -21,6 +21,13 @@
         }
     },
     {
+        "chainId": 14,
+        "bundler": "https://flare-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "0x8A41594e5c6Fe492e437414c24eA6f401186b8d2"
+        }
+    },
+    {
         "chainId": 56,
         "bundler": "https://bnb-bundler.etherspot.io/",
         "contracts": {
@@ -32,6 +39,13 @@
         "bundler": "https://gnosis-bundler.etherspot.io/",
         "contracts": {
             "etherspotPaymasterAddress": "0x373aBcF1EA9e5802778E32870e7f72C8A6a90349"
+        }
+    },
+        {
+        "chainId": 114,
+        "bundler": "https://flaretestnet-bundler.etherspot.io/",
+        "contracts": {
+            "etherspotPaymasterAddress": "0x2a18C360b525824B3e5656B5a705554f2a5036Be"
         }
     },
     {
@@ -46,6 +60,13 @@
         "bundler": "https://polygon-bundler.etherspot.io",
         "contracts": {
             "etherspotPaymasterAddress": "0x26FeC24b0D467C9de105217B483931e8f944ff50"
+        }
+    },
+    {
+        "chainId": 420,
+        "bundler": "https://optimismgoerli-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "0x898c530A5fA37720DcF1843AeCC34b6B0cBaEB8a"
         }
     },
     {
