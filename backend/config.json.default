@@ -34,6 +34,13 @@
             "etherspotPaymasterAddress": "0xEA5ecE95D3A28f9faB161779d20128b449F9EC9C"
         }
     },
+        {
+        "chainId": 97,
+        "bundler": "https://bnbtestnet-bundler.etherspot.io/",
+        "contracts": {
+            "etherspotPaymasterAddress": "0x153e26707DF3787183945B88121E4Eb188FDCAAA"
+        }
+    },
     {
         "chainId": 100,
         "bundler": "https://gnosis-bundler.etherspot.io/",
