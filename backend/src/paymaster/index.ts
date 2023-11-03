@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { providers, Wallet, ethers, Contract } from 'ethers';
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
 import abi from "../abi/EtherspotAbi.js";
@@ -31,7 +32,6 @@ export class Paymaster {
     this.stackupEndpoint = stackupApiKey ? `https://api.stackup.sh/v1/paymaster/${stackupApiKey}` : null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async getPaymasterAndData(userOp: any, validUntil: string, validAfter: string, paymasterContract: Contract, signer: Wallet) {
     // actual signing...
     const hash = await paymasterContract.getHash(
@@ -54,7 +54,6 @@ export class Paymaster {
     return paymasterAndData;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
@@ -82,8 +81,6 @@ export class Paymaster {
     }
   }
 
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async pimlico(userOp: any, gasToken: string, bundlerRpc: string, entryPoint: string, customPaymasterAddress: string) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
@@ -106,21 +103,23 @@ export class Paymaster {
         preVerificationGas: response.preVerificationGas,
         callGasLimit: response.callGasLimit,
       };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       throw new Error('Transaction Execution reverted ' + err.message)
     }
   }
 
   async pimlicoAddress(gasToken: string, bundlerRpc: string, entryPoint: string) {
-    const provider = new providers.JsonRpcProvider(bundlerRpc);
-    const erc20Paymaster = await getERC20Paymaster(provider, gasToken, entryPoint)
-    return {
-      message: erc20Paymaster.paymasterAddress
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const erc20Paymaster = await getERC20Paymaster(provider, gasToken, entryPoint)
+      return {
+        message: erc20Paymaster.paymasterAddress
+      }
+    } catch (err: any) {
+      throw new Error(err.message)
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async stackup(userOp: any, type: string, gasToken: string, entryPoint: string) {
     if (this.stackupEndpoint) {
       const provider = new ethers.providers.JsonRpcProvider(this.stackupEndpoint);
@@ -146,21 +145,32 @@ export class Paymaster {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
       const signer = new Wallet(relayerKey, provider)
+      for (let i = 0; i < address.length; i++) {
+        const isAdded = paymasterContract.check(signer.address, address[i]);
+        if (isAdded) {
+          throw new Error(`${address[i]} already whitelisted`)
+        }
+      }
       const encodedData = paymasterContract.interface.encodeFunctionData('addBatchToWhitelist', [address]);
       const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData });
       await tx.wait();
       return {
         message: `Successfully whitelisted with transaction Hash ${tx.hash}`
       };
-    } catch (err) {
+    } catch (err: any) {
+      if (err.message.includes('already whitelisted')) throw new Error(err);
       throw new Error('Error while submitting transaction');
     }
   }
 
   async checkWhitelistAddress(sponsorAddress: string, accountAddress: string, paymasterAddress: string, bundlerRpc: string) {
-    const provider = new providers.JsonRpcProvider(bundlerRpc);
-    const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
-    return paymasterContract.check(sponsorAddress, accountAddress);
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      return paymasterContract.check(sponsorAddress, accountAddress);
+    } catch (err) {
+      throw new Error('rpcError while checking whitelist');
+    }
   }
 
   async deposit(amount: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
