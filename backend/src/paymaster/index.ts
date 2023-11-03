@@ -146,7 +146,7 @@ export class Paymaster {
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
       const signer = new Wallet(relayerKey, provider)
       for (let i = 0; i < address.length; i++) {
-        const isAdded = paymasterContract.check(signer.address, address[i]);
+        const isAdded = await paymasterContract.check(signer.address, address[i]);
         if (isAdded) {
           throw new Error(`${address[i]} already whitelisted`)
         }
