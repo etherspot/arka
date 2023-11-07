@@ -47,6 +47,8 @@ import { OpToJSON } from "userop/dist/utils";
 interface EtherspotPaymasterResult {
   paymasterAndData: string;
   verificationGasLimit: string;
+  preVerificationGas: string;
+  callGasLimit: string;
 }
 
 export const etherspotPaymaster =
@@ -58,6 +60,8 @@ export const etherspotPaymaster =
       body: JSON.stringify({
         userOp: OpToJSON(ctx.op),
         entryPoint: ctx.entryPoint,
+        context: ctx.context,
+        chainId: 80001
       })
     }).then(res => res.json());
 
@@ -67,19 +71,23 @@ export const etherspotPaymaster =
 
     ctx.op.paymasterAndData = pm.paymasterAndData;
     ctx.op.verificationGasLimit = pm.verificationGasLimit;
+    ctx.op.preVerificationGas = pm.preVerificationGas;
+    ctx.op.callGasLimit = pm.callGasLimit;
   };
 ```
 
 Config file should look like this:
 ```json
 {
-  "rpcUrl": "http://127.0.0.1:14337/1",
+  "rpcUrl": "http://127.0.0.1:14337/80001",
   "signingKey": "0x...",
   "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
   "EtherspotWalletFactory": "0x27f11918740060bd9Be146086F6836e18eedBB8C",
   "paymaster": {
-    "rpcUrl": "http://127.0.0.1:5050",
-    "context": {}
+    "rpcUrl": "http://127.0.0.1:5050?api_key=api_key",
+    "context": {
+      "mode": "sponsor",
+    }
   }
 }
 
