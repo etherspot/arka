@@ -60,8 +60,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const gasToken = context?.token ? context.token : null;
         const mode = context?.mode ? String(context.mode) : null;
         const chainId = query['chainId'];
-        const api_key = query['api_key'];
-        if (!api_key) 
+        const api_key = query['apiKey'];
+        if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
@@ -88,8 +88,8 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
         if (
-          mode.toLowerCase() == 'erc20' && 
-          !(TOKEN_ADDRESS[chainId] && TOKEN_ADDRESS[chainId][gasToken]) && 
+          mode.toLowerCase() == 'erc20' &&
+          !(TOKEN_ADDRESS[chainId] && TOKEN_ADDRESS[chainId][gasToken]) &&
           !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
         ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
         const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
@@ -107,7 +107,7 @@ const routes: FastifyPluginAsync = async (server) => {
             for (let i = 0; i < 14 - hex.length; i++) {
               str += '0';
             }
-            for (let i=0; i< 14 - hex1.length; i++) {
+            for (let i = 0; i < 14 - hex1.length; i++) {
               str1 += '0';
             }
             str += hex;
@@ -146,8 +146,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const context = body.params[1];
         const gasToken = context ? context.token : null;
         const chainId = query['chainId'];
-        const api_key = query['api_key'];
-        if (!api_key) 
+        const api_key = query['apiKey'];
+        if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
@@ -175,7 +175,7 @@ const routes: FastifyPluginAsync = async (server) => {
           customPaymasters = JSON.parse(buffer.toString());
         }
         let result;
-        if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) result = { message: customPaymasters[chainId][gasToken]}
+        if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) result = { message: customPaymasters[chainId][gasToken] }
         else {
           if (!(TOKEN_ADDRESS[chainId] && TOKEN_ADDRESS[chainId][gasToken])) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid network/token" })
           result = await paymaster.pimlicoAddress(gasToken, networkConfig.bundler, entryPoint);
@@ -202,8 +202,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const entryPoint = body.params[1];
         const context = body.params[2];
         const gasToken = context ? context.token : null;
-        const api_key = query['api_key'];
-        if (!api_key) 
+        const api_key = query['apiKey'];
+        if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
@@ -240,8 +240,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const query: any = request.query;
         const address = body.params[0];
         const chainId = query['chainId'];
-        const api_key = query['api_key'];
-        if (!api_key) 
+        const api_key = query['apiKey'];
+        if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
@@ -287,8 +287,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const sponsorAddress = body.params[0];
         const accountAddress = body.params[1];
         const chainId = query['chainId'];
-        const api_key = query['api_key'];
-        if (!api_key) 
+        const api_key = query['apiKey'];
+        if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
@@ -334,8 +334,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const query: any = request.query;
         const amount = body.params[0];
         const chainId = query['chainId'];
-        const api_key = query['api_key'];
-        if (!api_key) 
+        const api_key = query['apiKey'];
+        if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
