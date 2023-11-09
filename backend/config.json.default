@@ -77,10 +77,24 @@
         }
     },
     {
+        "chainId": 1001,
+        "bundler": "https://klaytntestnet-bundler.etherspot.io/",
+        "contracts": {
+            "etherspotPaymasterAddress": "0x810FA4C915015b703db0878CF2B9344bEB254a40"
+        }
+    },
+    {
         "chainId": 5000,
         "bundler": "https://mantle-bundler.etherspot.io/",
         "contracts": {
             "etherspotPaymasterAddress": "0x8A41594e5c6Fe492e437414c24eA6f401186b8d2"
+        }
+    },
+    {
+        "chainId": 8217,
+        "bundler": "https://klaytn-bundler.etherspot.io/",
+        "contracts": {
+            "etherspotPaymasterAddress": "0x4ebd86AAF89151b5303DB072e0205C668e31E5E7"
         }
     },
     {
