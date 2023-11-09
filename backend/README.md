@@ -84,7 +84,7 @@ Config file should look like this:
   "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
   "EtherspotWalletFactory": "0x27f11918740060bd9Be146086F6836e18eedBB8C",
   "paymaster": {
-    "rpcUrl": "http://127.0.0.1:5050?api_key=api_key",
+    "rpcUrl": "http://127.0.0.1:5050?apiKey=apiKey&chainId=80001",
     "context": {
       "mode": "sponsor",
     }
