@@ -151,5 +151,34 @@ If you want to contribute,
       ```
       And use it in routes/index.ts as server.config.newEnvVar inside routes variable
 3. Test on your local machine
-4. Sumbit the PR for merging the changes to master and notify us.
+4. Submit the PR for merging the changes to master and notify us.
 5. Also write the description of the changes made and do tell us why do you think this change is necessary and specify the env vars if needed to add
+
+
+## Available endpoints -
+## Note: All the below urls has two parameters as queryString i.e apiKey and chainId as default 
+- `/` - This url accepts three parameters in body as array and returns the paymasterData, verificationGasLimit, callGasLimit and preVerificationGas
+Parameters:
+  1. userOp object itself in JSON format
+  2. entryPointAddress
+  3. context object which has one required parameter mode and three optional parameter
+    - mode which accepts "erc20" | "sponsor"
+    - token (if mode is "erc20") which accepts symbol i.e "USDC"
+    - validAfter - timestamp in milliseconds only applicable with mode as "sponsor" used for defining the start of the paymaster validity
+    - validUntil - timestamp in milliseconds only applicable with mode as "sponsor" used for defining the end of the paymaster validity
+
+- `/pimlicoAddress` - This url accepts two parameters in body and returns the address of the deployed erc20 paymaster if exists
+Parameters:
+  1. entryPointAddress
+  2. context object with token symbol i.e { token: "USDC" }
+
+- `/whitelist` - This url accepts one parameter and returns the submitted transaction hash if successful. This url is used to whitelist an array of addresses thats needed to be whitelisted for sponsorship. Please note that all addresses needs to be addresses that wasn't been whitelisted before.
+  1. address - an array of addresses (max. 10 per request)
+
+- `/checkWhitelist` - This url accepts two parameters in body and returns if the address has been whitelisted or not
+  1. sponsorAddress - The address of the sponsorer
+  2. accountAddress - The address which needs to be checked
+
+- `/deposit` - This url accepts one parameter and returns the submitted transaction hash if successful. This url is used to deposit some funds to the entryPointAddress from the sponsor wallet
+  1. amount - The amount to be deposited in ETH
+  
