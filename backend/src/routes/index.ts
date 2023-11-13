@@ -59,8 +59,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const context = body.params[2];
         const gasToken = context?.token ? context.token : null;
         const mode = context?.mode ? String(context.mode) : null;
-        const chainId = query['chainId'];
-        const api_key = query['apiKey'];
+        const chainId = query['chainId'] ?? body.params[3];
+        const api_key = query['apiKey'] ?? body.params[4];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
@@ -145,8 +145,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const entryPoint = body.params[0];
         const context = body.params[1];
         const gasToken = context ? context.token : null;
-        const chainId = query['chainId'];
-        const api_key = query['apiKey'];
+        const chainId = query['chainId'] ?? body.params[2];
+        const api_key = query['apiKey'] ?? body.params[3];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
@@ -202,7 +202,7 @@ const routes: FastifyPluginAsync = async (server) => {
         const entryPoint = body.params[1];
         const context = body.params[2];
         const gasToken = context ? context.token : null;
-        const api_key = query['apiKey'];
+        const api_key = query['apiKey'] ?? body.params[3];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
@@ -239,8 +239,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const body: any = request.body;
         const query: any = request.query;
         const address = body.params[0];
-        const chainId = query['chainId'];
-        const api_key = query['apiKey'];
+        const chainId = query['chainId'] ?? body.params[1];
+        const api_key = query['apiKey'] ?? body.params[2];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
@@ -286,8 +286,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const query: any = request.query;
         const sponsorAddress = body.params[0];
         const accountAddress = body.params[1];
-        const chainId = query['chainId'];
-        const api_key = query['apiKey'];
+        const chainId = query['chainId'] ?? body.params[2];
+        const api_key = query['apiKey'] ?? body.params[3];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
@@ -333,8 +333,8 @@ const routes: FastifyPluginAsync = async (server) => {
         const body: any = request.body;
         const query: any = request.query;
         const amount = body.params[0];
-        const chainId = query['chainId'];
-        const api_key = query['apiKey'];
+        const chainId = query['chainId'] ?? body.params[1];
+        const api_key = query['apiKey'] ?? body.params[2];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         const AWSresponse = await client.send(
