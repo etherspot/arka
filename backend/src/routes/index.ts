@@ -3,6 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
 import { ethers, providers } from "ethers";
 import fetch from 'node-fetch';
+import pino from 'pino';
 import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
@@ -11,6 +12,12 @@ import ReturnCode from "../constants/ReturnCode.js";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import PimlicoAbi from "../abi/PimlicoAbi.js";
 import PythOracleAbi from "../abi/PythOracleAbi.js";
+
+const logger = pino({
+  transport: {
+    target: 'pino-pretty'
+  },
+})
 
 function getNetworkConfig(key: any, supportedNetworks: any) {
   if (supportedNetworks !== '') {
@@ -404,13 +411,13 @@ export async function cronJob() {
             });
             await tx.wait();
           } catch (err) {
-            console.log(err);
+            logger.error(err);
           }
         }
         try {
           await paymasterContract.updatePrice();
         } catch (err) {
-          console.log('Err on updating Price on paymaster', err);
+          logger.error('Err on updating Price on paymaster', err);
         }
       });
     });
