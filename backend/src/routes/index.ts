@@ -9,8 +9,8 @@ import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
-import PimlicoAbi from "abi/PimlicoAbi.js";
-import PythOracleAbi from "abi/PythOracleAbi.js";
+import PimlicoAbi from "../abi/PimlicoAbi.js";
+import PythOracleAbi from "../abi/PythOracleAbi.js";
 
 function getNetworkConfig(key: any, supportedNetworks: any) {
   if (supportedNetworks !== '') {

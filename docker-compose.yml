@@ -1,22 +1,20 @@
-version: "3"
+version: "3.8"
 
 services:
-
-mysql:
-    build: ./develop/mysql
-    command: mysqld --user=root --verbose
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    expose:
+      - 3000
     ports:
-      - 3306:3306
-    env_file:
-      - ./common/mysql.env
+      - "3000:3000"
 
-phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    links:
-      - mysql
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    expose:
+      - 5050
     ports:
-      - 8000:80
-    env_file:
-      - ./common/phpmyadmin.env
-    volumes:
-      - ./common/php.ini:/usr/local/etc/php/php.ini
+      - "5050:5050"
