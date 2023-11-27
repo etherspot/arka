@@ -417,7 +417,7 @@ export async function cronJob() {
         try {
           await paymasterContract.updatePrice();
         } catch (err) {
-          logger.error('Err on updating Price on paymaster', err);
+          logger.error('Err on updating Price on paymaster' + err);
         }
       });
     });
