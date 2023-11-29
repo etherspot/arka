@@ -1,13 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
-import { ethers } from "ethers";
+import { ethers, providers } from "ethers";
+import fetch from 'node-fetch';
+import pino from 'pino';
 import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
+import PimlicoAbi from "../abi/PimlicoAbi.js";
+import PythOracleAbi from "../abi/PythOracleAbi.js";
+
+const logger = pino({
+  transport: {
+    target: 'pino-pretty'
+  },
+})
+
+function getNetworkConfig(key: any, supportedNetworks: any) {
+  if (supportedNetworks !== '') {
+    const buffer = Buffer.from(supportedNetworks, 'base64');
+    const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
+    return SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key });
+  } else
+    return SupportedNetworks.find((chain) => chain.chainId == key);
+}
 
 const routes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(
@@ -17,15 +36,6 @@ const routes: FastifyPluginAsync = async (server) => {
   const prefixSecretId = 'arka_';
 
   const client = new SecretsManagerClient();
-
-  function getNetworkConfig(key: any, supportedNetworks: any) {
-    if (supportedNetworks !== '') {
-      const buffer = Buffer.from(supportedNetworks, 'base64');
-      const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
-      return SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key });
-    } else
-      return SupportedNetworks.find((chain) => chain.chainId == key);
-  }
 
   const whitelistResponseSchema = {
     schema: {
@@ -366,5 +376,52 @@ const routes: FastifyPluginAsync = async (server) => {
     }
   )
 };
+
+export async function cronJob() {
+  const paymastersAdrbase64 = process.env.DEPLOYED_ERC20_PAYMASTERS ?? ''
+  if (paymastersAdrbase64) {
+    const buffer = Buffer.from(paymastersAdrbase64, 'base64');
+    const DEPLOYED_ERC20_PAYMASTERS = JSON.parse(buffer.toString());
+    Object.keys(DEPLOYED_ERC20_PAYMASTERS).forEach(async (chain) => {
+      const networkConfig = getNetworkConfig(chain, '');
+      const deployedPaymasters: string[] = DEPLOYED_ERC20_PAYMASTERS[chain];
+      const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+      const signer = new ethers.Wallet(process.env.CRON_PRIVATE_KEY ?? '', provider);
+      deployedPaymasters.forEach(async (depolyedPaymaster) => {
+        const paymasterContract = new ethers.Contract(depolyedPaymaster, PimlicoAbi, signer)
+        const pythMainnetChains = process.env.PYTH_MAINNET_CHAIN_IDS;
+        const pythTestnetChains = process.env.PYTH_TESTNET_CHAIN_IDS;
+        if (pythMainnetChains?.includes(chain) || pythTestnetChains?.includes(chain)) {
+          try {
+            const oracleAddress = await paymasterContract.tokenOracle();
+            const oracleContract = new ethers.Contract(oracleAddress, PythOracleAbi, provider)
+            const priceId = await oracleContract.priceLocator();
+            const TESTNET_API_URL = process.env.PYTH_TESTNET_URL;
+            const MAINNET_API_URL = process.env.PYTH_MAINNET_URL;
+            const requestURL = `${chain === '5000' ? MAINNET_API_URL : TESTNET_API_URL}${priceId}`;
+            const response = await fetch(requestURL);
+            const vaa: any = await response.json();
+            const priceData = '0x' + Buffer.from(vaa[0], 'base64').toString('hex');
+            const updateFee = await oracleContract.getUpdateFee([priceData]);
+            const data = oracleContract.interface.encodeFunctionData('updatePrice', [[priceData]])
+            const tx = await signer.sendTransaction({
+              to: oracleAddress,
+              data: data,
+              value: updateFee
+            });
+            await tx.wait();
+          } catch (err) {
+            logger.error(err);
+          }
+        }
+        try {
+          await paymasterContract.updatePrice();
+        } catch (err) {
+          logger.error('Err on updating Price on paymaster' + err);
+        }
+      });
+    });
+  }
+}
 
 export default routes;
