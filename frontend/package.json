@@ -6,7 +6,7 @@
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "@mui/icons-material": "^5.14.7",
+    "@mui/icons-material": "^5.14.16",
     "@mui/material": "^5.14.18",
     "add": "^2.0.6",
     "bignumber.js": "^9.1.1",
