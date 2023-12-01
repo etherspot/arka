@@ -91,6 +91,13 @@
         }
     },
     {
+        "chainId": 5001,
+        "bundler": "https://mantletestnet-bundler.etherspot.io/",
+        "contracts": {
+            "etherspotPaymasterAddress": "0xb56eC212C60C47fb7385f13b7247886FFa5E9D5C"
+        }
+    },
+    {
         "chainId": 8217,
         "bundler": "https://klaytn-bundler.etherspot.io/",
         "contracts": {
