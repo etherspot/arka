@@ -384,42 +384,47 @@ export async function cronJob() {
     const DEPLOYED_ERC20_PAYMASTERS = JSON.parse(buffer.toString());
     Object.keys(DEPLOYED_ERC20_PAYMASTERS).forEach(async (chain) => {
       const networkConfig = getNetworkConfig(chain, '');
-      const deployedPaymasters: string[] = DEPLOYED_ERC20_PAYMASTERS[chain];
-      const provider = new providers.JsonRpcProvider(networkConfig.bundler);
-      const signer = new ethers.Wallet(process.env.CRON_PRIVATE_KEY ?? '', provider);
-      deployedPaymasters.forEach(async (depolyedPaymaster) => {
-        const paymasterContract = new ethers.Contract(depolyedPaymaster, PimlicoAbi, signer)
-        const pythMainnetChains = process.env.PYTH_MAINNET_CHAIN_IDS;
-        const pythTestnetChains = process.env.PYTH_TESTNET_CHAIN_IDS;
-        if (pythMainnetChains?.includes(chain) || pythTestnetChains?.includes(chain)) {
-          try {
-            const oracleAddress = await paymasterContract.tokenOracle();
-            const oracleContract = new ethers.Contract(oracleAddress, PythOracleAbi, provider)
-            const priceId = await oracleContract.priceLocator();
-            const TESTNET_API_URL = process.env.PYTH_TESTNET_URL;
-            const MAINNET_API_URL = process.env.PYTH_MAINNET_URL;
-            const requestURL = `${chain === '5000' ? MAINNET_API_URL : TESTNET_API_URL}${priceId}`;
-            const response = await fetch(requestURL);
-            const vaa: any = await response.json();
-            const priceData = '0x' + Buffer.from(vaa[0], 'base64').toString('hex');
-            const updateFee = await oracleContract.getUpdateFee([priceData]);
-            const data = oracleContract.interface.encodeFunctionData('updatePrice', [[priceData]])
-            const tx = await signer.sendTransaction({
-              to: oracleAddress,
-              data: data,
-              value: updateFee
-            });
-            await tx.wait();
-          } catch (err) {
-            logger.error(err);
+      if (networkConfig) {
+        const deployedPaymasters: string[] = DEPLOYED_ERC20_PAYMASTERS[chain];
+        const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+        const signer = new ethers.Wallet(process.env.CRON_PRIVATE_KEY ?? '', provider);
+        deployedPaymasters.forEach(async (deployedPaymaster) => {
+          const paymasterContract = new ethers.Contract(deployedPaymaster, PimlicoAbi, signer)
+          const pythMainnetChains = process.env.PYTH_MAINNET_CHAIN_IDS;
+          const pythTestnetChains = process.env.PYTH_TESTNET_CHAIN_IDS;
+          if (pythMainnetChains?.includes(chain) || pythTestnetChains?.includes(chain)) {
+            try {
+              const oracleAddress = await paymasterContract.tokenOracle();
+              const oracleContract = new ethers.Contract(oracleAddress, PythOracleAbi, provider)
+              const priceId = await oracleContract.priceLocator();
+              const TESTNET_API_URL = process.env.PYTH_TESTNET_URL;
+              const MAINNET_API_URL = process.env.PYTH_MAINNET_URL;
+              const requestURL = `${chain === '5000' ? MAINNET_API_URL : TESTNET_API_URL}${priceId}`;
+              const response = await fetch(requestURL);
+              const vaa: any = await response.json();
+              const priceData = '0x' + Buffer.from(vaa[0], 'base64').toString('hex');
+              const updateFee = await oracleContract.getUpdateFee([priceData]);
+              const data = oracleContract.interface.encodeFunctionData('updatePrice', [[priceData]])
+              const tx = await signer.sendTransaction({
+                to: oracleAddress,
+                data: data,
+                value: updateFee
+              });
+              await tx.wait();
+            } catch (err) {
+              logger.error(err);
+            }
           }
-        }
-        try {
-          await paymasterContract.updatePrice();
-        } catch (err) {
-          logger.error('Err on updating Price on paymaster' + err);
-        }
-      });
+          try {
+            await paymasterContract.updatePrice();
+            logger.info('Price Updated for ' + chain);
+          } catch (err) {
+            logger.error('Err on updating Price on paymaster' + err);
+          }
+        });
+      } else {
+        logger.info('Network config for ' + chain + ' is not added to default');
+      }
     });
   }
 }

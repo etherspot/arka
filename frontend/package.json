@@ -3,21 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@babel/plugin-proposal-private-property-in-object": "7.21.11",
     "@emotion/react": "^11.11.1",
-    "@emotion/styled": "^11.11.0",
-    "@mui/icons-material": "^5.14.7",
-    "@mui/material": "^5.14.18",
-    "add": "^2.0.6",
-    "bignumber.js": "^9.1.1",
+    "@emotion/styled": "11.11.0",
+    "@mui/icons-material": "5.14.16",
+    "@mui/material": "5.14.18",
+    "bignumber.js": "9.1.2",
     "ethers": "5.7.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^6.3.0",
-    "react-select": "^5.8.0",
-    "styled-components": "^6.1.1",
-    "yarn": "^1.22.19"
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-hot-toast": "2.4.1",
+    "react-router-dom": "6.18.0",
+    "react-select": "5.8.0",
+    "styled-components": "6.1.1",
+    "yarn": "1.22.19"
   },
   "scripts": {
     "start": "react-app-rewired start",
@@ -33,9 +32,9 @@
     "styled-components": "^5"
   },
   "devDependencies": {
-    "nth-check": "^2.0.1",
-    "postcss": "^8.4.31",
-    "process": "^0.11.10",
+    "nth-check": "2.0.1",
+    "postcss": "8.4.31",
+    "process": "0.11.10",
     "react-app-rewired": "2.2.1",
     "react-scripts": "^5.0.1",
     "tailwindcss": "^3.3.5"
