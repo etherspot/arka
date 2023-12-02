@@ -33,7 +33,7 @@
     "@sinclair/typebox": "0.31.28",
     "ajv": "8.11.2",
     "dotenv": "16.0.3",
-    "env-schema": "5.1.1",
+    "env-schema": "5.2.1",
     "ethers": "5.7.2",
     "fastify": "4.24.3",
     "fastify-cron": "1.3.1",
