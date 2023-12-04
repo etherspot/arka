@@ -11,13 +11,10 @@
    </p>
 </div>
 
-<div align="center">
-  <p>
-    <b>
-       Warning! This repo/software is under active development
-    </b>
-   </p>
-</div>
+--------------
+
+>[!IMPORTANT]
+>This repo/software is under active development.
 
 ## 💸 Arka
 
