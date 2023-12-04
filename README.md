@@ -40,7 +40,7 @@ You can see a [list of available endpoints here](https://github.com/etherspot/ar
 
 ## 🖥 Arka Frontend
 
-This is a basic frontend which let's a user run some Arka [API calls.](https://etherspot.fyi/arka/api-calls/)
+This is a basic frontend which let's a user interact with the Arka smart contract on various chains.
 
 To run the dapp:
 #### `cd frontend`
