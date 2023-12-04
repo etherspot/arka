@@ -1,4 +1,4 @@
-# Mock Paymaster API
+# Arka Paymaster API
 
 This is a simple API that signs userOps so that their fees are covered by EtherspotPaymaster contract.
 
