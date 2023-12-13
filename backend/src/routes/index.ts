@@ -12,6 +12,7 @@ import ReturnCode from "../constants/ReturnCode.js";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import PimlicoAbi from "../abi/PimlicoAbi.js";
 import PythOracleAbi from "../abi/PythOracleAbi.js";
+import EtherspotChainlinkOracleAbi from "../abi/EtherspotChainlinkOracleAbi.js";
 
 const logger = pino({
   transport: {
@@ -413,6 +414,32 @@ export async function cronJob() {
               await tx.wait();
             } catch (err) {
               logger.error(err);
+            }
+          }
+          const customChainlinkDeploymentsbase64 = process.env.CUSTOM_CHAINLINK_DEPLOYED;
+          if (customChainlinkDeploymentsbase64) {
+            try {
+              const buffer = Buffer.from(customChainlinkDeploymentsbase64, 'base64');
+              const customChainlinks = JSON.parse(buffer.toString());
+              const customChainlinkDeployments = customChainlinks[chain] ?? [];
+              if (customChainlinkDeployments.includes(deployedPaymaster)) {
+                const coingeckoIds = process.env.COINGECKO_IDS?.split(',') ?? [''];
+                const coingeckoId = coingeckoIds[customChainlinkDeployments.indexOf(deployedPaymaster)]
+                const response: any = await (await fetch(`${process.env.COINGECKO_API_URL}${coingeckoId}`)).json();
+                const price = ethers.utils.parseUnits(response[coingeckoId].usd.toString(), 8);
+                if (price) {
+                  const oracleAddress = await paymasterContract.tokenOracle();
+                  const oracleContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider)
+                  const data = oracleContract.interface.encodeFunctionData('fulfillPriceData', [price])
+                  const tx = await signer.sendTransaction({
+                    to: oracleAddress,
+                    data: data,
+                  });
+                  await tx.wait();
+                }
+              }
+            } catch (err) {
+              logger.error('Err on fetching price from coingecko' + err)
             }
           }
           try {
