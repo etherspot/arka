@@ -112,7 +112,7 @@ const routes: FastifyPluginAsync = async (server) => {
             const validUntil = context.validUntil ? new Date(context.validUntil) : date;
             const validAfter = context.validAfter ? new Date(context.validAfter) : date;
             const hex = (Number((validUntil.valueOf() / 1000).toFixed(0)) + 600).toString(16);
-            const hex1 = (Number((validAfter.valueOf() / 1000).toFixed(0))).toString(16);
+            const hex1 = (Number((validAfter.valueOf() / 1000).toFixed(0)) - 60).toString(16);
             let str = '0x'
             let str1 = '0x'
             for (let i = 0; i < 14 - hex.length; i++) {
