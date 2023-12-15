@@ -16,7 +16,7 @@
     "react-router-dom": "6.18.0",
     "react-select": "5.8.0",
     "styled-components": "6.1.1",
-    "yarn": "1.22.19"
+    "yarn": "1.22.20"
   },
   "scripts": {
     "start": "react-app-rewired start",
