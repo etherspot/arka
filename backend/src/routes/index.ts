@@ -1,26 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
-import { ethers, providers } from "ethers";
-import fetch from 'node-fetch';
-import pino from 'pino';
+import { ethers } from "ethers";
 import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
-import PimlicoAbi from "../abi/PimlicoAbi.js";
-import PythOracleAbi from "../abi/PythOracleAbi.js";
-import EtherspotChainlinkOracleAbi from "../abi/EtherspotChainlinkOracleAbi.js";
 
-const logger = pino({
-  transport: {
-    target: 'pino-pretty'
-  },
-})
-
-function getNetworkConfig(key: any, supportedNetworks: any) {
+export function getNetworkConfig(key: any, supportedNetworks: any) {
   if (supportedNetworks !== '') {
     const buffer = Buffer.from(supportedNetworks, 'base64');
     const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
@@ -274,7 +263,7 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        const validAddresses = await address.every(ethers.utils.isAddress);
+        const validAddresses = address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
         const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets['PRIVATE_KEY']);
         if (body.jsonrpc)
@@ -295,8 +284,7 @@ const routes: FastifyPluginAsync = async (server) => {
       try {
         const body: any = request.body;
         const query: any = request.query;
-        const sponsorAddress = body.params[0];
-        const accountAddress = body.params[1];
+        const accountAddress = body.params[0];
         const chainId = query['chainId'] ?? body.params[2];
         const api_key = query['apiKey'] ?? body.params[3];
         if (!api_key)
@@ -309,9 +297,7 @@ const routes: FastifyPluginAsync = async (server) => {
         const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
         if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
-          !sponsorAddress ||
           !accountAddress ||
-          !ethers.utils.isAddress(sponsorAddress) ||
           !ethers.utils.isAddress(accountAddress) ||
           !chainId ||
           isNaN(chainId)
@@ -323,7 +309,7 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        const response = await paymaster.checkWhitelistAddress(sponsorAddress, accountAddress, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler);
+        const response = await paymaster.checkWhitelistAddress(accountAddress, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets['PRIVATE_KEY']);
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result: { message: response === true ? 'Already added' : 'Not added yet' }, error: null })
         return reply.code(ReturnCode.SUCCESS).send({ message: response === true ? 'Already added' : 'Not added yet' });
@@ -377,83 +363,5 @@ const routes: FastifyPluginAsync = async (server) => {
     }
   )
 };
-
-export async function cronJob() {
-  const paymastersAdrbase64 = process.env.DEPLOYED_ERC20_PAYMASTERS ?? ''
-  if (paymastersAdrbase64) {
-    const buffer = Buffer.from(paymastersAdrbase64, 'base64');
-    const DEPLOYED_ERC20_PAYMASTERS = JSON.parse(buffer.toString());
-    Object.keys(DEPLOYED_ERC20_PAYMASTERS).forEach(async (chain) => {
-      const networkConfig = getNetworkConfig(chain, '');
-      if (networkConfig) {
-        const deployedPaymasters: string[] = DEPLOYED_ERC20_PAYMASTERS[chain];
-        const provider = new providers.JsonRpcProvider(networkConfig.bundler);
-        const signer = new ethers.Wallet(process.env.CRON_PRIVATE_KEY ?? '', provider);
-        deployedPaymasters.forEach(async (deployedPaymaster) => {
-          const paymasterContract = new ethers.Contract(deployedPaymaster, PimlicoAbi, signer)
-          const pythMainnetChains = process.env.PYTH_MAINNET_CHAIN_IDS;
-          const pythTestnetChains = process.env.PYTH_TESTNET_CHAIN_IDS;
-          if (pythMainnetChains?.includes(chain) || pythTestnetChains?.includes(chain)) {
-            try {
-              const oracleAddress = await paymasterContract.tokenOracle();
-              const oracleContract = new ethers.Contract(oracleAddress, PythOracleAbi, provider)
-              const priceId = await oracleContract.priceLocator();
-              const TESTNET_API_URL = process.env.PYTH_TESTNET_URL;
-              const MAINNET_API_URL = process.env.PYTH_MAINNET_URL;
-              const requestURL = `${chain === '5000' ? MAINNET_API_URL : TESTNET_API_URL}${priceId}`;
-              const response = await fetch(requestURL);
-              const vaa: any = await response.json();
-              const priceData = '0x' + Buffer.from(vaa[0], 'base64').toString('hex');
-              const updateFee = await oracleContract.getUpdateFee([priceData]);
-              const data = oracleContract.interface.encodeFunctionData('updatePrice', [[priceData]])
-              const tx = await signer.sendTransaction({
-                to: oracleAddress,
-                data: data,
-                value: updateFee
-              });
-              await tx.wait();
-            } catch (err) {
-              logger.error(err);
-            }
-          }
-          const customChainlinkDeploymentsbase64 = process.env.CUSTOM_CHAINLINK_DEPLOYED;
-          if (customChainlinkDeploymentsbase64) {
-            try {
-              const buffer = Buffer.from(customChainlinkDeploymentsbase64, 'base64');
-              const customChainlinks = JSON.parse(buffer.toString());
-              const customChainlinkDeployments = customChainlinks[chain] ?? [];
-              if (customChainlinkDeployments.includes(deployedPaymaster)) {
-                const coingeckoIds = process.env.COINGECKO_IDS?.split(',') ?? [''];
-                const coingeckoId = coingeckoIds[customChainlinkDeployments.indexOf(deployedPaymaster)]
-                const response: any = await (await fetch(`${process.env.COINGECKO_API_URL}${coingeckoId}`)).json();
-                const price = ethers.utils.parseUnits(response[coingeckoId].usd.toString(), 8);
-                if (price) {
-                  const oracleAddress = await paymasterContract.tokenOracle();
-                  const oracleContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider)
-                  const data = oracleContract.interface.encodeFunctionData('fulfillPriceData', [price])
-                  const tx = await signer.sendTransaction({
-                    to: oracleAddress,
-                    data: data,
-                  });
-                  await tx.wait();
-                }
-              }
-            } catch (err) {
-              logger.error('Err on fetching price from coingecko' + err)
-            }
-          }
-          try {
-            await paymasterContract.updatePrice();
-            logger.info('Price Updated for ' + chain);
-          } catch (err) {
-            logger.error('Err on updating Price on paymaster' + err);
-          }
-        });
-      } else {
-        logger.info('Network config for ' + chain + ' is not added to default');
-      }
-    });
-  }
-}
 
 export default routes;

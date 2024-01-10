@@ -163,11 +163,12 @@ export class Paymaster {
     }
   }
 
-  async checkWhitelistAddress(sponsorAddress: string, accountAddress: string, paymasterAddress: string, bundlerRpc: string) {
+  async checkWhitelistAddress(accountAddress: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const signer = new Wallet(relayerKey, provider)
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
-      return paymasterContract.check(sponsorAddress, accountAddress);
+      return paymasterContract.check(signer.address, accountAddress);
     } catch (err) {
       throw new Error('rpcError while checking whitelist');
     }

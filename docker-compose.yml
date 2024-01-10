@@ -18,3 +18,12 @@ services:
       - 5050
     ports:
       - "5050:5050"
+
+  admin_frontend:
+    build:
+      context: ./admin_frontend
+      dockerfile: Dockerfile
+    expose:
+      - 3002
+    ports:
+      - "3002:3002"
