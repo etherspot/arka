@@ -19,9 +19,7 @@ export function getNetworkConfig(key: any, supportedNetworks: any) {
 }
 
 const routes: FastifyPluginAsync = async (server) => {
-  const paymaster = new Paymaster(
-    server.config.STACKUP_API_KEY,
-  );
+  const paymaster = new Paymaster();
 
   const prefixSecretId = 'arka_';
 
@@ -191,46 +189,6 @@ const routes: FastifyPluginAsync = async (server) => {
       }
     }
   )
-
-  server.post(
-    "/stackup",
-    async function (request, reply) {
-      try {
-        const body: any = request.body;
-        const query: any = request.query;
-        const userOp = body.params[0];
-        const entryPoint = body.params[1];
-        const context = body.params[2];
-        const gasToken = context ? context.token : null;
-        const api_key = query['apiKey'] ?? body.params[3];
-        if (!api_key)
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + api_key,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        if (
-          !userOp ||
-          !entryPoint ||
-          !gasToken
-        ) {
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-        }
-        const result = await paymaster.stackup(userOp, "erc20token", gasToken, entryPoint);
-        if (body.jsonrpc)
-          return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
-        return reply.code(ReturnCode.SUCCESS).send(result);
-      } catch (err: any) {
-        request.log.error(err);
-        if (err.name == "ResourceNotFoundException")
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
-        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.INVALID_DATA });
-      }
-    }
-  );
 
   server.post(
     "/whitelist",

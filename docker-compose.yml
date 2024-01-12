@@ -11,6 +11,12 @@ services:
       - "3000:3000"
 
   backend:
+    environment:
+      - LOG_LEVEL=debug
+      - API_HOST=127.0.0.1
+      - API_PORT=5050
+      - SUPPORTED_NETWORKS=
+      - CRON_PRIVATE_KEY=
     build: 
       context: ./backend
       dockerfile: Dockerfile

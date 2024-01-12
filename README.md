@@ -30,6 +30,20 @@ The flow is as follows:
 - [Deposit](https://etherspot.fyi/arka/api-calls/deposit) to the paymaster.
 - Include the paymaster data in the [UserOp](https://etherspot.fyi/account-abstraction/userops) to have the transaction sponsored.
 
+## 🐳 How to run (a Docker image)
+
+## Prerequisites
+* Docker Installed (https://www.docker.com/get-started/)
+* Edit docker-compose.yml for backend cron job and put a value in CRON_PRIVATE_KEY with the wallet private key you want to use to periodically update the paymaster contract price
+
+#### `docker compose up`
+
+This would spin up three services at once which will be available on these urls:
+- http://localhost:3002 (Arka Admin Frontend)
+- http://localhost:3000 (Arka Frontend for EndUser)
+- http://localhost:5050 (Arka backend for Api service)
+
+
 ## 🔙 Arka Backend
 
 This contains the full source code and implementation of Arka. 
@@ -38,16 +52,13 @@ To run your own instance of this, please [follow these steps.](https://github.co
 
 You can see a [list of available endpoints here](https://github.com/etherspot/arka/tree/master/backend#available-endpoints--).
 
+## 🖥 Arka Admin Frontend
+
+This contains ability to change configuration that are available in sql.
+
 ## 🖥 Arka Frontend
 
 This is a basic frontend which let's a user interact with the Arka smart contract on various chains.
-
-To run the dapp:
-#### `cd frontend`
-#### `npm i`
-#### `npm start`
-
-For more details on what can be done here please look at [the frontend readme.](https://github.com/etherspot/arka/blob/master/frontend/README.md)
 
 
 ## 🔗 Important links

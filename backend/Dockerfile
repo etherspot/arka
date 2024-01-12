@@ -16,8 +16,10 @@ FROM node:18-alpine AS runner
 WORKDIR /usr/app
 ARG APP_ENV
 COPY --from=builder /app/build ./build
+COPY ./src/migrations ./build/migrations
 COPY package.json ./
 COPY --from=builder /app/config.json.default /usr/app/config.json
+RUN touch /usr/app/database.sqlite
 RUN npm install
 USER node
 ENV NODE_ENV="production"
