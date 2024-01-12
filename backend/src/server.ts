@@ -37,7 +37,6 @@ await server.register(cors, {
 
 // Database
 await server.register(database);
-console.log('dirname: ', __dirname + "/migrations");
 
 const postgrator = new Postgrator({
   migrationPattern: __dirname + "/migrations/*",
