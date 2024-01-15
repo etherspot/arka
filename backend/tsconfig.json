@@ -4,6 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "lib": ["esnext"],
+    "allowJs": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,

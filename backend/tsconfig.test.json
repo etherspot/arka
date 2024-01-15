@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "isolatedModules": true,
+    },
+    "include": [
+        "**/*.test.ts",
+        "**/*.spec.ts"
+    ],
+    "exclude": [
+        "./node_modules/",
+        "./build/"
+    ]
+}
