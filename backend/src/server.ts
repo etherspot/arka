@@ -22,7 +22,6 @@ await server.register(cors, {
   preflightContinue: true
 })
 
-
 await server.register(config);
 await server.register(routes);
 await server.register(fastifyCron, {
