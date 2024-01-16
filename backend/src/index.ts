@@ -15,6 +15,7 @@ setTimeout(async () => {
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () =>
     server.close().then((err) => {
+      server.sqlite.close();
       console.log(`close application on ${signal}`);
       process.exit(err ? 1 : 0);
     }),

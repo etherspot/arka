@@ -1,3 +1,7 @@
+--------------------------------------------------------------------------------
+-- Up
+--------------------------------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS config (
     id INTEGER PRIMARY KEY,
     DEPLOYED_ERC20_PAYMASTERS TEXT NOT NULL,
@@ -30,3 +34,9 @@ INSERT INTO config (
       "ewogICAgIjgwMDAxIjogWyIweGMzM2MzOEE3QkZFQmJCOTk3ZEQ0MDExQ0RkQWY0ZWJEMWU4ODAzQzAiXQp9",
       "panther",
       "https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&precision=8&ids=");
+
+--------------------------------------------------------------------------------
+-- Down
+--------------------------------------------------------------------------------
+
+DROP TABLE IF EXISTS config

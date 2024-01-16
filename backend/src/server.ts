@@ -2,9 +2,6 @@
 import fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import fastifyCron from 'fastify-cron';
-import Postgrator from "postgrator";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
 import { providers, ethers } from 'ethers';
 import fetch from 'node-fetch';
 import database from './plugins/db.js';
@@ -14,8 +11,6 @@ import adminRoutes from './routes/admin.js';
 import EtherspotChainlinkOracleAbi from './abi/EtherspotChainlinkOracleAbi.js';
 import PimlicoAbi from './abi/PimlicoAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let server: FastifyInstance;
 
@@ -43,22 +38,6 @@ const initializeServer = async (): Promise<void> => {
 
   // Database
   await server.register(database);
-
-  const postgrator = new Postgrator({
-    migrationPattern: __dirname + "/migrations/*",
-    driver: "sqlite3",
-    execQuery: (query) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rows = new Promise<{ rows: any[] }>((resolve) => {
-        server.sqlite.all(query, (err, rows) => {
-          resolve({ rows });
-        })
-      });
-      return rows;
-    },
-  });
-
-  await postgrator.migrate()
 
   const ConfigData: any = await new Promise(resolve => {
     server.sqlite.get("SELECT * FROM config", (err, row) => {
