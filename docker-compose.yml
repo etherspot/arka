@@ -11,6 +11,12 @@ services:
       - "3000:3000"
 
   backend:
+    environment:
+      - LOG_LEVEL=debug
+      - API_HOST=0.0.0.0
+      - API_PORT=5050
+      - SUPPORTED_NETWORKS=
+      - CRON_PRIVATE_KEY=
     build: 
       context: ./backend
       dockerfile: Dockerfile
@@ -18,3 +24,12 @@ services:
       - 5050
     ports:
       - "5050:5050"
+
+  admin_frontend:
+    build:
+      context: ./admin_frontend
+      dockerfile: Dockerfile
+    expose:
+      - 3002
+    ports:
+      - "3002:3002"

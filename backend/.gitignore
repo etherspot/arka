@@ -18,6 +18,7 @@ coverage
 
 .env
 config.json
+database.sqlite
 
 package-lock.json
 pnpm-lock.yaml

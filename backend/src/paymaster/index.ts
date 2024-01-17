@@ -2,34 +2,12 @@
 import { providers, Wallet, ethers, Contract } from 'ethers';
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
 import abi from "../abi/EtherspotAbi.js";
-import pino from 'pino';
 import { PimlicoPaymaster, getERC20Paymaster } from './pimlico.js';
 
-const logger = pino({
-  transport: {
-    target: 'pino-pretty'
-  },
-})
-
-interface stackupPaymasterResponse {
-  jsonrpc: string;
-  id: number;
-  result: {
-    paymasterAndData: string,
-    preVerificationGas: string,
-    verificationGasLimit: string,
-    callGasLimit: string,
-  } | null;
-  error: { message: string, code: string } | null;
-}
-
 export class Paymaster {
-  private stackupEndpoint: string | null;
 
-  constructor(
-    stackupApiKey: string,
-  ) {
-    this.stackupEndpoint = stackupApiKey ? `https://api.stackup.sh/v1/paymaster/${stackupApiKey}` : null;
+  constructor() {
+    //
   }
 
   async getPaymasterAndData(userOp: any, validUntil: string, validAfter: string, paymasterContract: Contract, signer: Wallet) {
@@ -120,26 +98,6 @@ export class Paymaster {
     }
   }
 
-  async stackup(userOp: any, type: string, gasToken: string, entryPoint: string) {
-    if (this.stackupEndpoint) {
-      const provider = new ethers.providers.JsonRpcProvider(this.stackupEndpoint);
-      const pm: stackupPaymasterResponse = (await provider.send("pm_sponsorUserOperation", [
-        userOp,
-        entryPoint,
-        { type, token: gasToken },
-      ]));
-      logger.info(pm);
-      if (pm.error) throw new Error(pm.error.message);
-      return {
-        paymasterAndData: pm.result?.paymasterAndData,
-        verificationGasLimit: pm.result?.verificationGasLimit,
-      }
-
-    } else {
-      throw new Error('Invalid Api Key')
-    }
-  }
-
   async whitelistAddresses(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
@@ -163,11 +121,12 @@ export class Paymaster {
     }
   }
 
-  async checkWhitelistAddress(sponsorAddress: string, accountAddress: string, paymasterAddress: string, bundlerRpc: string) {
+  async checkWhitelistAddress(accountAddress: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const signer = new Wallet(relayerKey, provider)
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
-      return paymasterContract.check(sponsorAddress, accountAddress);
+      return paymasterContract.check(signer.address, accountAddress);
     } catch (err) {
       throw new Error('rpcError while checking whitelist');
     }
