@@ -8,7 +8,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
   server.get("/getConfig", async function (request, reply) {
     try {
       const result: any = await new Promise((resolve, reject) => {
-        server.sqlite.get("SELECT * FROM config", (err, row) => {
+        server.sqlite.db.get("SELECT * FROM config", (err: any, row: any) => {
           if (err) reject(err);
           resolve(row);
         })
@@ -28,15 +28,15 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         !body.PYTH_MAINNET_CHAIN_IDS || !body.CRON_TIME || !body.CUSTOM_CHAINLINK_DEPLOYED || !body.COINGECKO_IDS || !body.COINGECKO_API_URL || !body.id)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       await new Promise((resolve, reject) => {
-        server.sqlite.run("UPDATE config SET DEPLOYED_ERC20_PAYMASTERS = ?, \
-        PYTH_MAINNET_URL = ?, \
-        PYTH_TESTNET_URL = ?, \
-        PYTH_TESTNET_CHAIN_IDS = ?, \
-        PYTH_MAINNET_CHAIN_IDS = ?, \
-        CRON_TIME = ?, \
-        CUSTOM_CHAINLINK_DEPLOYED = ?, \
-        COINGECKO_IDS = ?, \
-        COINGECKO_API_URL = ? WHERE id = ?", [body.DEPLOYED_ERC20_PAYMASTERS, body.PYTH_MAINNET_URL, body.PYTH_TESTNET_URL, body.PYTH_TESTNET_CHAIN_IDS,
+        server.sqlite.db.run("UPDATE config SET DEPLOYED_ERC20_PAYMASTERS = ?, \
+          PYTH_MAINNET_URL = ?, \
+          PYTH_TESTNET_URL = ?, \
+          PYTH_TESTNET_CHAIN_IDS = ?, \
+          PYTH_MAINNET_CHAIN_IDS = ?, \
+          CRON_TIME = ?, \
+          CUSTOM_CHAINLINK_DEPLOYED = ?, \
+          COINGECKO_IDS = ?, \
+          COINGECKO_API_URL = ? WHERE id = ?", [body.DEPLOYED_ERC20_PAYMASTERS, body.PYTH_MAINNET_URL, body.PYTH_TESTNET_URL, body.PYTH_TESTNET_CHAIN_IDS,
         body.PYTH_MAINNET_CHAIN_IDS, body.CRON_TIME, body.CUSTOM_CHAINLINK_DEPLOYED, body.COINGECKO_IDS, body.COINGECKO_API_URL, body.id
         ], (err: any, row: any) => {
           if (err) reject(err);

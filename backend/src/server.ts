@@ -36,11 +36,15 @@ const initializeServer = async (): Promise<void> => {
     preflightContinue: true
   })
 
+  await server.register(routes);
+
+  await server.register(adminRoutes);
+
   // Database
   await server.register(database);
 
   const ConfigData: any = await new Promise(resolve => {
-    server.sqlite.get("SELECT * FROM config", (err, row) => {
+    server.sqlite.db.get("SELECT * FROM config", (err, row) => {
       if (err) resolve(null);
       resolve(row);
     });
@@ -143,10 +147,6 @@ const initializeServer = async (): Promise<void> => {
   });
 
   server.cron.startAllJobs()
-
-  await server.register(routes);
-
-  await server.register(adminRoutes);
 
   await server.ready();
 }

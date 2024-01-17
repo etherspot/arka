@@ -19,8 +19,8 @@ COPY --from=builder /app/build ./build
 COPY ./src/migrations ./build/migrations
 COPY package.json ./
 COPY --from=builder /app/config.json.default /usr/app/config.json
-RUN touch /usr/app/database.sqlite
+RUN touch database.sqlite
 RUN npm install
-USER node
+USER root
 ENV NODE_ENV="production"
 CMD ["npm", "start"]
