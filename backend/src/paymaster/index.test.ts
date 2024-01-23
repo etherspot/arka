@@ -1,17 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Paymaster } from "paymaster";
-
-beforeEach(() => {
-  jest.clearAllMocks();
-});
-
-afterEach(() => {
-  //
-});
-
-afterAll(async () => {
-  jest.clearAllMocks();
-});
+import { Paymaster } from "./index.js";
 
 describe('Paymaster on Mumbai', () => {
   const paymaster = new Paymaster();
@@ -32,7 +20,7 @@ describe('Paymaster on Mumbai', () => {
     signature: '0x0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101',
     preVerificationGas: '0xc6c4'
   };
-  describe('sign function - success scenario', async () => {
+  test('sign function - success scenario', async () => {
     type response = {
       paymasterAndData: string,
       verificationGasLimit: any,
@@ -44,7 +32,7 @@ describe('Paymaster on Mumbai', () => {
     const signResponse = await paymaster.sign(userOp, Mock_Valid_Until, Mock_Valid_After, entryPointAddress, paymasterAddress, bundlerUrl, relayerKey);
     expect(signResponse).toMatchObject<response>(signResponse);
   });
-  describe('pimlico function - success scenario', async () => {
+  test('pimlico function - success scenario', async () => {
     type response = {
       paymasterAndData: string,
       verificationGasLimit: any,
