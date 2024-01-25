@@ -34,4 +34,6 @@ export default {
       'src/server.ts',
       'src/plugins/config.ts',
   ],
+  collectCoverage: true,
+  coverageReporters: ["lcov", "text"]
 }
