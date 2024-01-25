@@ -89,9 +89,10 @@ const Dashboard = ({ logInType }) => {
   // Definitions
   const { user, signIn } = UserAuth();
   const [value, setValue] = React.useState(0);
-  const [chainId, setChainId] = useState("5");
+  const [chainId, setChainId] = useState(80001);
   const [signedIn, setSignedIn] = useState(false);
-  const [networksSupported] = useState(Object.keys(networks));
+  const [networksSupported, setNetworksSupported] = useState(Object.keys(networks));
+  const [supportedNetworks, setSupportedNetworks] = useState();
   const [isLoading, setIsLoading] = useState(false);
   const [paymasterBalance, setPaymasterBalance] = useState("0");
   const [useCustomPaymaster] = useState(false);
@@ -104,8 +105,9 @@ const Dashboard = ({ logInType }) => {
 
   // Functions
   const getPaymasterContract = (chainId) => {
+    if (!supportedNetworks) return null;
     const provider = new ethers.providers.JsonRpcProvider(
-      networks[chainId].rpcUrl,
+      supportedNetworks[chainId].rpcUrl,
       {
         name: "Connected Bundler",
         chainId: Number(chainId),
@@ -119,22 +121,56 @@ const Dashboard = ({ logInType }) => {
       );
     } else {
       return new ethers.Contract(
-        networks[chainId].paymasterAddress,
+        supportedNetworks[chainId].paymasterAddress,
         EtherspotPaymasterAbi,
         provider
       );
     }
   };
 
+  const fetchData = async (address) => {
+		try {
+			setIsLoading(true);
+			const data = await (
+				await fetch("http://localhost:5050/getSupportedNetworks", {
+					method: "POST",
+          body: JSON.stringify({WALLET_ADDRESS: address})
+				})
+			).json();
+      const supportedNetworksChainIds = [];
+      let supportedNetworks = {}
+
+      data?.map((value) => {
+        supportedNetworks[value.chainId] = {
+          ...networks[value.chainId],
+          chainId: value.chainId,
+          rpcUrl: value.bundler,
+          paymasterAddress: value.contracts.etherspotPaymasterAddress,
+        }
+        supportedNetworksChainIds.push(value.chainId)
+        return value;
+      });
+      setSupportedNetworks(supportedNetworks);
+      setNetworksSupported(supportedNetworksChainIds);
+			setIsLoading(false);
+		} catch (err) {
+			toast.error(
+				"Make sure that backend server is running since its unreachable"
+			);
+		}
+	};
+
   const getPaymasterBalance = async (chainId) => {
     try {
       if (!isLoading) {
         setIsLoading(true);
         const PaymasterContract = getPaymasterContract(chainId);
-        const balance = await PaymasterContract.getSponsorBalance(
-          user?.address
-        );
-        setPaymasterBalance(ethers.utils.formatEther(balance));
+        if (PaymasterContract) {
+          const balance = await PaymasterContract.getSponsorBalance(
+            user?.address
+          );
+          setPaymasterBalance(ethers.utils.formatEther(balance));
+        }
         setIsLoading(false);
       }
     } catch (err) {
@@ -147,11 +183,16 @@ const Dashboard = ({ logInType }) => {
     setIsLoading(false);
     if (user?.address) {
       setSignedIn(true);
-      getPaymasterBalance(chainId);
+      fetchData(user.address);
     }
     setIsLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isLoading]);
+
+  useEffect(() => {
+    getPaymasterBalance(chainId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supportedNetworks]);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -344,7 +385,7 @@ const Dashboard = ({ logInType }) => {
                 />
               </Tabs>
             </Box>
-            {networksSupported?.length ? (
+            {networksSupported?.length && supportedNetworks ? (
               <div className="justify-center flex mt-8">
                 <Tabs
                   value={chainId}
@@ -354,7 +395,7 @@ const Dashboard = ({ logInType }) => {
                   allowScrollButtonsMobile
                   indicatorColor="none"
                   textColor="primary"
-                  aria-label="scrollable force tabs example"
+                  aria-label="scrollable force tabs"
                   sx={[
                     {
                       ".Mui-selected": {
@@ -381,7 +422,7 @@ const Dashboard = ({ logInType }) => {
                   {networksSupported.map((network, index) => {
                     return (
                       <Tab
-                        icon={<img src={networks[network].networkImg} alt="" />}
+                        icon={<img src={networks[network].networkImg} width={48} height={48} alt="" />}
                         iconPosition="start"
                         label={networks[network].label}
                         value={network}

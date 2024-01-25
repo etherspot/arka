@@ -8,6 +8,7 @@ import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
+import { decode } from "../utils/crypto.js";
 
 export function getNetworkConfig(key: any, supportedNetworks: any) {
   if (supportedNetworks !== '') {
@@ -23,7 +24,14 @@ const routes: FastifyPluginAsync = async (server) => {
 
   const prefixSecretId = 'arka_';
 
-  const client = new SecretsManagerClient();
+  let client: SecretsManagerClient;
+
+  const unsafeMode = process.env.UNSAFE_MODE ?? false;
+
+  if (!unsafeMode) {
+    console.log('initialised aws secrets');
+    client = new SecretsManagerClient();
+  }
 
   const whitelistResponseSchema = {
     schema: {
@@ -61,13 +69,34 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = query['apiKey'] ?? body.params[4];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + api_key,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        let customPaymasters = [];
+        let privateKey = '';
+        let supportedNetworks;
+        if (!unsafeMode) {
+          const AWSresponse = await client.send(
+            new GetSecretValueCommand({
+              SecretId: prefixSecretId + api_key,
+            })
+          );
+          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          if (secrets['ERC20_PAYMASTERS']) {
+            const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
+            customPaymasters = JSON.parse(buffer.toString());
+          }
+          privateKey = secrets['PRIVATE_KEY'];
+          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+        } else {
+          const record: any = await getSQLdata(api_key);
+          console.log(record);
+          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          if (record['ERC20_PAYMASTERS']) {
+            const buffer = Buffer.from(record['ERC20_PAYMASTERS'], 'base64');
+            customPaymasters = JSON.parse(buffer.toString());
+          }
+          privateKey = decode(record['PRIVATE_KEY']);
+          supportedNetworks = record['SUPPORTED_NETWORKS'];
+        }
         if (
           !userOp ||
           !entryPoint ||
@@ -77,11 +106,7 @@ const routes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
-        let customPaymasters = [];
-        if (secrets['ERC20_PAYMASTERS']) {
-          const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
-          customPaymasters = JSON.parse(buffer.toString());
-        }
+        
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
@@ -90,7 +115,7 @@ const routes: FastifyPluginAsync = async (server) => {
           !(TOKEN_ADDRESS[chainId] && TOKEN_ADDRESS[chainId][gasToken]) &&
           !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
         ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
-        const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         let result;
         switch (mode.toLowerCase()) {
@@ -110,7 +135,7 @@ const routes: FastifyPluginAsync = async (server) => {
             }
             str += hex;
             str1 += hex1;
-            result = await paymaster.sign(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets['PRIVATE_KEY']);
+            result = await paymaster.sign(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey);
             break;
           }
           case 'erc20': {
@@ -147,13 +172,35 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = query['apiKey'] ?? body.params[3];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + api_key,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        let customPaymasters = [];
+        let privateKey = '';
+        let supportedNetworks;
+        if (!unsafeMode) {
+          const AWSresponse = await client.send(
+            new GetSecretValueCommand({
+              SecretId: prefixSecretId + api_key,
+            })
+          );
+          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          if (secrets['ERC20_PAYMASTERS']) {
+            const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
+            customPaymasters = JSON.parse(buffer.toString());
+          }
+          privateKey = secrets['PRIVATE_KEY'];
+          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+        } else {
+          const record: any = await getSQLdata(api_key);
+          console.log(record);
+          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          if (record['ERC20_PAYMASTERS']) {
+            const buffer = Buffer.from(record['ERC20_PAYMASTERS'], 'base64');
+            customPaymasters = JSON.parse(buffer.toString());
+          }
+          privateKey = decode(record['PRIVATE_KEY']);
+          supportedNetworks = record['SUPPORTED_NETWORKS'];
+        }
+        if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !entryPoint ||
           !gasToken ||
@@ -165,13 +212,8 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        let customPaymasters = [];
-        if (secrets['ERC20_PAYMASTERS']) {
-          const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
-          customPaymasters = JSON.parse(buffer.toString());
-        }
         let result;
         if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) result = { message: customPaymasters[chainId][gasToken] }
         else {
@@ -201,13 +243,26 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = query['apiKey'] ?? body.params[2];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + api_key,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        let privateKey = '';
+        let supportedNetworks;
+        if (!unsafeMode) {
+          const AWSresponse = await client.send(
+            new GetSecretValueCommand({
+              SecretId: prefixSecretId + api_key,
+            })
+          );
+          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = secrets['PRIVATE_KEY'];
+          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+        } else {
+          const record: any = await getSQLdata(api_key);
+          console.log(record);
+          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(record['PRIVATE_KEY']);
+          supportedNetworks = record['SUPPORTED_NETWORKS'];
+        }
+        if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !Array.isArray(address) ||
           address.length > 10 ||
@@ -219,11 +274,11 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const validAddresses = address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
-        const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets['PRIVATE_KEY']);
+        const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey);
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(ReturnCode.SUCCESS).send(result);
@@ -247,13 +302,26 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = query['apiKey'] ?? body.params[3];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + api_key,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        let privateKey = '';
+        let supportedNetworks;
+        if (!unsafeMode) {
+          const AWSresponse = await client.send(
+            new GetSecretValueCommand({
+              SecretId: prefixSecretId + api_key,
+            })
+          );
+          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = secrets['PRIVATE_KEY'];
+          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+        } else {
+          const record: any = await getSQLdata(api_key);
+          console.log(record);
+          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(record['PRIVATE_KEY']);
+          supportedNetworks = record['SUPPORTED_NETWORKS'];
+        }
+        if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !accountAddress ||
           !ethers.utils.isAddress(accountAddress) ||
@@ -265,9 +333,9 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        const response = await paymaster.checkWhitelistAddress(accountAddress, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets['PRIVATE_KEY']);
+        const response = await paymaster.checkWhitelistAddress(accountAddress, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey);
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result: { message: response === true ? 'Already added' : 'Not added yet' }, error: null })
         return reply.code(ReturnCode.SUCCESS).send({ message: response === true ? 'Already added' : 'Not added yet' });
@@ -292,13 +360,25 @@ const routes: FastifyPluginAsync = async (server) => {
         const api_key = query['apiKey'] ?? body.params[2];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + api_key,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        let privateKey = '';
+        let supportedNetworks;
+        if (!unsafeMode) {
+          const AWSresponse = await client.send(
+            new GetSecretValueCommand({
+              SecretId: prefixSecretId + api_key,
+            })
+          );
+          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = secrets['PRIVATE_KEY'];
+          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+        } else {
+          const record: any = await getSQLdata(api_key);
+          console.log(record);
+          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(record['PRIVATE_KEY']);
+          supportedNetworks = record['SUPPORTED_NETWORKS'];
+        }
         if (
           isNaN(amount) ||
           !chainId ||
@@ -309,9 +389,9 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId, secrets['SUPPORTED_NETWORKS'] ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, secrets['PRIVATE_KEY']);
+        return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey);
       } catch (err: any) {
         request.log.error(err);
         if (err.name == "ResourceNotFoundException")
@@ -320,6 +400,16 @@ const routes: FastifyPluginAsync = async (server) => {
       }
     }
   )
+
+  async function getSQLdata(apiKey: string) {
+    const result: any[] = await new Promise((resolve, reject) => {
+      server.sqlite.db.get("SELECT * FROM api_keys WHERE API_KEY = ?", [apiKey], (err: any, rows: any[]) => {
+        if (err) reject(err);
+        resolve(rows);
+      })
+    })
+    return result;
+  }
 };
 
 export default routes;

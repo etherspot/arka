@@ -77,7 +77,7 @@ const Dashboard = () => {
 
 	return (
 		<>
-    <Header className="align-center"/>
+    	<Header className="align-center" text="Arka Admin Config Settings"/>
 			<div className="mb-8">
 				<TextField
 					type="text"
