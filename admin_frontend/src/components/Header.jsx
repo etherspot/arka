@@ -11,12 +11,12 @@ const LogoText = styled.span`
     color: '#cfcfcf'
   `
 
-const Header = () => {
+const Header = ({ text }) => {
   return (
     <div className="flex justify-center w-full items-center mx-auto p-4">
       <div className="flex items-center text-cyan-400">
         <img src={EtherspotLogo} width={36} height={36} alt={'EtherspotLogo'} />
-        <LogoText>Arka Admin Config Settings</LogoText>
+        <LogoText>{text}</LogoText>
       </div>
     </div>
   );

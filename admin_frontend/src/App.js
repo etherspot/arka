@@ -5,6 +5,7 @@ import { Route, Routes } from 'react-router-dom';
 import { Toaster } from "react-hot-toast";
 import NotFound from './components/NotFound';
 import Dashboard from "./components/Dashboard";
+import ApiKeysPage from "./components/ApiKeys";
 
 // Css
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -26,6 +27,7 @@ function App() {
       <div className='mx-auto h-max' style={{ overflowY: 'auto', overflowX: 'auto' }}>
         <Routes>
           <Route path='/' element={<Dashboard />} />
+          <Route path='/apiKey' element={<ApiKeysPage />} />
           <Route path='*' element={<NotFound />} />
         </Routes>
     </div>

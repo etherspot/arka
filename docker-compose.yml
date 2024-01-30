@@ -15,6 +15,7 @@ services:
       - LOG_LEVEL=debug
       - API_HOST=0.0.0.0
       - API_PORT=5050
+      - UNSAFE_MODE=false
       - SUPPORTED_NETWORKS=
       - CRON_PRIVATE_KEY=
     build: 

@@ -6,17 +6,17 @@
     "@babel/plugin-proposal-private-property-in-object": "7.21.11",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "11.11.0",
-    "@mui/icons-material": "5.14.16",
-    "@mui/material": "5.14.18",
+    "@mui/icons-material": "5.14.18",
+    "@mui/material": "5.14.19",
     "bignumber.js": "9.1.2",
     "ethers": "5.7.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-hot-toast": "2.4.1",
-    "react-router-dom": "6.18.0",
+    "react-router-dom": "6.19.0",
     "react-select": "5.8.0",
     "styled-components": "6.1.1",
-    "yarn": "1.22.19"
+    "yarn": "1.22.20"
   },
   "scripts": {
     "start": "react-app-rewired start",

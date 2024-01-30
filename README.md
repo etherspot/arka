@@ -43,6 +43,30 @@ This would spin up three services at once which will be available on these urls:
 - http://localhost:3000 (Arka Frontend for EndUser)
 - http://localhost:5050 (Arka backend for Api service)
 
+## Local Configuration Changes
+
+There is an option to run the code locally without using AWS and only using local SQLite. These are the following steps to follow for using local SQLite database for apiKey and frontend to sync up
+
+* Edit the docker-compose.yml to change the UNSAFE_MODE variable under backend to be true
+* Run `docker compose up`
+* Once its running, go to `http://localhost:3002/apiKey` and add the necessary apiKey and its private Key to store it to the local sqlite. Please Note that the privateKey will be stored in encrypted format with the mac address as the secret string for encryption and decryption process
+* NOTE: The SUPPORTED_NETWORKS and ERC20_PAYMASTERS parameters require to input in base64 format and the original structure is described as follows
+- SUPPORTED_NETWORKS - the networks you wish to support. The structure should follow this file config.json which again needs to be converted into `base64` value
+- ERC20_PAYMASTERS - the custom deployed pimlico erc20 paymaster contract addresses. The structure should be as follows
+{
+    "10": {
+        "USDC": "0x99fB8d618F52a42049776899D5c07241D344a8A4",
+        "DAI": "0x3bE5380ec8cfe159f0525d16d11E9Baba516C40c",
+        "USDT": "0x9102889001d0901b3d9123651d492e52ce772C6b"
+    },
+    "420": {
+        "LINK": "0x53F48579309f8dBfFE4edE921C50200861C2482a"
+    },
+    "421613": {
+        "LINK": "0x0a6Aa1Bd30D6954cA525315287AdeeEcbb6eFB59"
+    }
+} which also needs to be converted into `base64` value
+
 
 ## 🔙 Arka Backend
 

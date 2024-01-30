@@ -5,5 +5,6 @@ export default {
     UNSUPPORTED_NETWORK_TOKEN: 'Unsupported network/token',
     EMPTY_BODY: 'Empty Body received',
     SOMETHING_WENT_WRONG: 'Something went wrong',
-    INVALID_MODE: 'Invalid mode selected'
+    INVALID_MODE: 'Invalid mode selected',
+    DUPLICATE_RECORD: 'Duplicate record found',
 }

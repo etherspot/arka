@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyPluginAsync } from "fastify";
 import { CronTime } from 'cron';
+import { ethers } from "ethers";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
+import { encode, decode } from "../utils/crypto.js";
+import SupportedNetworks from "../../config.json" assert { type: "json" };
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
   server.get("/getConfig", async function (request, reply) {
@@ -47,6 +50,113 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       server.cron.getJobByName('PriceUpdate')?.setTime(new CronTime(body.CRON_TIME));
       server.cron.getJobByName('PriceUpdate')?.start();
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully saved' });
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+    }
+  });
+
+  server.post('/saveKey', async function (request, reply) {
+    try {
+      console.log('body: ', JSON.parse(request.body as string));
+      const body: any = JSON.parse(request.body as string);
+      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!body.API_KEY || !body.PRIVATE_KEY)
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      const wallet = new ethers.Wallet(body.PRIVATE_KEY);
+      const publicAddress = await wallet.getAddress();
+      const result: any[] = await new Promise((resolve, reject) => {
+        server.sqlite.db.get("SELECT * FROM api_keys WHERE WALLET_ADDRESS=?", [publicAddress], (err: any, row: any) => {
+          if (err) reject(err);
+          resolve(row);
+        })
+      })
+      if (result && result.length > 0)
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.DUPLICATE_RECORD });
+      const privateKey = body.PRIVATE_KEY;
+      const hmac = encode(privateKey);
+      await new Promise((resolve, reject) => {
+        server.sqlite.db.run("INSERT INTO api_keys ( \
+          API_KEY, \
+          WALLET_ADDRESS, \
+          PRIVATE_KEY, \
+          SUPPORTED_NETWORKS, \
+          ERC20_PAYMASTERS) VALUES (?, ?, ?, ?, ?)", [
+          body.API_KEY,
+          publicAddress,
+          hmac,
+          body.SUPPORTED_NETWORKS,
+          body.ERC20_PAYMASTERS,
+        ], (err: any, row: any) => {
+          if (err) reject(err);
+          resolve(row);
+        });
+      });
+      return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully saved' });
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+    }
+  })
+
+  server.get('/getKeys', async function (request, reply) {
+    try {
+      const result: any[] = await new Promise((resolve, reject) => {
+        server.sqlite.db.all("SELECT * FROM api_keys", (err: any, rows: any[]) => {
+          if (err) reject(err);
+          resolve(rows);
+        })
+      })
+      result.map((value) => {
+        value.PRIVATE_KEY = decode(value.PRIVATE_KEY)
+      });
+      return reply.code(ReturnCode.SUCCESS).send(result);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+    }
+  })
+
+  server.post('/deleteKey', async function (request, reply) {
+    try {
+      const body: any = JSON.parse(request.body as string);
+      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!body.API_KEY)
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      await new Promise((resolve, reject) => {
+        server.sqlite.db.run("DELETE FROM api_keys WHERE API_KEY=?", [body.API_KEY], (err: any, rows: any) => {
+          if (err) reject(err);
+          resolve(rows);
+        })
+      })
+      return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully deleted' });
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+    }
+  })
+
+  server.post('/getSupportedNetworks', async (request, reply) => {
+    try {
+      const body: any = JSON.parse(request.body as string);
+      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!body.WALLET_ADDRESS) {
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      }
+      const result: any = await new Promise((resolve, reject) => {
+        server.sqlite.db.get("SELECT SUPPORTED_NETWORKS from api_keys WHERE WALLET_ADDRESS=?", [ethers.utils.getAddress(body.WALLET_ADDRESS)], (err: any, row: any) => {
+          if (err) reject(err);
+          resolve(row);
+        })
+      })
+      if (!result) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      let supportedNetworks;
+      if (result.SUPPORTED_NETWORKS == '') supportedNetworks = SupportedNetworks;
+      else {
+        const buffer = Buffer.from(result.SUPPORTED_NETWORKS, 'base64');
+        supportedNetworks = JSON.parse(buffer.toString())
+      }
+      return reply.code(ReturnCode.SUCCESS).send(supportedNetworks);
     } catch (err: any) {
       request.log.error(err);
       return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });

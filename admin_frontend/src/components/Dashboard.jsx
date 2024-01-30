@@ -42,7 +42,7 @@ const Dashboard = () => {
 			setLoading(false);
 		} catch (err) {
 			toast.error(
-				"Make sure that backend server is running since its unreachable"
+				"Check Backend Service for more info"
 			);
 		}
 	};
@@ -70,14 +70,14 @@ const Dashboard = () => {
 			setLoading(false);
 		} catch (err) {
 			toast.error(
-				"Make sure that backend server is running since its unreachable"
+				"Check Backend Service for more info"
 			);
 		}
 	};
 
 	return (
 		<>
-    <Header className="align-center"/>
+    	<Header className="align-center" text="Arka Admin Config Settings"/>
 			<div className="mb-8">
 				<TextField
 					type="text"
