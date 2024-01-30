@@ -47,7 +47,7 @@ const ApiKeysPage = () => {
 			setLoading(false);
 		} catch (err) {
 			toast.error(
-				"Make sure that backend server is running since its unreachable"
+				"Check Backend Service for more info"
 			);
 		}
 	};
@@ -86,7 +86,7 @@ const ApiKeysPage = () => {
 			}
 		} catch (err) {
 			toast.error(
-				"Make sure that backend server is running since its unreachable"
+				"Check Backend Service for more info"
 			);
 			setLoading(false);
 		}
@@ -111,7 +111,7 @@ const ApiKeysPage = () => {
 		} catch (err) {
 			console.log("err: ", err);
 			toast.error(
-				"Make sure that backend server is running since its unreachable"
+				"Check Backend Service for more info"
 			);
 			setLoading(false);
 		}

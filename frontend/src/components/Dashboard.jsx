@@ -155,7 +155,7 @@ const Dashboard = ({ logInType }) => {
 			setIsLoading(false);
 		} catch (err) {
 			toast.error(
-				"Make sure that backend server is running since its unreachable"
+				"Check Backend Service for more info"
 			);
 		}
 	};

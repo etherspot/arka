@@ -42,7 +42,7 @@ const Dashboard = () => {
 			setLoading(false);
 		} catch (err) {
 			toast.error(
-				"Make sure that backend server is running since its unreachable"
+				"Check Backend Service for more info"
 			);
 		}
 	};
@@ -70,7 +70,7 @@ const Dashboard = () => {
 			setLoading(false);
 		} catch (err) {
 			toast.error(
-				"Make sure that backend server is running since its unreachable"
+				"Check Backend Service for more info"
 			);
 		}
 	};
