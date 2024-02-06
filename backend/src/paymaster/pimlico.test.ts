@@ -34,41 +34,66 @@ describe('PimlicoPaymaster on Mumbai', () => {
   const provider = new providers.JsonRpcProvider(bundlerUrl);
   const pimlicoPaymaster = new PimlicoPaymaster(paymasterAddress, provider);
 
-  test('calculateTokenAmount function - valid details', async () => {
+  test('SMOKE: validate the calculateTokenAmount function with valid details', async () => {
     try {
-      await pimlicoPaymaster.calculateTokenAmount(userOp);
+      const calculateTokenAmountResponse = await pimlicoPaymaster.calculateTokenAmount(userOp);
+
+      try {
+        expect(calculateTokenAmountResponse).toHaveProperty('_hex');
+      } catch (e) {
+        fail("The _hex details is not displayed in the calculate token amount response")
+      }
+
     } catch (e) {
-      throw new Error('An error is displayed while performing calculateTokenAmount action.')
+      fail('An error is displayed while performing calculateTokenAmount action.')
     }
   });
 
-  test('generatePaymasterAndData function - valid details', async () => {
+  test('SMOKE: validate the generatePaymasterAndData function with valid details', async () => {
     try {
-      await pimlicoPaymaster.generatePaymasterAndData(userOp);
+      const generatePaymasterAndDataResponse = await pimlicoPaymaster.generatePaymasterAndData(userOp);
+      try {
+        expect(generatePaymasterAndDataResponse.length.toString()).toMatch('106');
+      } catch (e) {
+        fail("The paymaster and data details is not displayed in the generatePaymasterAndData response")
+      }
     } catch (e) {
-      throw new Error('An error is displayed while performing generatePaymasterAndData action.')
+      fail('An error is displayed while performing generatePaymasterAndData action.')
     }
   });
 
-  test('getERC20Paymaster function - valid details', async () => {
+  test('SMOKE: validate the getERC20Paymaster function with valid details', async () => {
     const erc20 = 'USDC';
     try {
-      await getERC20Paymaster(provider, erc20, entryPointAddress);
+      const getERC20PaymasterResponse =  await getERC20Paymaster(provider, erc20, entryPointAddress);
+      
+      try {
+        expect(getERC20PaymasterResponse).toHaveProperty('paymasterAddress');
+      } catch (e) {
+        fail("The paymasterAddress details is not displayed in the getERC20Paymaster response")
+      }
     } catch (e) {
-      throw new Error('An error is displayed while performing getERC20Paymaster action.')
+      fail('An error is displayed while performing getERC20Paymaster action.')
     }
   });
 
-  test('getERC20Paymaster function - valid details', async () => {
+  test('SMOKE: validate the getERC20Paymaster function with valid details and ERC20 paymaster build options', async () => {
     const erc20 = 'USDC';
     try {
-      await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
+      const getERC20PaymasterResponse = await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
+      
+      try {
+        expect(getERC20PaymasterResponse).toHaveProperty('paymasterAddress');
+      } catch (e) {
+        fail("The paymasterAddress details is not displayed in the getERC20Paymaster response")
+      }
+
     } catch (e) {
-      throw new Error('An error is displayed while performing getERC20Paymaster action.')
+      fail('An error is displayed while performing getERC20Paymaster action.')
     }
   });
 
-  test('getERC20Paymaster function - without owner', async () => {
+  test('REGRESSION: validate the getERC20Paymaster function with without owner', async () => {
     const erc20 = 'USDC';
     const ERC20PaymasterBuildOptions = {
       entrypoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -80,7 +105,7 @@ describe('PimlicoPaymaster on Mumbai', () => {
     }
     try {
       await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
-      throw new Error('The getERC20Paymaster function is worked, however the onwer is not available.')
+      fail('The getERC20Paymaster function is worked, however the onwer is not available.')
 
     } catch (e: any) {
       const actualMessage = 'Owner must be provided';
@@ -88,12 +113,12 @@ describe('PimlicoPaymaster on Mumbai', () => {
       if (expectedMessage.includes(actualMessage)) {
         console.log('The owner is not available while using the getERC20Paymaster function.')
       } else {
-        throw new Error('The respective validation is not displayed when owner not added while using the getERC20Paymaster function.')
+        fail('The respective validation is not displayed when owner not added while using the getERC20Paymaster function.')
       }
     }
   });
 
-  test('getERC20Paymaster function - without deployer', async () => {
+  test('REGRESSION: validate the getERC20Paymaster function with without deployer', async () => {
     const erc20 = 'USDC';
     const ERC20PaymasterBuildOptions = {
       entrypoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -105,7 +130,7 @@ describe('PimlicoPaymaster on Mumbai', () => {
     }
     try {
       await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
-      throw new Error('The getERC20Paymaster function is worked, however the deployer is not available.')
+      fail('The getERC20Paymaster function is worked, however the deployer is not available.')
 
     } catch (e: any) {
       const actualMessage = 'Deployer must be provided';
@@ -113,12 +138,12 @@ describe('PimlicoPaymaster on Mumbai', () => {
       if (expectedMessage.includes(actualMessage)) {
         console.log('The deployer is not available while using the getERC20Paymaster function.')
       } else {
-        throw new Error('The respective validation is not displayed when deployer not added while using the getERC20Paymaster function.')
+        fail('The respective validation is not displayed when deployer not added while using the getERC20Paymaster function.')
       }
     }
   });
 
-  test('getERC20Paymaster function - invalid native asset', async () => {
+  test('REGRESSION: validate the getERC20Paymaster function with invalid native asset', async () => {
     const erc20 = 'USDC';
     const ERC20PaymasterBuildOptions = {
       entrypoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -131,19 +156,19 @@ describe('PimlicoPaymaster on Mumbai', () => {
     }
     try {
       await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
-      throw new Error('The getERC20Paymaster function is worked, however the Native asset is invalid.')
+      fail('The getERC20Paymaster function is worked, however the Native asset is invalid.')
     } catch (e: any) {
       const actualMessage = 'Native asset not found - chainId';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The Native asset is invalid while using the getERC20Paymaster function.')
       } else {
-        throw new Error('The respective validation is not displayed when invalid Native asset added while using the getERC20Paymaster function.')
+        fail('The respective validation is not displayed when invalid Native asset added while using the getERC20Paymaster function.')
       }
     }
   });
 
-  test('getERC20Paymaster function - invalid native asset oracle', async () => {
+  test('REGRESSION: validate the getERC20Paymaster function with invalid native asset oracle', async () => {
     const erc20 = 'USDC';
     const ERC20PaymasterBuildOptions = {
       entrypoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -156,19 +181,19 @@ describe('PimlicoPaymaster on Mumbai', () => {
     }
     try {
       await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
-      throw new Error('The getERC20Paymaster function is worked, however the Native asset oracle is invalid.')
+      fail('The getERC20Paymaster function is worked, however the Native asset oracle is invalid.')
     } catch (e: any) {
       const actualMessage = 'Native asset oracle not found - chainId';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The Native asset oracle is invalid while using the getERC20Paymaster function.')
       } else {
-        throw new Error('The respective validation is not displayed when invalid Native asset oracle added while using the getERC20Paymaster function.')
+        fail('The respective validation is not displayed when invalid Native asset oracle added while using the getERC20Paymaster function.')
       }
     }
   });
 
-  test('getERC20Paymaster function - native asset oracle not deployed', async () => {
+  test('REGRESSION: validate the getERC20Paymaster function with native asset oracle not deployed', async () => {
     const randomAddress = ethers.Wallet.createRandom();
     const erc20 = 'USDC';
     const ERC20PaymasterBuildOptions = {
@@ -182,19 +207,19 @@ describe('PimlicoPaymaster on Mumbai', () => {
     }
     try {
       await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
-      throw new Error('The getERC20Paymaster function is worked, however the Native asset oracle is not deployed.')
+      fail('The getERC20Paymaster function is worked, however the Native asset oracle is not deployed.')
     } catch (e: any) {
       const actualMessage = 'Oracle for MATIC on chainId 80001 is not deployed';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The Native asset oracle is not deployed while using the getERC20Paymaster function.')
       } else {
-        throw new Error('The respective validation is not displayed when Native asset oracle not deployed while using the getERC20Paymaster function.')
+        fail('The respective validation is not displayed when Native asset oracle not deployed while using the getERC20Paymaster function.')
       }
     }
   });
 
-  test('getERC20Paymaster function - invalid token address', async () => {
+  test('REGRESSION: validate the getERC20Paymaster function with invalid token address', async () => {
     const erc20 = 'USDC';
     const ERC20PaymasterBuildOptions = {
       entrypoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -207,19 +232,19 @@ describe('PimlicoPaymaster on Mumbai', () => {
     }
     try {
       await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
-      throw new Error('The getERC20Paymaster function is worked, however the token address is invalid.')
+      fail('The getERC20Paymaster function is worked, however the token address is invalid.')
     } catch (e: any) {
       const actualMessage = 'Token USDC not supported on chainId';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The token address is invalid while using the getERC20Paymaster function.')
       } else {
-        throw new Error('The respective validation is not displayed when invalid token address added while using the getERC20Paymaster function.')
+        fail('The respective validation is not displayed when invalid token address added while using the getERC20Paymaster function.')
       }
     }
   });
 
-  test('getERC20Paymaster function - token address not deployed', async () => {
+  test('REGRESSION: validate the getERC20Paymaster function with token address not deployed', async () => {
     const randomAddress = ethers.Wallet.createRandom();
     const erc20 = 'USDC';
     const ERC20PaymasterBuildOptions = {
@@ -233,19 +258,19 @@ describe('PimlicoPaymaster on Mumbai', () => {
     }
     try {
       await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
-      throw new Error('The getERC20Paymaster function is worked, however the token address is not deployed.')
+      fail('The getERC20Paymaster function is worked, however the token address is not deployed.')
     } catch (e: any) {
       const actualMessage = 'Token USDC on 80001 is not deployed';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The token address is not deployed while using the getERC20Paymaster function.')
       } else {
-        throw new Error('The respective validation is not displayed when token address not deployed while using the getERC20Paymaster function.')
+        fail('The respective validation is not displayed when token address not deployed while using the getERC20Paymaster function.')
       }
     }
   });
 
-  test('getERC20Paymaster function - invalid token oracle', async () => {
+  test('REGRESSION: validate the getERC20Paymaster function with invalid token oracle', async () => {
     const erc20 = 'USDC';
     const ERC20PaymasterBuildOptions = {
       entrypoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -258,19 +283,19 @@ describe('PimlicoPaymaster on Mumbai', () => {
     }
     try {
       await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
-      throw new Error('The getERC20Paymaster function is worked, however the token oracle is invalid.')
+      fail('The getERC20Paymaster function is worked, however the token oracle is invalid.')
     } catch (e: any) {
       const actualMessage = 'Oracle for USDC not found, not supported on chainId';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The token oracle is invalid while using the getERC20Paymaster function.')
       } else {
-        throw new Error('The respective validation is not displayed when invalid token oracle added while using the getERC20Paymaster function.')
+        fail('The respective validation is not displayed when invalid token oracle added while using the getERC20Paymaster function.')
       }
     }
   });
 
-  test('getERC20Paymaster function - token oracle not deployed', async () => {
+  test('REGRESSION: validate the getERC20Paymaster function with token oracle not deployed', async () => {
     const randomAddress = ethers.Wallet.createRandom();
     const erc20 = 'USDC';
     const ERC20PaymasterBuildOptions = {
@@ -284,19 +309,19 @@ describe('PimlicoPaymaster on Mumbai', () => {
     }
     try {
       await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
-      throw new Error('The getERC20Paymaster function is worked, however the token oracle is not deployed.')
+      fail('The getERC20Paymaster function is worked, however the token oracle is not deployed.')
     } catch (e: any) {
       const actualMessage = 'Oracle for USDC on 80001 is not deployed';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The token oracle is not deployed while using the getERC20Paymaster function.')
       } else {
-        throw new Error('The respective validation is not displayed when token oracle not deployed while using the getERC20Paymaster function.')
+        fail('The respective validation is not displayed when token oracle not deployed while using the getERC20Paymaster function.')
       }
     }
   });
 
-  test('getERC20Paymaster function - ERC20Paymaster not deployed', async () => {
+  test('REGRESSION: validate the getERC20Paymaster function with ERC20Paymaster not deployed', async () => {
     const randomAddress = ethers.Wallet.createRandom();
     const erc20 = 'USDC';
     const ERC20PaymasterBuildOptions = {
@@ -310,14 +335,14 @@ describe('PimlicoPaymaster on Mumbai', () => {
     }
     try {
       await getERC20Paymaster(provider, erc20, entryPointAddress, ERC20PaymasterBuildOptions);
-      throw new Error('The getERC20Paymaster function is worked, however the ERC20Paymaster not deployed.')
+      fail('The getERC20Paymaster function is worked, however the ERC20Paymaster not deployed.')
     } catch (e: any) {
       const actualMessage = 'ERC20Paymaster not deployed at';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The ERC20Paymaster not deployed while using the getERC20Paymaster function.')
       } else {
-        throw new Error('The respective validation is not displayed when ERC20Paymaster not deployed while using the getERC20Paymaster function.')
+        fail('The respective validation is not displayed when ERC20Paymaster not deployed while using the getERC20Paymaster function.')
       }
     }
   });
