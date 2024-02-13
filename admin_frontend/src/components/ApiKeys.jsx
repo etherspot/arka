@@ -17,6 +17,7 @@ import IconButton from "@mui/material/IconButton";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
+import Checkbox from '@mui/material/Checkbox';
 import Header from "./Header";
 
 const ApiKeysPage = () => {
@@ -26,6 +27,8 @@ const ApiKeysPage = () => {
 	const [privateKey, setPrivateKey] = useState("");
 	const [supportedNetworks, setSupportedNetworks] = useState("");
 	const [customErc20Paymaster, setCustomErc20Paymaster] = useState("");
+	const [txnMode, setTxnMode] = useState(0);
+	const [noOfTxn, setNoOfTxn] = useState(10);
 	const [showPassword, setShowPassword] = useState(false);
 
 	const handleClickShowPassword = () => setShowPassword(!showPassword);
@@ -33,6 +36,10 @@ const ApiKeysPage = () => {
 	const handleMouseDownPassword = (event) => {
 		event.preventDefault();
 	};
+
+	const handleChange = (event) => {
+		setTxnMode(event.target.checked ? 1 : 0)
+  };
 
 	const fetchData = async () => {
 		try {
@@ -68,6 +75,9 @@ const ApiKeysPage = () => {
 				PRIVATE_KEY: privateKey,
 				SUPPORTED_NETWORKS: supportedNetworks ?? "",
 				ERC20_PAYMASTERS: customErc20Paymaster ?? "",
+				TRANSACTION_LIMIT: txnMode,
+        NO_OF_TRANSACTIONS_IN_A_MONTH: noOfTxn,
+        INDEXER_ENDPOINT: 'http://localhost:3003'
 			};
 			const data = await (
 				await fetch("http://localhost:5050/saveKey", {
@@ -129,6 +139,8 @@ const ApiKeysPage = () => {
 							<TableCell>Private Key</TableCell>
 							<TableCell>Supported Networks</TableCell>
 							<TableCell>Custom ERC20 Paymasters</TableCell>
+							<TableCell>Transaction Limit Mode</TableCell>
+							<TableCell>No of Transactions Allowed</TableCell>
 							<TableCell>Actions Available</TableCell>
 						</TableRow>
 					</TableHead>
@@ -212,6 +224,25 @@ const ApiKeysPage = () => {
 								/>
 							</TableCell>
 							<TableCell>
+								<Checkbox
+									checked={txnMode === 0? false : true}
+									onChange={handleChange}
+									inputProps={{ 'aria-label': 'controlled' }}
+								/>
+							</TableCell>
+							<TableCell>
+							<TextField
+									type="number"
+									variant="outlined"
+									color="secondary"
+									label="NO_OF_TRANSACTIONS_IN_A_MONTH"
+									onChange={(e) => setNoOfTxn(e.target.value)}
+									value={noOfTxn}
+									required
+									fullWidth
+								/>
+							</TableCell>
+							<TableCell>
 								<LoadingButton
 									loading={loading}
 									disabled={loading}
@@ -249,6 +280,8 @@ const ApiKeysPage = () => {
 								</TableCell>
 								<TableCell>{row.SUPPORTED_NETWORKS}</TableCell>
 								<TableCell>{row.ERC20_PAYMASTERS}</TableCell>
+								<TableCell>{row.TRANSACTION_LIMIT === 0 ? 'OFF': 'ON'}</TableCell>
+								<TableCell>{row.NO_OF_TRANSACTIONS_IN_A_MONTH}</TableCell>
 								<TableCell>
 									<LoadingButton
 										loading={loading}

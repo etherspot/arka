@@ -32,11 +32,10 @@ export class Paymaster {
     return paymasterAndData;
   }
 
-  async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
+  async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, bundlerRpc: string, signer: Wallet) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
-      const signer = new Wallet(relayerKey, provider)
       userOp.paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
       userOp.signature = '0x';
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);

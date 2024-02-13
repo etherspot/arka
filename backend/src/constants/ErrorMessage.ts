@@ -7,4 +7,6 @@ export default {
     SOMETHING_WENT_WRONG: 'Something went wrong',
     INVALID_MODE: 'Invalid mode selected',
     DUPLICATE_RECORD: 'Duplicate record found',
+    QUOTA_EXCEEDED: 'Quota exceeded for this month',
+    RECORD_NOT_FOUND: 'Api Key provided not found'
 }

@@ -58,7 +58,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.post('/saveKey', async function (request, reply) {
     try {
-      console.log('body: ', JSON.parse(request.body as string));
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.API_KEY || !body.PRIVATE_KEY)
@@ -81,12 +80,18 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           WALLET_ADDRESS, \
           PRIVATE_KEY, \
           SUPPORTED_NETWORKS, \
-          ERC20_PAYMASTERS) VALUES (?, ?, ?, ?, ?)", [
+          ERC20_PAYMASTERS, \
+          TRANSACTION_LIMIT, \
+          NO_OF_TRANSACTIONS_IN_A_MONTH, \
+          INDEXER_ENDPOINT) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
           body.API_KEY,
           publicAddress,
           hmac,
           body.SUPPORTED_NETWORKS,
           body.ERC20_PAYMASTERS,
+          body.TRANSACTION_LIMIT ?? 0,
+          body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
+          body.INDEXER_ENDPOINT ?? "http://localhost:3003"
         ], (err: any, row: any) => {
           if (err) reject(err);
           resolve(row);
@@ -96,6 +101,39 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
     } catch (err: any) {
       request.log.error(err);
       return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+    }
+  })
+
+  server.post('/updateKey', async function (request, reply) {
+    try {
+      const body: any = JSON.parse(request.body as string);
+      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!body.API_KEY)
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      const result: any[] = await new Promise((resolve, reject) => {
+        server.sqlite.db.get("SELECT * FROM api_keys WHERE API_KEY=?", [body.API_KEY], (err: any, row: any) => {
+          if (err) reject(err);
+          resolve(row);
+        })
+      });
+      if (!result || result.length == 0)
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
+      await new Promise((resolve, reject) => {
+        server.sqlite.db.run("UPDATE api_keys SET SUPPORTED_NETWORKS = ?, \
+          ERC20_PAYMASTERS = ?, \
+          TRANSACTION_LIMIT = ?, \
+          NO_OF_TRANSACTIONS_IN_A_MONTH = ?, \
+          INDEXER_ENDPOINT = ?, \
+          WHERE API_KEY = ?", [body.SUPPORTED_NETWORKS, body.ERC20_PAYMASTERS, body.TRANSACTION_LIMIT ?? 0, body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
+        body.INDEXER_ENDPOINT ?? "http://localhost:3003", body.API_KEY
+        ], (err: any, row: any) => {
+          if (err) reject(err);
+          resolve(row);
+        })
+      });
+      return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully updated' });
+    } catch (err) {
+      server.log.error(err);
     }
   })
 
