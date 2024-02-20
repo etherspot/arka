@@ -10,6 +10,7 @@ import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { decode } from "../utils/crypto.js";
+import { printRequest } from "../utils/common.js";
 
 export function getNetworkConfig(key: any, supportedNetworks: any) {
   if (supportedNetworks !== '') {
@@ -58,8 +59,7 @@ const routes: FastifyPluginAsync = async (server) => {
     "/",
     async function (request, reply) {
       try {
-        server.log.info(request.query, "query passed: ");
-        server.log.info(request.body, "body passed: ");
+        printRequest(request, server.log);
         const query: any = request.query;
         const body: any = request.body;
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
@@ -188,8 +188,7 @@ const routes: FastifyPluginAsync = async (server) => {
     whitelistResponseSchema,
     async function (request, reply) {
       try {
-        server.log.info(request.query, "query passed: ");
-        server.log.info(request.body, "body passed: ");
+        printRequest(request, server.log);
         const query: any = request.query;
         const body: any = request.body;
         const entryPoint = body.params[0];
@@ -264,8 +263,7 @@ const routes: FastifyPluginAsync = async (server) => {
     "/whitelist",
     async function (request, reply) {
       try {
-        server.log.info(request.query, "query passed: ");
-        server.log.info(request.body, "body passed: ");
+        printRequest(request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const address = body.params[0];
@@ -326,8 +324,7 @@ const routes: FastifyPluginAsync = async (server) => {
     "/checkWhitelist",
     async function (request, reply) {
       try {
-        server.log.info(request.query, "query passed: ");
-        server.log.info(request.body, "body passed: ");
+        printRequest(request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const accountAddress = body.params[0];
@@ -387,8 +384,7 @@ const routes: FastifyPluginAsync = async (server) => {
     whitelistResponseSchema,
     async function (request, reply) {
       try {
-        server.log.info(request.query, "query passed: ");
-        server.log.info(request.body, "body passed: ");
+        printRequest(request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const amount = body.params[0];
