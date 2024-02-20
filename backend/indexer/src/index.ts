@@ -7,8 +7,6 @@ ponder.on("EtherspotPaymaster:SponsorSuccessful", async ({ event, context }) => 
   const time = Number(BigNumber.from(block.timestamp).toString());
   const timestamp = new Date(time * 1000);
 
-  console.log('saved event: ', event);
-
   await db.PaymasterEvent.create({
     id: transaction.hash + log.logIndex,
     data: {
