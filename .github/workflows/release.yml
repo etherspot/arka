@@ -21,7 +21,7 @@ jobs:
         id: get_frontend_version
         run: echo version=$(node -p "require('./frontend/package.json').version") >> ${{ github.workspace }}/frontend_version.txt
       - name: Build and push frontend Docker image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
@@ -46,7 +46,7 @@ jobs:
         id: get_admin_frontend_version
         run: echo version=$(node -p "require('./admin_frontend/package.json').version") >> ${{ github.workspace }}/admin_frontend_version.txt
       - name: Build and push admin_frontend Docker image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: ./admin_frontend
           file: ./admin_frontend/Dockerfile
@@ -71,7 +71,7 @@ jobs:
         id: get_backend_version
         run: echo version=$(node -p "require('./backend/package.json').version") >> ${{ github.workspace }}/backend_version.txt
       - name: Build and push backend Docker image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: ./backend
           file: ./backend/Dockerfile
