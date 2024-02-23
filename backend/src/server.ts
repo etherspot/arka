@@ -101,14 +101,16 @@ const initializeServer = async (): Promise<void> => {
                       }
                     }
                     const customChainlinkDeploymentsbase64 = ConfigData.CUSTOM_CHAINLINK_DEPLOYED;
+                    const coingeckoIdsbase64 = ConfigData.COINGECKO_IDS;
                     if (customChainlinkDeploymentsbase64) {
                       try {
-                        const buffer = Buffer.from(customChainlinkDeploymentsbase64, 'base64');
+                        let buffer = Buffer.from(customChainlinkDeploymentsbase64, 'base64');
                         const customChainlinks = JSON.parse(buffer.toString());
+                        buffer = Buffer.from(coingeckoIdsbase64, 'base64');
+                        const coingeckoIds = JSON.parse(buffer.toString());
                         const customChainlinkDeployments = customChainlinks[chain] ?? [];
                         if (customChainlinkDeployments.includes(deployedPaymaster)) {
-                          const coingeckoIds = ConfigData.COINGECKO_IDS?.split(',') ?? [''];
-                          const coingeckoId = coingeckoIds[customChainlinkDeployments.indexOf(deployedPaymaster)]
+                          const coingeckoId = coingeckoIds[chain][customChainlinkDeployments.indexOf(deployedPaymaster)]
                           const response: any = await (await fetch(`${ConfigData.COINGECKO_API_URL}${coingeckoId}`)).json();
                           const price = ethers.utils.parseUnits(response[coingeckoId].usd.toString(), 8);
                           if (price) {

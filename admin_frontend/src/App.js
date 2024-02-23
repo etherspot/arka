@@ -10,6 +10,8 @@ import ApiKeysPage from "./components/ApiKeys";
 // Css
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { AuthContextProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const darkTheme = createTheme({
   palette: {
@@ -23,15 +25,20 @@ function App() {
     <>
       <Toaster />
       <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <div className='mx-auto h-max' style={{ overflowY: 'auto', overflowX: 'auto' }}>
-        <Routes>
-          <Route path='/' element={<Dashboard />} />
-          <Route path='/apiKey' element={<ApiKeysPage />} />
-          <Route path='*' element={<NotFound />} />
-        </Routes>
-    </div>
-    </ThemeProvider>
+        <CssBaseline />
+        <div className='mx-auto h-max' style={{ overflowY: 'auto', overflowX: 'auto' }}>
+          <AuthContextProvider>
+            <Routes>
+              <Route path='/' element={<Dashboard />} />
+              <Route path='/apiKey' element={
+                <ProtectedRoute>
+                  <ApiKeysPage />
+                </ProtectedRoute>} />
+              <Route path='*' element={<NotFound />} />
+            </Routes>
+          </AuthContextProvider>
+        </div>
+      </ThemeProvider>
     </>
   );
 

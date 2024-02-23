@@ -11,6 +11,8 @@
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "buffer": "^6.0.3",
+    "ethers": "^5.7.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
@@ -45,6 +47,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.16",
+    "json-loader": "^0.5.7",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1"
   }
