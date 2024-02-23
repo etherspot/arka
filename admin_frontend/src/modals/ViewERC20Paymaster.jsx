@@ -1,8 +1,4 @@
 import { useEffect, useState } from "react";
-import AddCircleIcon from "@mui/icons-material/AddCircle";
-import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
-import toast from "react-hot-toast";
-import { TextField } from "@mui/material";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -22,12 +18,6 @@ const style = {
 	p: 2,
 	flexDirection: "column",
 	overflowX: "scroll",
-};
-
-const defaultERC20Row = {
-	chainId: 0,
-	token: "",
-	erc20PaymasterAddress: "",
 };
 
 const ViewERC20PaymasterModal = ({ supportedNetworks, open, handleClose }) => {

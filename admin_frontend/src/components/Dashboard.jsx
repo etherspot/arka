@@ -55,7 +55,6 @@ const Dashboard = () => {
 	const [customChainlinkOpen, setCustomChainlinkOpen] = useState(false);
 
 	const handleOpen = () => {
-		console.log(coingeckoIds);
 		setOpen(true);
 	}
 	const handleClose = () => {
@@ -67,7 +66,6 @@ const Dashboard = () => {
 	};
 
 	const handleDpOpen = () => {
-		console.log(deployedPaymasters);
 		setDpOpen(true);
 	};
 
@@ -158,7 +156,7 @@ const Dashboard = () => {
     	<Header className="align-center" text="Arka Admin Global Config Settings"/>
 			<div className="mb-1">
 				<SettingsText>COINGECKO_IDS</SettingsText>
-				<Button sx={{marginLeft: '3rem'}} disabled={loading} onClick={handleOpen}>Edit</Button>
+				<Button sx={{marginLeft: '3rem'}} disabled={loading && signedIn} onClick={handleOpen}>Edit</Button>
 			</div>
 			<div className="mb-8">
 				<span style={InfoTextStyle}>COINGECKO_IDS are for Deployed paymasters with custom chainlink oracles. Can be left blank if you dont use custom erc20 paymasters deployed</span>
@@ -216,14 +214,14 @@ const Dashboard = () => {
 			</div>
 			<div className="mb-1">
 				<SettingsText>Custom Chainlink for CRONJOB</SettingsText>
-				<Button sx={{marginLeft: '3rem'}} disabled={loading} onClick={() => setCustomChainlinkOpen(true)}>Edit</Button>
+				<Button sx={{marginLeft: '3rem'}} disabled={loading && signedIn} onClick={() => setCustomChainlinkOpen(true)}>Edit</Button>
 			</div>
 			<div className="mb-8">
 				<span style={InfoTextStyle}>Custom deployments of erc20 paymaster supported by chainlink oracles tokens to update the oracle price manually in the above specified cron time</span>
 			</div>
 			<div className="mb-1">
 				<SettingsText>Deployed Paymasters for CRONJOB</SettingsText>
-				<Button sx={{marginLeft: '3rem'}} disabled={loading} onClick={handleDpOpen}>Edit</Button>
+				<Button sx={{marginLeft: '3rem'}} disabled={loading && signedIn} onClick={handleDpOpen}>Edit</Button>
 			</div>
 			<div className="mb-8">
 				<span style={InfoTextStyle}>Custom deployed erc20 paymasters to update the price feed on the paymaster</span>

@@ -14,7 +14,6 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import Modal from "@mui/material/Modal";
-import { useContext } from "react";
 
 const style = {
 	width: "100%",
@@ -85,7 +84,9 @@ const AddERC20PaymasterModal = ({
             });
             setTokens(tokens);
           }
+          return;
         });
+        return;
       });
     } else {
       toast.error("ChainId and Token Already present");
@@ -98,7 +99,7 @@ const AddERC20PaymasterModal = ({
     ];
     if (Object.keys(supportedNetworks[element.chainId]).length === 0) delete supportedNetworks[element.chainId];
     setSupportedNetworks(supportedNetworks);
-    setTokens(tokens.filter(token => element.chainId != token.chainId && element.token != token.token ));
+    setTokens(tokens.filter(token => element.chainId !== token.chainId && element.token !== token.token ));
     setERC20Row(defaultERC20Row);
   }
 

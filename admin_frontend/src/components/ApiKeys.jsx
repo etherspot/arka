@@ -87,8 +87,7 @@ const ApiKeysPage = () => {
 				})
 			).json();
 			console.log("data: ", data);
-			data.filter((element) => {
-				console.log(element.SUPPORTED_NETWORKS);
+			data.filter(element => {
 				if (element.SUPPORTED_NETWORKS) {
 					const buffer = Buffer.from(element.SUPPORTED_NETWORKS, "base64");
 					const SUPPORTED_NETWORKS = JSON.parse(buffer.toString());
@@ -99,6 +98,7 @@ const ApiKeysPage = () => {
 					const ERC20_PAYMASTERS = JSON.parse(buffer.toString());
 					element.ERC20_PAYMASTERS = ERC20_PAYMASTERS;
 				}
+				return element;
 			});
 			setKeys(data);
 			setLoading(false);
