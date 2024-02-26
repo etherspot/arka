@@ -62,6 +62,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.API_KEY || !body.PRIVATE_KEY)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.API_KEY))
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED })
       const wallet = new ethers.Wallet(body.PRIVATE_KEY);
       const publicAddress = await wallet.getAddress();
       const result: any[] = await new Promise((resolve, reject) => {

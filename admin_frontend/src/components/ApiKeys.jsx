@@ -68,6 +68,10 @@ const ApiKeysPage = () => {
 			toast.error("Please input both API_KEY & PRIVATE_KEY field");
 			return;
 		}
+		if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(apiKey)) {
+			toast.error("Invalid Validation: API_KEY format. Please see the docs for more info");
+			return;
+		}
 		try {
 			setLoading(true);
 			const requestData = {
