@@ -9,8 +9,11 @@ import Header from "./Header";
 import Button from "@mui/material/Button";
 // context
 import { UserAuth } from "../context/AuthContext";
+
 import CoingeckoIdModal from "../modals/CoingeckoId";
 import DeployedPaymastersModal from "../modals/DeployedPaymasters";
+
+import { ENDPOINTS, SERVER_URL } from "../constants/constants";
 
 const SettingsText = styled.span`
     margin: '3px 0 4px 8px', 
@@ -62,7 +65,6 @@ const Dashboard = () => {
 		setDpOpen(false);
 		setCustomChainlinkOpen(false);
 		setDisableSave(false);
-		console.log(coingeckoIds, deployedPaymasters, customChainlink)
 	};
 
 	const handleDpOpen = () => {
@@ -74,18 +76,16 @@ const Dashboard = () => {
 			try {
 				setLoading(true);
 				const data = await (
-					await fetch("http://localhost:5050/getConfig", {
+					await fetch(`${SERVER_URL}${ENDPOINTS['getConfig']}`, {
 						method: "GET",
 					})
 				).json();
-				console.log("data: ", data);
 				setConfig(data);
 				setEdittedConfig(data);
 				let buffer;
 				if (data.COINGECKO_IDS && data.COINGECKO_IDS !== "") {
 					buffer = Buffer.from(data.COINGECKO_IDS, 'base64');
 					const coingeckoIds = JSON.parse(buffer.toString())
-					console.log(coingeckoIds)
 					setCoingeckoIds(coingeckoIds);
 				}
 				if (data.DEPLOYED_ERC20_PAYMASTERS && data.DEPLOYED_ERC20_PAYMASTERS !== "") {
@@ -128,9 +128,8 @@ const Dashboard = () => {
 			edittedConfig.COINGECKO_IDS = Buffer.from(JSON.stringify(coingeckoIds)).toString("base64");
 			edittedConfig.DEPLOYED_ERC20_PAYMASTERS = Buffer.from(JSON.stringify(deployedPaymasters)).toString("base64");
 			edittedConfig.CUSTOM_CHAINLINK_DEPLOYED = Buffer.from(JSON.stringify(customChainlink)).toString("base64");
-			console.log("edittedConfig: ", edittedConfig);
 			const data = await (
-				await fetch("http://localhost:5050/saveConfig", {
+				await fetch(`${SERVER_URL}${ENDPOINTS['saveConfig']}`, {
 					method: "POST",
 					body: JSON.stringify(edittedConfig),
 				})

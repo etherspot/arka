@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Buffer } from "buffer";
+import toast from "react-hot-toast";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
-import toast from "react-hot-toast";
 import { TextField } from "@mui/material";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -16,12 +16,16 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import IconButton from "@mui/material/IconButton";
 import Button from "@mui/material/Button";
+
 import Header from "./Header";
+
 import AddSupportedNetworksModal from "../modals/AddSupportedNetworksModal";
 import ViewSupportedNetworksModal from "../modals/ViewSupportedNetworksModal";
-import defaultSupportedNetworks from "../constants/defaultNetworks";
 import AddERC20PaymasterModal from "../modals/AddERC20Paymaster";
 import ViewERC20PaymasterModal from "../modals/ViewERC20Paymaster";
+
+import defaultSupportedNetworks from "../constants/defaultNetworks";
+import { ENDPOINTS, SERVER_URL } from "../constants/constants";
 
 const ApiKeysPage = () => {
 	const [keys, setKeys] = useState([]);
@@ -82,11 +86,10 @@ const ApiKeysPage = () => {
 		try {
 			setLoading(true);
 			const data = await (
-				await fetch("http://localhost:5050/getKeys", {
+				await fetch(`${SERVER_URL}${ENDPOINTS['getKeys']}`, {
 					method: "GET",
 				})
 			).json();
-			console.log("data: ", data);
 			data.filter(element => {
 				if (element.SUPPORTED_NETWORKS) {
 					const buffer = Buffer.from(element.SUPPORTED_NETWORKS, "base64");
@@ -103,7 +106,6 @@ const ApiKeysPage = () => {
 			setKeys(data);
 			setLoading(false);
 		} catch (err) {
-			console.log(err);
 			toast.error("Check Backend Service for more info");
 		}
 	};
@@ -113,14 +115,12 @@ const ApiKeysPage = () => {
 	}, []);
 
 	const handleSubmit = async () => {
-		console.log(supportedNetworks);
 		if (apiKey === "" || privateKey === "") {
 			toast.error("Please input both API_KEY & PRIVATE_KEY field");
 			return;
 		}
 		try {
 			setLoading(true);
-			console.log(customErc20Paymaster);
 			let base64Erc20 = "";
 			if (customErc20Paymaster != {})
 				base64Erc20 = Buffer.from(
@@ -134,9 +134,8 @@ const ApiKeysPage = () => {
 					"",
 				ERC20_PAYMASTERS: base64Erc20 ?? "",
 			};
-			console.log("requestData: ", requestData);
 			const data = await (
-				await fetch("http://localhost:5050/saveKey", {
+				await fetch(`${SERVER_URL}${ENDPOINTS['saveKey']}`, {
 					method: "POST",
 					body: JSON.stringify(requestData),
 				})
@@ -151,7 +150,6 @@ const ApiKeysPage = () => {
 				toast.error("Could not save");
 			}
 		} catch (err) {
-			console.log(err);
 			toast.error("Check Backend Service for more info");
 			setLoading(false);
 		}
@@ -161,7 +159,7 @@ const ApiKeysPage = () => {
 		try {
 			setLoading(true);
 			const data = await (
-				await fetch("http://localhost:5050/deleteKey", {
+				await fetch(`${SERVER_URL}${ENDPOINTS['deleteKey']}`, {
 					method: "POST",
 					body: JSON.stringify({ API_KEY: key }),
 				})
@@ -174,7 +172,6 @@ const ApiKeysPage = () => {
 				toast.error("Could not save");
 			}
 		} catch (err) {
-			console.log("err: ", err);
 			toast.error("Check Backend Service for more info");
 			setLoading(false);
 		}

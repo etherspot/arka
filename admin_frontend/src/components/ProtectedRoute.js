@@ -8,7 +8,6 @@ const ProtectedRoute = ({ children }) => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    console.log(user);
     if (!user) {
       toast.error('Please connect to wallet to verify')
       navigate('/')

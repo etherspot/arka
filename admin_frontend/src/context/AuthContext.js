@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from 'react';
 import toast from "react-hot-toast";
+import { ENDPOINTS, SERVER_URL } from '../constants/constants';
 
 const UserContext = createContext();
 
@@ -10,7 +11,6 @@ export const AuthContextProvider = ({ children }) => {
   const initializeProvider = async () => {
     const res = await window.ethereum
       .request({ method: "eth_requestAccounts" });
-    console.log(res[0]);
     return res[0];
   }
 
@@ -34,9 +34,8 @@ export const AuthContextProvider = ({ children }) => {
       if (!window.ethereum) return null;
       setIsSigningIn(true);
       const address = await initializeProvider();
-      // const balance = await getBalance(address);
       const data = await (
-				await fetch("http://localhost:5050/adminLogin", {
+				await fetch(`${SERVER_URL}${ENDPOINTS['adminLogin']}`, {
 					method: "POST",
 					body: JSON.stringify({WALLET_ADDRESS: address}),
 				})
@@ -51,8 +50,9 @@ export const AuthContextProvider = ({ children }) => {
       setIsSigningIn(false);
       return null;
     } catch (error) {
-      console.error('error', error);
       setIsSigningIn(false);
+      setUser(null);
+      return null;
     }
   };
 
