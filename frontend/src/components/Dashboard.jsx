@@ -186,8 +186,7 @@ const Dashboard = ({ logInType }) => {
       fetchData(user.address);
     }
     setIsLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isLoading]);
+  }, [user]);
 
   useEffect(() => {
     getPaymasterBalance(chainId)

@@ -121,6 +121,29 @@ export class Paymaster {
     }
   }
 
+  async removeWhitelistAddress(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      const signer = new Wallet(relayerKey, provider)
+      for (let i = 0; i < address.length; i++) {
+        const isAdded = await paymasterContract.check(signer.address, address[i]);
+        if (!isAdded) {
+          throw new Error(`${address[i]} is not whitelisted`)
+        }
+      }
+      const encodedData = paymasterContract.interface.encodeFunctionData('removeBatchToWhitelist', [address]);
+      const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData });
+      await tx.wait();
+      return {
+        message: `Successfully removed whitelisted addresses with transaction Hash ${tx.hash}`
+      };
+    } catch (err: any) {
+      if (err.message.includes('is not whitelisted')) throw new Error(err);
+      throw new Error('Error while submitting transaction');
+    }
+  }
+
   async checkWhitelistAddress(accountAddress: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
