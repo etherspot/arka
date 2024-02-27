@@ -9,5 +9,5 @@ export default {
     DUPLICATE_RECORD: 'Duplicate record found',
     QUOTA_EXCEEDED: 'Quota exceeded for this month',
     RECORD_NOT_FOUND: 'Api Key provided not found',
-    API_KEY_VALIDATION_FAILED: 'Api Key is not in the right format as described',
+    API_KEY_VALIDATION_FAILED: 'Api Key is not in the right format as described in readme file',
 }

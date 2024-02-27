@@ -97,7 +97,7 @@ const routes: FastifyPluginAsync = async (server) => {
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
           noOfTxns = secrets['NO_OF_TRANSACTIONS_IN_A_MONTH'] ?? 10;
           txnMode = secrets['TRANSACTION_LIMIT'] ?? 0;
-          indexerEndpoint = secrets['INDEXER_ENDPOINT'] ?? "http://localhost:3003";
+          indexerEndpoint = secrets['INDEXER_ENDPOINT'] ?? process.env.DEFAULT_INDEXER_ENDPOINT;
         } else {
           const record: any = await getSQLdata(api_key);
           if (!record) {
@@ -112,7 +112,7 @@ const routes: FastifyPluginAsync = async (server) => {
           supportedNetworks = record['SUPPORTED_NETWORKS'];
           noOfTxns = record['NO_OF_TRANSACTIONS_IN_A_MONTH'];
           txnMode = record['TRANSACTION_LIMIT'];
-          indexerEndpoint = record['INDEXER_ENDPOINT'] ?? "http://localhost:3003";
+          indexerEndpoint = record['INDEXER_ENDPOINT'] ?? process.env.DEFAULT_INDEXER_ENDPOINT;
         }
         if (
           !userOp ||
@@ -142,7 +142,8 @@ const routes: FastifyPluginAsync = async (server) => {
             const provider = new providers.JsonRpcProvider(networkConfig.bundler);
             const signer = new Wallet(privateKey, provider)
             if (txnMode) {
-              const IndexerData = await getIndexerData(await signer.getAddress(), userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
+              const signerAddress = await signer.getAddress();
+              const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
               if (IndexerData.length >= noOfTxns) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.QUOTA_EXCEEDED})
             }
             const validUntil = context.validUntil ? new Date(context.validUntil) : date;

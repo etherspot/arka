@@ -27,6 +27,8 @@ services:
       - "5050:5050"
 
   admin_frontend:
+    environment:
+      - REACT_APP_INDEXER_ENDPOINT=http://localhost:3003
     build:
       context: ./admin_frontend
       dockerfile: Dockerfile

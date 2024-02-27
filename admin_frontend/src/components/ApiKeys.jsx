@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
-import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
+import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
 import toast from "react-hot-toast";
 import { TextField } from "@mui/material";
 import Table from "@mui/material/Table";
@@ -17,7 +17,7 @@ import IconButton from "@mui/material/IconButton";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-import Checkbox from '@mui/material/Checkbox';
+import Checkbox from "@mui/material/Checkbox";
 import Header from "./Header";
 
 const ApiKeysPage = () => {
@@ -38,8 +38,8 @@ const ApiKeysPage = () => {
 	};
 
 	const handleChange = (event) => {
-		setTxnMode(event.target.checked ? 1 : 0)
-  };
+		setTxnMode(event.target.checked ? 1 : 0);
+	};
 
 	const fetchData = async () => {
 		try {
@@ -49,13 +49,10 @@ const ApiKeysPage = () => {
 					method: "GET",
 				})
 			).json();
-			console.log("data: ", data);
 			setKeys(data);
 			setLoading(false);
 		} catch (err) {
-			toast.error(
-				"Check Backend Service for more info"
-			);
+			toast.error("Check Backend Service for more info");
 		}
 	};
 
@@ -68,8 +65,14 @@ const ApiKeysPage = () => {
 			toast.error("Please input both API_KEY & PRIVATE_KEY field");
 			return;
 		}
-		if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(apiKey)) {
-			toast.error("Invalid Validation: API_KEY format. Please see the docs for more info");
+		if (
+			!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(
+				apiKey
+			)
+		) {
+			toast.error(
+				"Invalid Validation: API_KEY format. Please see the docs for more info"
+			);
 			return;
 		}
 		try {
@@ -80,16 +83,16 @@ const ApiKeysPage = () => {
 				SUPPORTED_NETWORKS: supportedNetworks ?? "",
 				ERC20_PAYMASTERS: customErc20Paymaster ?? "",
 				TRANSACTION_LIMIT: txnMode,
-        NO_OF_TRANSACTIONS_IN_A_MONTH: noOfTxn,
-        INDEXER_ENDPOINT: 'http://localhost:3003'
+				NO_OF_TRANSACTIONS_IN_A_MONTH: noOfTxn,
+				INDEXER_ENDPOINT:
+					process.env.REACT_APP_INDEXER_ENDPOINT ?? "http://localhost:3003",
 			};
-			const data = await (
-				await fetch("http://localhost:5050/saveKey", {
-					method: "POST",
-					body: JSON.stringify(requestData),
-				})
-			).json();
-			if (!data.error) {
+			const data = await fetch("http://localhost:5050/saveKey", {
+				method: "POST",
+				body: JSON.stringify(requestData),
+			});
+			const dataJson = await data.json();
+			if (!dataJson.error) {
 				toast.success("Saved Successfully");
 				setApiKey("");
 				setPrivateKey("");
@@ -99,9 +102,7 @@ const ApiKeysPage = () => {
 				toast.error("Could not save");
 			}
 		} catch (err) {
-			toast.error(
-				"Check Backend Service for more info"
-			);
+			toast.error("Check Backend Service for more info");
 			setLoading(false);
 		}
 	};
@@ -124,9 +125,7 @@ const ApiKeysPage = () => {
 			}
 		} catch (err) {
 			console.log("err: ", err);
-			toast.error(
-				"Check Backend Service for more info"
-			);
+			toast.error("Check Backend Service for more info");
 			setLoading(false);
 		}
 	};
@@ -229,13 +228,13 @@ const ApiKeysPage = () => {
 							</TableCell>
 							<TableCell>
 								<Checkbox
-									checked={txnMode === 0? false : true}
+									checked={txnMode === 0 ? false : true}
 									onChange={handleChange}
-									inputProps={{ 'aria-label': 'controlled' }}
+									inputProps={{ "aria-label": "controlled" }}
 								/>
 							</TableCell>
 							<TableCell>
-							<TextField
+								<TextField
 									type="number"
 									variant="outlined"
 									color="secondary"
@@ -284,7 +283,9 @@ const ApiKeysPage = () => {
 								</TableCell>
 								<TableCell>{row.SUPPORTED_NETWORKS}</TableCell>
 								<TableCell>{row.ERC20_PAYMASTERS}</TableCell>
-								<TableCell>{row.TRANSACTION_LIMIT === 0 ? 'OFF': 'ON'}</TableCell>
+								<TableCell>
+									{row.TRANSACTION_LIMIT === 0 ? "OFF" : "ON"}
+								</TableCell>
 								<TableCell>{row.NO_OF_TRANSACTIONS_IN_A_MONTH}</TableCell>
 								<TableCell>
 									<LoadingButton

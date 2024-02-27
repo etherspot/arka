@@ -134,8 +134,9 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         })
       });
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully updated' });
-    } catch (err) {
+    } catch (err: any) {
       server.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
     }
   })
 

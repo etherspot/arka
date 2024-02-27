@@ -1,26 +1,26 @@
 {
-"name": "indexer",
-"version": "0.0.1",
-"private": true,
-"type": "module",
-"scripts": {
-  "dev": "ponder dev --port 3003",
-  "start": "ponder start --port 3003",
-  "codegen": "ponder codegen",
-  "lint": "eslint .",
-  "typecheck": "tsc"
-},
-"dependencies": {
-  "@ponder/core": "0.2.2",
-  "viem": "1.19.3"
-},
-"devDependencies": {
-  "@types/node": "20.9.0",
-  "eslint": "8.53.0",
-  "eslint-config-ponder": "0.2.2",
-  "typescript": "5.2.2"
-},
-"engines": {
-  "node": ">=18.14"
+  "name": "indexer",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ponder dev --port 3003",
+    "start": "ponder start --port 3003",
+    "codegen": "ponder codegen",
+    "lint": "eslint .",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@ponder/core": "0.2.2",
+    "viem": "1.19.3"
+  },
+  "devDependencies": {
+    "@types/node": "20.9.0",
+    "eslint": "8.53.0",
+    "eslint-config-ponder": "0.2.2",
+    "typescript": "5.2.2"
+  },
+  "engines": {
+    "node": ">=18.14"
+  }
 }
-} 
