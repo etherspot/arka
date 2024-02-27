@@ -58,7 +58,7 @@ export class Paymaster {
     }
   }
 
-  async pimlico(userOp: any, gasToken: string, bundlerRpc: string, entryPoint: string, customPaymasterAddress: string) {
+  async pimlico(userOp: any, gasToken: string, bundlerRpc: string, entryPoint: string, customPaymasterAddress: string | null) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       let erc20Paymaster;
