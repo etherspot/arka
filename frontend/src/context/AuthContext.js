@@ -16,7 +16,7 @@ export const AuthContextProvider = ({ children }) => {
           params: [address, "latest"]
         })
       return balance;
-    } catch(err) {
+    } catch (err) {
       console.error('Error on retrieving balance', err);
       return 0;
     }

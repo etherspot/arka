@@ -135,3 +135,7 @@ export const networks = {
     blockExplorerLink: 'https://snowtrace.io/tx/'
   }
 }
+
+export const ENDPOINTS = {
+  'getSupportedNetworks': '/getSupportedNetworks'
+}

@@ -30,6 +30,7 @@ import EtherspotLogo from "../assets/internal-36-etherspot@2x.png";
 // constants
 import { networks } from "../utils/constant";
 import EtherspotPaymasterAbi from "../abi/EtherspotPaymasterAbi.json";
+import { ENDPOINTS } from "../constants/constants";
 
 const ITEM_HEIGHT = 48;
 const MenuProps = {
@@ -137,7 +138,7 @@ const Dashboard = ({ logInType }) => {
 		try {
 			setIsLoading(true);
 			const data = await (
-				await fetch("http://localhost:5050/getSupportedNetworks", {
+				await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['getSupportedNetworks']}`, {
 					method: "POST",
 					body: JSON.stringify({ WALLET_ADDRESS: address }),
 				})
@@ -308,7 +309,7 @@ const Dashboard = ({ logInType }) => {
 			setIsLoading(false);
 		} catch (e) {
 			console.error(e.message);
-			toast.error("Something went wrong on MetaMask");
+			toast.error("Something went wrong while submitting. Please check your injected wallet");
 			setIsLoading(false);
 		}
 	};
@@ -364,7 +365,7 @@ const Dashboard = ({ logInType }) => {
 			setIsLoading(false);
 		} catch (err) {
 			console.error(err);
-			toast.error("Something went wrong on MetaMask");
+			toast.error("Something went wrong while submitting. Please check your injected wallet");
 			setIsLoading(false);
 		}
 	};
