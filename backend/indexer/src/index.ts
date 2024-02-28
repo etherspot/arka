@@ -21,5 +21,6 @@ ponder.on("EtherspotPaymaster:SponsorSuccessful", async ({ event, context }) => 
     })
   } catch (err) {
     // caught err
+    console.log(err);
   }
 });

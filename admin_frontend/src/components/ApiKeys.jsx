@@ -19,6 +19,7 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Checkbox from "@mui/material/Checkbox";
 import Header from "./Header";
+import { ENDPOINTS } from "../constants/common";
 
 const ApiKeysPage = () => {
 	const [keys, setKeys] = useState([]);
@@ -45,14 +46,17 @@ const ApiKeysPage = () => {
 		try {
 			setLoading(true);
 			const data = await (
-				await fetch("http://localhost:5050/getKeys", {
+				await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['getKeys']}`, {
 					method: "GET",
 				})
 			).json();
 			setKeys(data);
 			setLoading(false);
 		} catch (err) {
-			toast.error("Check Backend Service for more info");
+			if (err.message.includes("Falied to fetch"))
+				toast.error("Failed to connect. Please make sure that the backend is running")
+			else
+				toast.error(err.message)
 		}
 	};
 
@@ -87,7 +91,7 @@ const ApiKeysPage = () => {
 				INDEXER_ENDPOINT:
 					process.env.REACT_APP_INDEXER_ENDPOINT ?? "http://localhost:3003",
 			};
-			const data = await fetch("http://localhost:5050/saveKey", {
+			const data = await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['saveKey']}`, {
 				method: "POST",
 				body: JSON.stringify(requestData),
 			});
@@ -102,7 +106,10 @@ const ApiKeysPage = () => {
 				toast.error("Could not save");
 			}
 		} catch (err) {
-			toast.error("Check Backend Service for more info");
+			if (err.message.includes("Falied to fetch"))
+				toast.error("Failed to connect. Please make sure that the backend is running")
+			else
+				toast.error(err.message)
 			setLoading(false);
 		}
 	};
@@ -111,7 +118,7 @@ const ApiKeysPage = () => {
 		try {
 			setLoading(true);
 			const data = await (
-				await fetch("http://localhost:5050/deleteKey", {
+				await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['deleteKey']}`, {
 					method: "POST",
 					body: JSON.stringify({ API_KEY: key }),
 				})
@@ -124,8 +131,10 @@ const ApiKeysPage = () => {
 				toast.error("Could not save");
 			}
 		} catch (err) {
-			console.log("err: ", err);
-			toast.error("Check Backend Service for more info");
+			if (err.message.includes("Falied to fetch"))
+				toast.error("Failed to connect. Please make sure that the backend is running")
+			else
+				toast.error(err.message)
 			setLoading(false);
 		}
 	};

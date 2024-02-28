@@ -124,7 +124,7 @@ const routes: FastifyPluginAsync = async (server) => {
           server.log.info("Incomplete body data provided")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
-        
+
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
@@ -144,7 +144,7 @@ const routes: FastifyPluginAsync = async (server) => {
             if (txnMode) {
               const signerAddress = await signer.getAddress();
               const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
-              if (IndexerData.length >= noOfTxns) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.QUOTA_EXCEEDED})
+              if (IndexerData.length >= noOfTxns) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.QUOTA_EXCEEDED })
             }
             const validUntil = context.validUntil ? new Date(context.validUntil) : date;
             const validAfter = context.validAfter ? new Date(context.validAfter) : date;
@@ -286,7 +286,6 @@ const routes: FastifyPluginAsync = async (server) => {
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
           const record: any = await getSQLdata(api_key);
-          console.log(record);
           if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(record['PRIVATE_KEY']);
           supportedNetworks = record['SUPPORTED_NETWORKS'];
@@ -347,7 +346,6 @@ const routes: FastifyPluginAsync = async (server) => {
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
           const record: any = await getSQLdata(api_key);
-          console.log(record);
           if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(record['PRIVATE_KEY']);
           supportedNetworks = record['SUPPORTED_NETWORKS'];
@@ -407,7 +405,6 @@ const routes: FastifyPluginAsync = async (server) => {
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
           const record: any = await getSQLdata(api_key);
-          console.log(record);
           if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(record['PRIVATE_KEY']);
           supportedNetworks = record['SUPPORTED_NETWORKS'];
@@ -435,13 +432,18 @@ const routes: FastifyPluginAsync = async (server) => {
   )
 
   async function getSQLdata(apiKey: string) {
-    const result: any[] = await new Promise((resolve, reject) => {
-      server.sqlite.db.get("SELECT * FROM api_keys WHERE API_KEY = ?", [apiKey], (err: any, rows: any[]) => {
-        if (err) reject(err);
-        resolve(rows);
+    try {
+      const result: any[] = await new Promise((resolve, reject) => {
+        server.sqlite.db.get("SELECT * FROM api_keys WHERE API_KEY = ?", [apiKey], (err: any, rows: any[]) => {
+          if (err) reject(err);
+          resolve(rows);
+        })
       })
-    })
-    return result;
+      return result;
+    } catch (err) {
+      server.log.error(err);
+      return null;
+    }
   }
 
   async function getIndexerData(sponsor: string, sender: string, month: number, year: number, noOfTxns: number, endpoint: string): Promise<any[]> {
