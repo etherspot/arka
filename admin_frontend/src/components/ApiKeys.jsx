@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
 import toast from "react-hot-toast";
+// components
 import { TextField } from "@mui/material";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -18,7 +19,10 @@ import OutlinedInput from "@mui/material/OutlinedInput";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Checkbox from "@mui/material/Checkbox";
+
 import Header from "./Header";
+
+// constants
 import { ENDPOINTS } from "../constants/common";
 
 const ApiKeysPage = () => {
@@ -239,7 +243,6 @@ const ApiKeysPage = () => {
 								<Checkbox
 									checked={txnMode === 0 ? false : true}
 									onChange={handleChange}
-									inputProps={{ "aria-label": "controlled" }}
 								/>
 							</TableCell>
 							<TableCell>
