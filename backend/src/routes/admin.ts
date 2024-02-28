@@ -19,7 +19,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.SUCCESS).send(result);
     } catch (err: any) {
       request.log.error(err);
-      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
   })
 
@@ -52,7 +52,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully saved' });
     } catch (err: any) {
       request.log.error(err);
-      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
   });
 
@@ -102,7 +102,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully saved' });
     } catch (err: any) {
       request.log.error(err);
-      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
   })
 
@@ -138,7 +138,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully updated' });
     } catch (err: any) {
       server.log.error(err);
-      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
   })
 
@@ -156,7 +156,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.SUCCESS).send(result);
     } catch (err: any) {
       request.log.error(err);
-      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
   })
 
@@ -177,7 +177,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully deleted' });
     } catch (err: any) {
       request.log.error(err);
-      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
   })
 
@@ -204,7 +204,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.SUCCESS).send(supportedNetworks);
     } catch (err: any) {
       request.log.error(err);
-      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
   })
 };

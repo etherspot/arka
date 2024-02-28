@@ -54,7 +54,7 @@ export class Paymaster {
 
       return returnValue;
     } catch (err) {
-      throw new Error('Transaction Execution reverted')
+      throw new Error('Failed to process request to bundler')
     }
   }
 
@@ -81,7 +81,7 @@ export class Paymaster {
         callGasLimit: response.callGasLimit,
       };
     } catch (err: any) {
-      throw new Error('Transaction Execution reverted ' + err.message)
+      throw new Error('Failed to process request to bundler ' + err.message)
     }
   }
 

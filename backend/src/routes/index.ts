@@ -179,7 +179,7 @@ const routes: FastifyPluginAsync = async (server) => {
         request.log.error(err);
         if (err.name == "ResourceNotFoundException")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
-        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
       }
     }
   );
@@ -255,7 +255,7 @@ const routes: FastifyPluginAsync = async (server) => {
         request.log.error(err);
         if (err.name == "ResourceNotFoundException")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
-        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG });
+        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
       }
     }
   )
@@ -315,7 +315,7 @@ const routes: FastifyPluginAsync = async (server) => {
         request.log.error(err);
         if (err.name == "ResourceNotFoundException")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
-        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
+        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS })
       }
     }
   )
@@ -373,7 +373,7 @@ const routes: FastifyPluginAsync = async (server) => {
         request.log.error(err);
         if (err.name == "ResourceNotFoundException")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
-        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
+        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS })
       }
     }
   )
@@ -426,7 +426,7 @@ const routes: FastifyPluginAsync = async (server) => {
         request.log.error(err);
         if (err.name == "ResourceNotFoundException")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
-        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
+        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS })
       }
     }
   )
