@@ -112,6 +112,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.API_KEY)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.API_KEY))
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED })
       const result: any[] = await new Promise((resolve, reject) => {
         server.sqlite.db.get("SELECT * FROM api_keys WHERE API_KEY=?", [body.API_KEY], (err: any, row: any) => {
           if (err) reject(err);
@@ -164,6 +166,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.API_KEY)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.API_KEY))
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED })
       await new Promise((resolve, reject) => {
         server.sqlite.db.run("DELETE FROM api_keys WHERE API_KEY=?", [body.API_KEY], (err: any, rows: any) => {
           if (err) reject(err);
