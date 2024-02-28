@@ -18,6 +18,7 @@ services:
       - UNSAFE_MODE=false
       - SUPPORTED_NETWORKS=
       - CRON_PRIVATE_KEY=
+      - REACT_APP_INDEXER_ENDPOINT=http://localhost:3003
     build: 
       context: ./backend
       dockerfile: Dockerfile
@@ -27,6 +28,9 @@ services:
       - "5050:5050"
 
   admin_frontend:
+    environment:
+      - REACT_APP_INDEXER_ENDPOINT=http://localhost:3003
+      - REACT_APP_SERVER_URL=http://localhost:5050
     build:
       context: ./admin_frontend
       dockerfile: Dockerfile

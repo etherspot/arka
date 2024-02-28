@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
-import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
+import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
 import toast from "react-hot-toast";
+// components
 import { TextField } from "@mui/material";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -17,7 +18,12 @@ import IconButton from "@mui/material/IconButton";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
+import Checkbox from "@mui/material/Checkbox";
+
 import Header from "./Header";
+
+// constants
+import { ENDPOINTS } from "../constants/common";
 
 const ApiKeysPage = () => {
 	const [keys, setKeys] = useState([]);
@@ -26,6 +32,8 @@ const ApiKeysPage = () => {
 	const [privateKey, setPrivateKey] = useState("");
 	const [supportedNetworks, setSupportedNetworks] = useState("");
 	const [customErc20Paymaster, setCustomErc20Paymaster] = useState("");
+	const [txnMode, setTxnMode] = useState(0);
+	const [noOfTxn, setNoOfTxn] = useState(10);
 	const [showPassword, setShowPassword] = useState(false);
 
 	const handleClickShowPassword = () => setShowPassword(!showPassword);
@@ -34,21 +42,25 @@ const ApiKeysPage = () => {
 		event.preventDefault();
 	};
 
+	const handleChange = (event) => {
+		setTxnMode(event.target.checked ? 1 : 0);
+	};
+
 	const fetchData = async () => {
 		try {
 			setLoading(true);
 			const data = await (
-				await fetch("http://localhost:5050/getKeys", {
+				await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['getKeys']}`, {
 					method: "GET",
 				})
 			).json();
-			console.log("data: ", data);
 			setKeys(data);
 			setLoading(false);
 		} catch (err) {
-			toast.error(
-				"Check Backend Service for more info"
-			);
+			if (err.message.includes("Falied to fetch"))
+				toast.error("Failed to connect. Please make sure that the backend is running")
+			else
+				toast.error(err.message)
 		}
 	};
 
@@ -61,6 +73,16 @@ const ApiKeysPage = () => {
 			toast.error("Please input both API_KEY & PRIVATE_KEY field");
 			return;
 		}
+		if (
+			!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(
+				apiKey
+			)
+		) {
+			toast.error(
+				"Invalid Validation: API_KEY format. Please see the docs for more info"
+			);
+			return;
+		}
 		try {
 			setLoading(true);
 			const requestData = {
@@ -68,14 +90,17 @@ const ApiKeysPage = () => {
 				PRIVATE_KEY: privateKey,
 				SUPPORTED_NETWORKS: supportedNetworks ?? "",
 				ERC20_PAYMASTERS: customErc20Paymaster ?? "",
+				TRANSACTION_LIMIT: txnMode,
+				NO_OF_TRANSACTIONS_IN_A_MONTH: noOfTxn,
+				INDEXER_ENDPOINT:
+					process.env.REACT_APP_INDEXER_ENDPOINT ?? "http://localhost:3003",
 			};
-			const data = await (
-				await fetch("http://localhost:5050/saveKey", {
-					method: "POST",
-					body: JSON.stringify(requestData),
-				})
-			).json();
-			if (!data.error) {
+			const data = await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['saveKey']}`, {
+				method: "POST",
+				body: JSON.stringify(requestData),
+			});
+			const dataJson = await data.json();
+			if (!dataJson.error) {
 				toast.success("Saved Successfully");
 				setApiKey("");
 				setPrivateKey("");
@@ -85,9 +110,10 @@ const ApiKeysPage = () => {
 				toast.error("Could not save");
 			}
 		} catch (err) {
-			toast.error(
-				"Check Backend Service for more info"
-			);
+			if (err.message.includes("Falied to fetch"))
+				toast.error("Failed to connect. Please make sure that the backend is running")
+			else
+				toast.error(err.message)
 			setLoading(false);
 		}
 	};
@@ -96,7 +122,7 @@ const ApiKeysPage = () => {
 		try {
 			setLoading(true);
 			const data = await (
-				await fetch("http://localhost:5050/deleteKey", {
+				await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['deleteKey']}`, {
 					method: "POST",
 					body: JSON.stringify({ API_KEY: key }),
 				})
@@ -109,10 +135,10 @@ const ApiKeysPage = () => {
 				toast.error("Could not save");
 			}
 		} catch (err) {
-			console.log("err: ", err);
-			toast.error(
-				"Check Backend Service for more info"
-			);
+			if (err.message.includes("Falied to fetch"))
+				toast.error("Failed to connect. Please make sure that the backend is running")
+			else
+				toast.error(err.message)
 			setLoading(false);
 		}
 	};
@@ -129,6 +155,8 @@ const ApiKeysPage = () => {
 							<TableCell>Private Key</TableCell>
 							<TableCell>Supported Networks</TableCell>
 							<TableCell>Custom ERC20 Paymasters</TableCell>
+							<TableCell>Transaction Limit Mode</TableCell>
+							<TableCell>No of Transactions Allowed</TableCell>
 							<TableCell>Actions Available</TableCell>
 						</TableRow>
 					</TableHead>
@@ -212,6 +240,24 @@ const ApiKeysPage = () => {
 								/>
 							</TableCell>
 							<TableCell>
+								<Checkbox
+									checked={txnMode === 0 ? false : true}
+									onChange={handleChange}
+								/>
+							</TableCell>
+							<TableCell>
+								<TextField
+									type="number"
+									variant="outlined"
+									color="secondary"
+									label="NO_OF_TRANSACTIONS_IN_A_MONTH"
+									onChange={(e) => setNoOfTxn(e.target.value)}
+									value={noOfTxn}
+									required
+									fullWidth
+								/>
+							</TableCell>
+							<TableCell>
 								<LoadingButton
 									loading={loading}
 									disabled={loading}
@@ -249,6 +295,10 @@ const ApiKeysPage = () => {
 								</TableCell>
 								<TableCell>{row.SUPPORTED_NETWORKS}</TableCell>
 								<TableCell>{row.ERC20_PAYMASTERS}</TableCell>
+								<TableCell>
+									{row.TRANSACTION_LIMIT === 0 ? "OFF" : "ON"}
+								</TableCell>
+								<TableCell>{row.NO_OF_TRANSACTIONS_IN_A_MONTH}</TableCell>
 								<TableCell>
 									<LoadingButton
 										loading={loading}

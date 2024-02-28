@@ -67,6 +67,14 @@ There is an option to run the code locally without using AWS and only using loca
     }
 } which also needs to be converted into `base64` value
 
+## API KEY VALIDATION
+- In ARKA Admin Frontend, create an API_KEY with the following format - 
+* Min length - 8 Max length - 20
+* contains atleast one Special characters out of these - `@$!%*-_&`
+* contains atleast one lowercase alphabet
+* contains atleast one uppercase alphabet
+* contains atleast one digit 0-9
+
 
 ## 🔙 Arka Backend
 
