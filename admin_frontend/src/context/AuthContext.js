@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from 'react';
 import toast from "react-hot-toast";
-import { ENDPOINTS, SERVER_URL } from '../constants/constants';
+import { ENDPOINTS } from '../constants/constants';
 
 const UserContext = createContext();
 
@@ -15,41 +15,55 @@ export const AuthContextProvider = ({ children }) => {
   }
 
   const accountChangeHandler = async (accounts) => {
-    const data = await (
-      await fetch("http://localhost:5050/adminLogin", {
+    try {
+      const data = await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['adminLogin']}`, {
         method: "POST",
-        body: JSON.stringify({WALLET_ADDRESS: accounts[0]}),
-      })
-    ).json();
-    if (!data.error) {
-      toast.success("Logged In Successfully");
-      setUser({address: accounts[0]});
-    } else {
-      toast.error("Login Failed");
+        body: JSON.stringify({ WALLET_ADDRESS: accounts[0] }),
+      });
+      const dataJson = await data.json();
+      if (!dataJson.error) {
+        toast.success("Logged In Successfully");
+        setUser({ address: accounts[0] });
+      } else {
+        toast.error("Login Failed");
+      }
+    } catch (error) {
+      if (error?.message?.includes('Failed to fetch')) {
+        toast.error('Failed to access the server url');
+      } else
+        toast.error(error?.message);
+      setUser(null);
     }
   };
 
   const signIn = async () => {
     try {
-      if (!window.ethereum) return null;
+      if (!window.ethereum) {
+        toast.error('Cannot determine any injected wallet')
+        return null;
+      }
       setIsSigningIn(true);
       const address = await initializeProvider();
-      const data = await (
-				await fetch(`${SERVER_URL}${ENDPOINTS['adminLogin']}`, {
-					method: "POST",
-					body: JSON.stringify({WALLET_ADDRESS: address}),
-				})
-			).json();
-			if (!data.error) {
-				toast.success("Logged In Successfully");
-        setUser({address});
+      const data = await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['adminLogin']}`, {
+        method: "POST",
+        body: JSON.stringify({ WALLET_ADDRESS: address }),
+      });
+      const dataJson = await data.json();
+      if (!dataJson.error) {
+        toast.success("Logged In Successfully");
+        setUser({ address });
+        setIsSigningIn(false);
         return { address };
-			} else {
-				toast.error("Login Failed");
-			}
-      setIsSigningIn(false);
-      return null;
+      } else {
+        toast.error("Login Failed");
+        setIsSigningIn(false);
+        return null;
+      }
     } catch (error) {
+      if (error?.message?.includes('Failed to fetch')) {
+        toast.error('Failed to access the server url')
+      } else
+        toast.error(error?.message);
       setIsSigningIn(false);
       setUser(null);
       return null;

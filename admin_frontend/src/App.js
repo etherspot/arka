@@ -30,7 +30,7 @@ function App() {
           <AuthContextProvider>
             <Routes>
               <Route path='/' element={<Dashboard />} />
-              <Route path='/apiKey' element={
+              <Route path='/apikeys' element={
                 <ProtectedRoute>
                   <ApiKeysPage />
                 </ProtectedRoute>} />

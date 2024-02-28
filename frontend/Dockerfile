@@ -6,5 +6,6 @@ COPY package.json /frontend/
 COPY config-overrides.js /frontend/
 COPY postcss.config.js /frontend/
 COPY tailwind.config.js /frontend/
+COPY demo.env /frontend/.env
 RUN npm install
 CMD ["npm", "start"]
