@@ -28,9 +28,8 @@ import { UserAuth } from "../context/AuthContext";
 import EtherspotLogo from "../assets/internal-36-etherspot@2x.png";
 
 // constants
-import { networks } from "../utils/constant";
+import { networks, ENDPOINTS } from "../utils/constant";
 import EtherspotPaymasterAbi from "../abi/EtherspotPaymasterAbi.json";
-import { ENDPOINTS } from "../constants/constants";
 
 const ITEM_HEIGHT = 48;
 const MenuProps = {
