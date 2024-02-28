@@ -53,8 +53,8 @@ export class Paymaster {
       }
 
       return returnValue;
-    } catch (err) {
-      throw new Error('Failed to process request to bundler')
+    } catch (err: any) {
+      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
     }
   }
 
@@ -81,7 +81,7 @@ export class Paymaster {
         callGasLimit: response.callGasLimit,
       };
     } catch (err: any) {
-      throw new Error('Failed to process request to bundler ' + err.message)
+      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg: ' + err.message)
     }
   }
 
