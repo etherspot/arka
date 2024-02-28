@@ -93,7 +93,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           body.ERC20_PAYMASTERS,
           body.TRANSACTION_LIMIT ?? 0,
           body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
-          body.INDEXER_ENDPOINT ?? "http://localhost:3003"
+          body.INDEXER_ENDPOINT ?? process.env.DEFAULT_INDEXER_ENDPOINT
         ], (err: any, row: any) => {
           if (err) reject(err);
           resolve(row);
@@ -129,7 +129,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           NO_OF_TRANSACTIONS_IN_A_MONTH = ?, \
           INDEXER_ENDPOINT = ?, \
           WHERE API_KEY = ?", [body.SUPPORTED_NETWORKS, body.ERC20_PAYMASTERS, body.TRANSACTION_LIMIT ?? 0, body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
-        body.INDEXER_ENDPOINT ?? "http://localhost:3003", body.API_KEY
+        body.INDEXER_ENDPOINT ?? process.env.DEFAULT_INDEXER_ENDPOINT, body.API_KEY
         ], (err: any, row: any) => {
           if (err) reject(err);
           resolve(row);

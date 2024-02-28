@@ -18,6 +18,7 @@ services:
       - UNSAFE_MODE=false
       - SUPPORTED_NETWORKS=
       - CRON_PRIVATE_KEY=
+      - REACT_APP_INDEXER_ENDPOINT=http://localhost:3003
     build: 
       context: ./backend
       dockerfile: Dockerfile
