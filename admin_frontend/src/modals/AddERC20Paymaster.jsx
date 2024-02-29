@@ -180,7 +180,6 @@ const AddERC20PaymasterModal = ({
                     }}
                     value={ERC20Row.chainId}
                     required
-                    multiline
                     fullWidth
                   />
                 </TableCell>
@@ -198,7 +197,6 @@ const AddERC20PaymasterModal = ({
                     }
                     value={ERC20Row.token}
                     required
-                    multiline
                     fullWidth
                   />
                 </TableCell>
@@ -216,7 +214,6 @@ const AddERC20PaymasterModal = ({
                     }
                     value={ERC20Row.erc20PaymasterAddress}
                     required
-                    multiline
                     fullWidth
                   />
                 </TableCell>
