@@ -32,6 +32,7 @@ services:
 
   admin_frontend:
     environment:
+      - REACT_APP_INDEXER_ENDPOINT=http://localhost:3003
       - REACT_APP_SERVER_URL=http://localhost:5050
     build:
       context: ./admin_frontend

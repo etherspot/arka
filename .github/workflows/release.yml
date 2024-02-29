@@ -1,4 +1,4 @@
-name: Build Arka docker image 
+name: Build Arka Docker image
 
 on:
   push:
@@ -6,48 +6,95 @@ on:
       - "master"
 
 jobs:
-  build:
+  build_frontend:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v3
-      -
-        name: Login to Docker Hub
-        uses: docker/login-action@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+      - name: Get frontend package version
+        id: get_frontend_version
+        run: echo frontend_version=$(node -p "require('./frontend/package.json').version") >> $GITHUB_OUTPUT
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/arka-frontend:${{ steps.get_frontend_version.outputs.frontend_version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/arka-frontend:latest
+          platforms: linux/amd64,linux/arm64
 
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - 
-        name: Get Arka backend package version
-        id: get_version
-        run: echo version=$(node -p "require('./backend/package.json').version") >> $GITHUB_OUTPUT
-      -
-        name: Build and push
-        uses: docker/build-push-action@v4
+  build_admin_frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Checkout admin_frontend
+        uses: actions/checkout@v4
+      - name: Get admin_frontend package version
+        id: get_admin_frontend_version
+        run: echo admin_frontend_version=$(node -p "require('./admin_frontend/package.json').version") >> $GITHUB_OUTPUT
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push admin_frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./admin_frontend
+          file: ./admin_frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/arka-admin-frontend:${{ steps.get_admin_frontend_version.outputs.admin_frontend_version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/arka-admin-frontend:latest
+          platforms: linux/amd64,linux/arm64
+
+  build_backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Checkout backend
+        uses: actions/checkout@v4
+      - name: Get backend package version
+        id: get_backend_version
+        run: echo backend_version=$(node -p "require('./backend/package.json').version") >> $GITHUB_OUTPUT
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push backend Docker image
+        uses: docker/build-push-action@v5
         with:
           context: ./backend
-          platforms: linux/amd64,linux/arm64
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/arka:${{ steps.get_version.outputs.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/arka:latest
-      -
-        name: Create GitHub release
+            ${{ secrets.DOCKERHUB_USERNAME }}/arka-backend:${{ steps.get_backend_version.outputs.backend_version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/arka-backend:latest
+          platforms: linux/amd64,linux/arm64
+      - name: Create GitHub release
         uses: "marvinpinto/action-automatic-releases@6273874b61ebc8c71f1a61b2d98e234cf389b303"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: ${{ steps.get_version.outputs.version }}
+          automatic_release_tag: ${{ steps.get_backend_version.outputs.backend_version }}
           prerelease: false
-          title: Release ${{ steps.get_version.outputs.version }}
-      - 
-        name: Trigger pipeline
+          title: Arka ${{ steps.get_backend_version.outputs.backend_version }}
+      - name: Trigger pipeline
         run: ${{ secrets.PIPELINE_TRIGGER  }}
