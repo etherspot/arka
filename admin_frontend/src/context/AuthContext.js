@@ -25,13 +25,14 @@ export const AuthContextProvider = ({ children }) => {
         toast.success("Logged In Successfully");
         setUser({ address: accounts[0] });
       } else {
-        toast.error("Login Failed");
+        toast.error("Failed to authenticate with this wallet. Please make sure the address is associated with admin address given and try again");
       }
     } catch (error) {
       if (error?.message?.includes('Failed to fetch')) {
         toast.error('Failed to access the server url');
-      } else
+      } else {
         toast.error(error?.message);
+      }
       setUser(null);
     }
   };
@@ -55,15 +56,16 @@ export const AuthContextProvider = ({ children }) => {
         setIsSigningIn(false);
         return { address };
       } else {
-        toast.error("Login Failed");
+        toast.error("Failed to authenticate with this wallet. Please make sure the address is associated with admin address given and try again");
         setIsSigningIn(false);
         return null;
       }
     } catch (error) {
       if (error?.message?.includes('Failed to fetch')) {
         toast.error('Failed to access the server url')
-      } else
+      } else {
         toast.error(error?.message);
+      }
       setIsSigningIn(false);
       setUser(null);
       return null;

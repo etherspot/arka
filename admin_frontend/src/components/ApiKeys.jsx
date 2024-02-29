@@ -113,7 +113,7 @@ const ApiKeysPage = () => {
       setLoading(false);
     } catch (err) {
       if (err?.message?.includes("Failed to fetch")) {
-        toast.error("Failed to access the server url");
+        toast.error("There was a problem communicating with the server. Please try again, or contact Arka support team.");
       } else toast.error(err?.message);
     }
   };
@@ -157,11 +157,11 @@ const ApiKeysPage = () => {
         fetchData();
       } else {
         setLoading(false);
-        toast.error("Could not save");
+        toast.error(`${dataJson.message} Please try again or contant Arka support team`);
       }
     } catch (err) {
       if (err?.message?.includes("Failed to fetch")) {
-        toast.error("Failed to access the server url");
+        toast.error("There was a problem communicating with the server. Please try again, or contact Arka support team.");
       } else toast.error(err?.message);
       setLoading(false);
     }
@@ -183,11 +183,11 @@ const ApiKeysPage = () => {
         fetchData();
       } else {
         setLoading(false);
-        toast.error("Could not save");
+        toast.error(`${dataJson.message} Please try again or contant Arka support team`);
       }
     } catch (err) {
       if (err?.message?.includes("Failed to fetch")) {
-        toast.error("Failed to access the server url");
+        toast.error("There was a problem communicating with the server. Please try again, or contact Arka support team.");
       } else toast.error(err?.message);
       setLoading(false);
     }
@@ -217,7 +217,6 @@ const ApiKeysPage = () => {
                   color="secondary"
                   label="WALLET ADDRESS"
                   value={"AutoFill"}
-                  multiline
                   disabled
                 />
               </TableCell>
@@ -230,7 +229,6 @@ const ApiKeysPage = () => {
                   onChange={(e) => setApiKey(e.target.value)}
                   value={apiKey}
                   required
-                  multiline
                   fullWidth
                 />
               </TableCell>
@@ -238,7 +236,6 @@ const ApiKeysPage = () => {
                 <TextField
                   id="outlined-password-input"
                   label="PRIVATE KEY"
-                  multiline
                   value={privateKey}
                   onChange={(e) => setPrivateKey(e.target.value)}
                   required

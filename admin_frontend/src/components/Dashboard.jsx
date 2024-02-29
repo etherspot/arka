@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Buffer } from "buffer";
+
+// components
 import { TextField } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import { styled } from "styled-components";
@@ -7,12 +9,15 @@ import SaveIcon from "@mui/icons-material/Save";
 import toast from "react-hot-toast";
 import Header from "./Header";
 import Button from "@mui/material/Button";
+
 // context
 import { UserAuth } from "../context/AuthContext";
 
+// Modals
 import CoingeckoIdModal from "../modals/CoingeckoId";
 import DeployedPaymastersModal from "../modals/DeployedPaymasters";
 
+// contants
 import { ENDPOINTS } from "../constants/constants";
 
 const SettingsText = styled.span`
@@ -22,6 +27,7 @@ const SettingsText = styled.span`
     text-align: 'center',
     color: '#cfcfcf'
   `;
+
 const InfoTextStyle = {
   fontSize: "small",
   color: "grey",
@@ -150,7 +156,7 @@ const Dashboard = () => {
           toast.success("Saved Successfully");
           fetchData();
         } else {
-          toast.error("Could not save");
+          toast.error(`${dataJson.message} Please try again or contant Arka support team`);
         }
         setLoading(false);
       } catch (err) {
@@ -235,7 +241,6 @@ const Dashboard = () => {
           value={edittedConfig.CRON_TIME}
           required
           fullWidth
-          multiline
         />
       </div>
       <div className="mb-8">
