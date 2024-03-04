@@ -32,7 +32,7 @@ INSERT INTO config (
       "5000",
       "0 0 * * *",
       "ewogICAgIjgwMDAxIjogWyIweGMzM2MzOEE3QkZFQmJCOTk3ZEQ0MDExQ0RkQWY0ZWJEMWU4ODAzQzAiXQp9",
-      "panther",
+      "eyI4MDAwMSI6WyJwYW50aGVyIl19",
       "https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&precision=8&ids=");
 
 --------------------------------------------------------------------------------

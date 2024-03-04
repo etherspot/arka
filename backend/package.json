@@ -1,6 +1,6 @@
 {
   "name": "arka",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "ARKA - (Albanian for Cashier's case) is the first open source Paymaster as a service software",
   "type": "module",
   "directories": {
@@ -30,6 +30,7 @@
     "@account-abstraction/utils": "0.5.0",
     "@aws-sdk/client-secrets-manager": "3.450.0",
     "@fastify/cors": "8.4.1",
+    "@ponder/core": "0.2.7",
     "@sinclair/typebox": "0.31.28",
     "ajv": "8.11.2",
     "crypto": "^1.0.1",
@@ -40,9 +41,11 @@
     "fastify-cron": "1.3.1",
     "fastify-plugin": "3.0.1",
     "getmac": "^6.6.0",
+    "graphql-request": "6.1.0",
     "node-fetch": "3.3.2",
-    "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7-rc.0"
+    "sqlite": "5.1.1",
+    "sqlite3": "5.1.7-rc.0",
+    "viem": "2.7.6"
   },
   "devDependencies": {
     "@babel/core": "7.23.2",
@@ -61,7 +64,7 @@
     "prettier": "2.8.0",
     "ts-jest": "29.1.1",
     "tsx": "3.12.1",
-    "typescript": "4.9.3",
+    "typescript": "5.0.4",
     "vitest": "0.25.8"
   }
 }

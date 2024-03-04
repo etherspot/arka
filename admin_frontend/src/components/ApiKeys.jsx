@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import AddCircleIcon from "@mui/icons-material/AddCircle";
-import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
+import { Buffer } from "buffer";
 import toast from "react-hot-toast";
+
+// components
+import AddCircleIcon from "@mui/icons-material/AddCircle";
+import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
 import { TextField } from "@mui/material";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -14,262 +17,349 @@ import InputAdornment from "@mui/material/InputAdornment";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import IconButton from "@mui/material/IconButton";
-import OutlinedInput from "@mui/material/OutlinedInput";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
+import Button from "@mui/material/Button";
+
 import Header from "./Header";
 
+//Modals
+import AddSupportedNetworksModal from "../modals/AddSupportedNetworksModal";
+import ViewSupportedNetworksModal from "../modals/ViewSupportedNetworksModal";
+import AddERC20PaymasterModal from "../modals/AddERC20Paymaster";
+import ViewERC20PaymasterModal from "../modals/ViewERC20Paymaster";
+
+//constants
+import defaultSupportedNetworks from "../constants/defaultNetworks";
+import { ENDPOINTS } from "../constants/constants";
+
 const ApiKeysPage = () => {
-	const [keys, setKeys] = useState([]);
-	const [loading, setLoading] = useState(false);
-	const [apiKey, setApiKey] = useState("");
-	const [privateKey, setPrivateKey] = useState("");
-	const [supportedNetworks, setSupportedNetworks] = useState("");
-	const [customErc20Paymaster, setCustomErc20Paymaster] = useState("");
-	const [showPassword, setShowPassword] = useState(false);
+  const [keys, setKeys] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [privateKey, setPrivateKey] = useState("");
+  const [supportedNetworks, setSupportedNetworks] = useState(
+    defaultSupportedNetworks
+  );
+  const [customErc20Paymaster, setCustomErc20Paymaster] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [customErc20Open, setCustomErc20Open] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewErc20Open, setViewErc20Open] = useState(false);
+  const [edit, setEdit] = useState(false);
+  const [ERC20Tokens, setERC20Tokens] = useState([]);
+  const handleOpen = () => {
+    setSupportedNetworks(defaultSupportedNetworks);
+    setOpen(true);
+  };
+  const handleClose = () => {
+    setOpen(false);
+  };
 
-	const handleClickShowPassword = () => setShowPassword(!showPassword);
+  const handleCustomErc20Open = (edit, data) => {
+    setEdit(edit);
+    setCustomErc20Paymaster(data);
+    setCustomErc20Open(true);
+  };
+  const handleCustomErc20Close = () => {
+    setCustomErc20Open(false);
+  };
+  const handleViewERC20Open = (data) => {
+    setERC20Tokens(data);
+    setViewErc20Open(true);
+  };
 
-	const handleMouseDownPassword = (event) => {
-		event.preventDefault();
-	};
+  const handleViewERC20Close = () => {
+    setViewErc20Open(false);
+  };
+  const handleViewOpen = (networks) => {
+    setSupportedNetworks(networks);
+    setViewModalOpen(true);
+  };
 
-	const fetchData = async () => {
-		try {
-			setLoading(true);
-			const data = await (
-				await fetch("http://localhost:5050/getKeys", {
-					method: "GET",
-				})
-			).json();
-			console.log("data: ", data);
-			setKeys(data);
-			setLoading(false);
-		} catch (err) {
-			toast.error(
-				"Check Backend Service for more info"
-			);
-		}
-	};
+  const handleViewClose = () => {
+    setViewModalOpen(false);
+  };
 
-	useEffect(() => {
-		fetchData();
-	}, []);
+  const handleClickShowPassword = () => setShowPassword(!showPassword);
 
-	const handleSubmit = async () => {
-		if (apiKey === "" || privateKey === "") {
-			toast.error("Please input both API_KEY & PRIVATE_KEY field");
-			return;
-		}
-		try {
-			setLoading(true);
-			const requestData = {
-				API_KEY: apiKey,
-				PRIVATE_KEY: privateKey,
-				SUPPORTED_NETWORKS: supportedNetworks ?? "",
-				ERC20_PAYMASTERS: customErc20Paymaster ?? "",
-			};
-			const data = await (
-				await fetch("http://localhost:5050/saveKey", {
-					method: "POST",
-					body: JSON.stringify(requestData),
-				})
-			).json();
-			if (!data.error) {
-				toast.success("Saved Successfully");
-				setApiKey("");
-				setPrivateKey("");
-				fetchData();
-			} else {
-				setLoading(false);
-				toast.error("Could not save");
-			}
-		} catch (err) {
-			toast.error(
-				"Check Backend Service for more info"
-			);
-			setLoading(false);
-		}
-	};
+  const handleMouseDownPassword = (event) => {
+    event.preventDefault();
+  };
 
-	const handleDelete = async (key) => {
-		try {
-			setLoading(true);
-			const data = await (
-				await fetch("http://localhost:5050/deleteKey", {
-					method: "POST",
-					body: JSON.stringify({ API_KEY: key }),
-				})
-			).json();
-			if (!data.error) {
-				toast.success("Deleted Successfully");
-				fetchData();
-			} else {
-				setLoading(false);
-				toast.error("Could not save");
-			}
-		} catch (err) {
-			console.log("err: ", err);
-			toast.error(
-				"Check Backend Service for more info"
-			);
-			setLoading(false);
-		}
-	};
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await fetch(
+        `${process.env.REACT_APP_SERVER_URL}${ENDPOINTS["getKeys"]}`,
+        {
+          method: "GET",
+        }
+      );
+      const dataJson = await data.json();
+      dataJson.filter((element) => {
+        if (element.SUPPORTED_NETWORKS) {
+          const buffer = Buffer.from(element.SUPPORTED_NETWORKS, "base64");
+          const parsedSupportedNetowrks = JSON.parse(buffer.toString());
+          element.SUPPORTED_NETWORKS = parsedSupportedNetowrks;
+        }
+        if (element.ERC20_PAYMASTERS) {
+          const buffer = Buffer.from(element.ERC20_PAYMASTERS, "base64");
+          const parsedErc20Paymasters = JSON.parse(buffer.toString());
+          element.ERC20_PAYMASTERS = parsedErc20Paymasters;
+        }
+        return element;
+      });
+      setKeys(dataJson);
+      setLoading(false);
+    } catch (err) {
+      if (err?.message?.includes("Failed to fetch")) {
+        toast.error("There was a problem communicating with the server. Please try again, or contact Arka support team.");
+      } else toast.error(err?.message);
+    }
+  };
 
-	return (
-		<>
-			<Header className="align-center" text="Arka Admin Api Keys" />
-			<TableContainer>
-				<Table aria-label="simple table" stickyHeader>
-					<TableHead>
-						<TableRow>
-							<TableCell>Wallet Address</TableCell>
-							<TableCell>Api Key</TableCell>
-							<TableCell>Private Key</TableCell>
-							<TableCell>Supported Networks</TableCell>
-							<TableCell>Custom ERC20 Paymasters</TableCell>
-							<TableCell>Actions Available</TableCell>
-						</TableRow>
-					</TableHead>
-					<TableBody>
-						<TableRow>
-							<TableCell>
-								<TextField
-									type="text"
-									variant="outlined"
-									color="secondary"
-									label="WALLET_ADDRESS"
-									value={"AutoFill"}
-									multiline
-									disabled
-								/>
-							</TableCell>
-							<TableCell>
-								<TextField
-									type="text"
-									variant="outlined"
-									color="secondary"
-									label="API_KEY"
-									onChange={(e) => setApiKey(e.target.value)}
-									value={apiKey}
-									required
-									multiline
-									fullWidth
-								/>
-							</TableCell>
-							<TableCell>
-								<FormControl variant="outlined" required fullWidth>
-									<InputLabel htmlFor="outlined-adornment-password">
-										PRIVATE_KEY
-									</InputLabel>
-									<OutlinedInput
-										id="outlined-adornment-password"
-										type={showPassword ? "text" : "password"}
-										endAdornment={
-											<InputAdornment position="end">
-												<IconButton
-													aria-label="toggle password visibility"
-													onClick={handleClickShowPassword}
-													onMouseDown={handleMouseDownPassword}
-													edge="end"
-												>
-													{showPassword ? <VisibilityOff /> : <Visibility />}
-												</IconButton>
-											</InputAdornment>
-										}
-										label="PRIVATE_KEY"
-										multiline
-										value={privateKey}
-										onChange={(e) => setPrivateKey(e.target.value)}
-									/>
-								</FormControl>
-							</TableCell>
-							<TableCell>
-								<TextField
-									type="text"
-									variant="outlined"
-									color="secondary"
-									label="SUPPORTED_NETWORKS"
-									onChange={(e) => setSupportedNetworks(e.target.value)}
-									value={supportedNetworks}
-									required
-									multiline
-									fullWidth
-								/>
-							</TableCell>
-							<TableCell>
-								<TextField
-									type="text"
-									variant="outlined"
-									color="secondary"
-									label="ERC20_PAYMASTERS"
-									onChange={(e) => setCustomErc20Paymaster(e.target.value)}
-									value={customErc20Paymaster}
-									required
-									multiline
-									fullWidth
-								/>
-							</TableCell>
-							<TableCell>
-								<LoadingButton
-									loading={loading}
-									disabled={loading}
-									loadingPosition="start"
-									startIcon={<AddCircleIcon />}
-									variant="contained"
-									onClick={() => {
-										handleSubmit();
-									}}
-								>
-									Add Row
-								</LoadingButton>
-							</TableCell>
-						</TableRow>
-						{keys.map((row) => (
-							<TableRow key={row.API_KEY}>
-								<TableCell>{row.WALLET_ADDRESS}</TableCell>
-								<TableCell>{row.API_KEY}</TableCell>
-								<TableCell>
-									<div className="flex flex-row">
-										<div>{showPassword ? row.PRIVATE_KEY : "*****"} </div>
-										<div>
-											<InputAdornment position="end">
-												<IconButton
-													aria-label="toggle password visibility"
-													onClick={handleClickShowPassword}
-													onMouseDown={handleMouseDownPassword}
-													edge="end"
-												>
-													{showPassword ? <VisibilityOff /> : <Visibility />}
-												</IconButton>
-											</InputAdornment>
-										</div>
-									</div>
-								</TableCell>
-								<TableCell>{row.SUPPORTED_NETWORKS}</TableCell>
-								<TableCell>{row.ERC20_PAYMASTERS}</TableCell>
-								<TableCell>
-									<LoadingButton
-										loading={loading}
-										disabled={loading}
-										loadingPosition="start"
-										startIcon={<RemoveCircleIcon />}
-										variant="contained"
-										onClick={() => {
-											handleDelete(row.API_KEY);
-										}}
-									>
-										Delete Row
-									</LoadingButton>
-								</TableCell>
-							</TableRow>
-						))}
-					</TableBody>
-				</Table>
-			</TableContainer>
-		</>
-	);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSubmit = async () => {
+    if (apiKey === "" || privateKey === "") {
+      toast.error("Please input both API_KEY & PRIVATE_KEY field");
+      return;
+    }
+    try {
+      setLoading(true);
+      let base64Erc20 = "";
+      if (customErc20Paymaster != {})
+        base64Erc20 = Buffer.from(
+          JSON.stringify(customErc20Paymaster)
+        ).toString("base64");
+      const requestData = {
+        API_KEY: apiKey,
+        PRIVATE_KEY: privateKey,
+        SUPPORTED_NETWORKS:
+          Buffer.from(JSON.stringify(supportedNetworks)).toString("base64") ??
+          "",
+        ERC20_PAYMASTERS: base64Erc20 ?? "",
+      };
+      const data = await fetch(
+        `${process.env.REACT_APP_SERVER_URL}${ENDPOINTS["saveKey"]}`,
+        {
+          method: "POST",
+          body: JSON.stringify(requestData),
+        }
+      );
+      const dataJson = data.json();
+      if (!dataJson.error) {
+        toast.success("Saved Successfully");
+        setApiKey("");
+        setPrivateKey("");
+        fetchData();
+      } else {
+        setLoading(false);
+        toast.error(`${dataJson.message} Please try again or contant Arka support team`);
+      }
+    } catch (err) {
+      if (err?.message?.includes("Failed to fetch")) {
+        toast.error("There was a problem communicating with the server. Please try again, or contact Arka support team.");
+      } else toast.error(err?.message);
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (key) => {
+    try {
+      setLoading(true);
+      const data = await fetch(
+        `${process.env.REACT_APP_SERVER_URL}${ENDPOINTS["deleteKey"]}`,
+        {
+          method: "POST",
+          body: JSON.stringify({ API_KEY: key }),
+        }
+      );
+      const dataJson = data.json();
+      if (!dataJson.error) {
+        toast.success("Deleted Successfully");
+        fetchData();
+      } else {
+        setLoading(false);
+        toast.error(`${dataJson.message} Please try again or contant Arka support team`);
+      }
+    } catch (err) {
+      if (err?.message?.includes("Failed to fetch")) {
+        toast.error("There was a problem communicating with the server. Please try again, or contact Arka support team.");
+      } else toast.error(err?.message);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <Header className="align-center" text="Arka Admin Api Keys" />
+      <TableContainer>
+        <Table aria-label="simple table" stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell>Wallet Address</TableCell>
+              <TableCell>Api Key</TableCell>
+              <TableCell>Private Key</TableCell>
+              <TableCell>Supported Networks</TableCell>
+              <TableCell>Custom ERC20 Paymasters</TableCell>
+              <TableCell>Actions Available</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <TableRow>
+              <TableCell>
+                <TextField
+                  type="text"
+                  variant="outlined"
+                  color="secondary"
+                  label="WALLET ADDRESS"
+                  value={"AutoFill"}
+                  disabled
+                />
+              </TableCell>
+              <TableCell>
+                <TextField
+                  type="text"
+                  variant="outlined"
+                  color="secondary"
+                  label="API KEY"
+                  onChange={(e) => setApiKey(e.target.value)}
+                  value={apiKey}
+                  required
+                  fullWidth
+                />
+              </TableCell>
+              <TableCell>
+                <TextField
+                  id="outlined-password-input"
+                  label="PRIVATE KEY"
+                  value={privateKey}
+                  onChange={(e) => setPrivateKey(e.target.value)}
+                  required
+                  type={showPassword ? "text" : "password"}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={handleClickShowPassword}
+                          onMouseDown={handleMouseDownPassword}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </TableCell>
+              <TableCell>
+                <Button onClick={handleOpen}>Edit</Button>
+              </TableCell>
+              <TableCell>
+                <Button onClick={() => handleCustomErc20Open(true, {})}>
+                  Edit
+                </Button>
+              </TableCell>
+              <TableCell>
+                <LoadingButton
+                  loading={loading}
+                  disabled={loading}
+                  loadingPosition="start"
+                  startIcon={<AddCircleIcon />}
+                  variant="contained"
+                  onClick={() => {
+                    handleSubmit();
+                  }}
+                >
+                  Add Row
+                </LoadingButton>
+              </TableCell>
+            </TableRow>
+            {keys.map((row, index) => (
+              <TableRow key={row.API_KEY}>
+                <TableCell>{row.WALLET_ADDRESS}</TableCell>
+                <TableCell>{row.API_KEY}</TableCell>
+                <TableCell>
+                  <div className="flex flex-row">
+                    <div>{showPassword ? row.PRIVATE_KEY : "*****"} </div>
+                    <div>
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={handleClickShowPassword}
+                          onMouseDown={handleMouseDownPassword}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    disabled={row.SUPPORTED_NETWORKS === ""}
+                    onClick={() => handleViewOpen(row.SUPPORTED_NETWORKS)}
+                  >
+                    View
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    disabled={row.ERC20_PAYMASTERS === ""}
+                    onClick={() => handleViewERC20Open(row.ERC20_PAYMASTERS)}
+                  >
+                    View
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  <LoadingButton
+                    loading={loading}
+                    disabled={loading}
+                    loadingPosition="start"
+                    startIcon={<RemoveCircleIcon />}
+                    variant="contained"
+                    onClick={() => {
+                      handleDelete(row.API_KEY);
+                    }}
+                  >
+                    Delete Row
+                  </LoadingButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <AddSupportedNetworksModal
+        supportedNetworks={supportedNetworks}
+        setSupportedNetworks={setSupportedNetworks}
+        open={open}
+        handleClose={handleClose}
+        editMode={edit}
+      />
+      <ViewERC20PaymasterModal
+        supportedNetworks={ERC20Tokens}
+        open={viewErc20Open}
+        handleClose={handleViewERC20Close}
+      />
+      <ViewSupportedNetworksModal
+        supportedNetworks={supportedNetworks}
+        open={viewModalOpen}
+        handleClose={handleViewClose}
+      />
+      <AddERC20PaymasterModal
+        supportedNetworks={customErc20Paymaster}
+        setSupportedNetworks={setCustomErc20Paymaster}
+        open={customErc20Open}
+        handleClose={handleCustomErc20Close}
+      />
+    </>
+  );
 };
 
 export default ApiKeysPage;

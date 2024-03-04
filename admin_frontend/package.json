@@ -1,23 +1,25 @@
 {
   "name": "admin_frontend",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "dependencies": {
-    "@emotion/react": "^11.11.3",
-    "@emotion/styled": "^11.11.0",
-    "@mui/icons-material": "^5.15.3",
-    "@mui/lab": "^5.0.0-alpha.159",
-    "@mui/material": "^5.15.3",
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^6.21.1",
+    "@emotion/react": "11.11.3",
+    "@emotion/styled": "11.11.0",
+    "@mui/icons-material": "5.15.3",
+    "@mui/lab": "5.0.0-alpha.159",
+    "@mui/material": "5.15.3",
+    "@testing-library/jest-dom": "5.17.0",
+    "@testing-library/react": "13.4.0",
+    "@testing-library/user-event": "13.5.0",
+    "buffer": "6.0.3",
+    "ethers": "5.7.2",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-hot-toast": "2.4.1",
+    "react-router-dom": "6.21.1",
     "react-scripts": "5.0.1",
-    "styled-components": "^6.1.8",
-    "web-vitals": "^2.1.4"
+    "styled-components": "6.1.8",
+    "web-vitals": "2.1.4"
   },
   "scripts": {
     "start": "PORT=3002 react-scripts start",
@@ -44,8 +46,9 @@
     ]
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.33",
-    "tailwindcss": "^3.4.1"
+    "autoprefixer": "10.4.16",
+    "json-loader": "0.5.7",
+    "postcss": "8.4.33",
+    "tailwindcss": "3.4.1"
   }
 }

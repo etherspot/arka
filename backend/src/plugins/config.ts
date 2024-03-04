@@ -17,6 +17,7 @@ const ConfigSchema = Type.Strict(
     API_HOST: Type.String(),
     API_PORT: Type.String(),
     SUPPORTED_NETWORKS: Type.String() || undefined,
+    ADMIN_WALLET_ADDRESS: Type.String() || undefined,
   })
 );
 
@@ -45,6 +46,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     API_PORT: process.env.API_PORT ?? '',
     API_HOST: process.env.API_HOST ?? '',
     SUPPORTED_NETWORKS: process.env.SUPPORTED_NETWORKS ?? '',
+    ADMIN_WALLET_ADDRESS: process.env.ADMIN_WALLET_ADDRESS ?? '0x80a1874E1046B1cc5deFdf4D3153838B72fF94Ac',
   }
 
   server.decorate("config", config);

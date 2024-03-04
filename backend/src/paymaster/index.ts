@@ -33,11 +33,10 @@ export class Paymaster {
     return paymasterAndData;
   }
 
-  async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
+  async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, bundlerRpc: string, signer: Wallet) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
-      const signer = new Wallet(relayerKey, provider)
       userOp.paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
       userOp.signature = '0x';
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
@@ -55,8 +54,8 @@ export class Paymaster {
       }
 
       return returnValue;
-    } catch (err) {
-      throw new Error('Transaction Execution reverted')
+    } catch (err: any) {
+      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
     }
   }
 
@@ -83,7 +82,7 @@ export class Paymaster {
         callGasLimit: response.callGasLimit,
       };
     } catch (err: any) {
-      throw new Error('Transaction Execution reverted ' + err.message)
+      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg: ' + err.message)
     }
   }
 

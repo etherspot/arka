@@ -22,3 +22,7 @@ database.sqlite
 
 package-lock.json
 pnpm-lock.yaml
+
+# Ponder
+/indexer/.ponder
+/indexer/generated
