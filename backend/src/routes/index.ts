@@ -320,6 +320,62 @@ const routes: FastifyPluginAsync = async (server) => {
     }
   )
 
+  server.post("/removeWhitelist", async function (request, reply) {
+    try {
+      const body: any = request.body;
+        const query: any = request.query;
+        const address = body.params[0];
+        const chainId = query['chainId'] ?? body.params[1];
+        const api_key = query['apiKey'] ?? body.params[2];
+        if (!api_key)
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        let privateKey = '';
+        let supportedNetworks;
+        if (!unsafeMode) {
+          const AWSresponse = await client.send(
+            new GetSecretValueCommand({
+              SecretId: prefixSecretId + api_key,
+            })
+          );
+          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = secrets['PRIVATE_KEY'];
+          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+        } else {
+          const record: any = await getSQLdata(api_key);
+          console.log(record);
+          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(record['PRIVATE_KEY']);
+          supportedNetworks = record['SUPPORTED_NETWORKS'];
+        }
+        if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        if (
+          !Array.isArray(address) ||
+          address.length > 10 ||
+          !chainId ||
+          isNaN(chainId)
+        ) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        }
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
+        if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        const validAddresses = address.every(ethers.utils.isAddress);
+        if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
+        const result = await paymaster.removeWhitelistAddress(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey);
+        if (body.jsonrpc)
+          return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
+        return reply.code(ReturnCode.SUCCESS).send(result);
+    } catch (err: any) {
+      request.log.error(err);
+      if (err.name == "ResourceNotFoundException")
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
+    }
+  })
+
   server.post(
     "/checkWhitelist",
     async function (request, reply) {

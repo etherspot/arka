@@ -7,6 +7,8 @@ export default {
     FAILED_TO_PROCESS: 'Failed to process the request. Please try again or contact ARKA support team',
     INVALID_MODE: 'Invalid mode selected',
     DUPLICATE_RECORD: 'Duplicate record found',
+    ERROR_ON_SUBMITTING_TXN: 'The wallet does not have enough funds or the gas price is too high at the moment. Please try again later or contact support team',
+    RPC_ERROR: 'rpcError while checking whitelist. Please try again later',
     QUOTA_EXCEEDED: 'Quota exceeded for this month',
     INVALID_USER: 'Unauthorised User',
     RECORD_NOT_FOUND: 'Api Key provided not found',

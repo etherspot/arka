@@ -3,6 +3,7 @@ import { providers, Wallet, ethers, Contract } from 'ethers';
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
 import abi from "../abi/EtherspotAbi.js";
 import { PimlicoPaymaster, getERC20Paymaster } from './pimlico.js';
+import ErrorMessage from 'constants/ErrorMessage.js';
 
 export class Paymaster {
 
@@ -116,7 +117,30 @@ export class Paymaster {
       };
     } catch (err: any) {
       if (err.message.includes('already whitelisted')) throw new Error(err);
-      throw new Error('Error while submitting transaction');
+      throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
+    }
+  }
+
+  async removeWhitelistAddress(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      const signer = new Wallet(relayerKey, provider)
+      for (let i = 0; i < address.length; i++) {
+        const isAdded = await paymasterContract.check(signer.address, address[i]);
+        if (!isAdded) {
+          throw new Error(`${address[i]} is not whitelisted`)
+        }
+      }
+      const encodedData = paymasterContract.interface.encodeFunctionData('removeBatchToWhitelist', [address]);
+      const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData });
+      await tx.wait();
+      return {
+        message: `Successfully removed whitelisted addresses with transaction Hash ${tx.hash}`
+      };
+    } catch (err: any) {
+      if (err.message.includes('is not whitelisted')) throw new Error(err);
+      throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
   }
 
@@ -127,7 +151,7 @@ export class Paymaster {
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
       return paymasterContract.check(signer.address, accountAddress);
     } catch (err) {
-      throw new Error('rpcError while checking whitelist');
+      throw new Error(ErrorMessage.RPC_ERROR);
     }
   }
 
@@ -146,7 +170,7 @@ export class Paymaster {
         message: `Successfully deposited with transaction Hash ${tx.hash}`
       };
     } catch (err) {
-      throw new Error('Error while submitting transaction');
+      throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
   }
 }
