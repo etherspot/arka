@@ -3,6 +3,7 @@ import { providers, Wallet, ethers, Contract } from 'ethers';
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
 import abi from "../abi/EtherspotAbi.js";
 import { PimlicoPaymaster, getERC20Paymaster } from './pimlico.js';
+import ErrorMessage from 'constants/ErrorMessage.js';
 
 export class Paymaster {
 
@@ -117,7 +118,7 @@ export class Paymaster {
       };
     } catch (err: any) {
       if (err.message.includes('already whitelisted')) throw new Error(err);
-      throw new Error('The wallet does not have enough funds or the gas price is too high at the moment. Please try again later or contact support team');
+      throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
   }
 
@@ -140,7 +141,7 @@ export class Paymaster {
       };
     } catch (err: any) {
       if (err.message.includes('is not whitelisted')) throw new Error(err);
-      throw new Error('The wallet does not have enough funds or the gas price is too high at the moment. Please try again later or contact support team');
+      throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
   }
 
@@ -151,7 +152,7 @@ export class Paymaster {
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
       return paymasterContract.check(signer.address, accountAddress);
     } catch (err) {
-      throw new Error('rpcError while checking whitelist');
+      throw new Error(ErrorMessage.RPC_ERROR);
     }
   }
 
@@ -170,7 +171,7 @@ export class Paymaster {
         message: `Successfully deposited with transaction Hash ${tx.hash}`
       };
     } catch (err) {
-      throw new Error('The wallet does not have enough funds or the gas price is too high at the moment. Please try again later or contact support team');
+      throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
   }
 }
