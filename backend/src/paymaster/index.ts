@@ -117,7 +117,7 @@ export class Paymaster {
       };
     } catch (err: any) {
       if (err.message.includes('already whitelisted')) throw new Error(err);
-      throw new Error('Error while submitting transaction');
+      throw new Error('The wallet does not have enough funds or the gas price is too high at the moment. Please try again later or contact support team');
     }
   }
 
@@ -140,7 +140,7 @@ export class Paymaster {
       };
     } catch (err: any) {
       if (err.message.includes('is not whitelisted')) throw new Error(err);
-      throw new Error('Error while submitting transaction');
+      throw new Error('The wallet does not have enough funds or the gas price is too high at the moment. Please try again later or contact support team');
     }
   }
 
@@ -170,7 +170,7 @@ export class Paymaster {
         message: `Successfully deposited with transaction Hash ${tx.hash}`
       };
     } catch (err) {
-      throw new Error('Error while submitting transaction');
+      throw new Error('The wallet does not have enough funds or the gas price is too high at the moment. Please try again later or contact support team');
     }
   }
 }
