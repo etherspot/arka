@@ -2,6 +2,9 @@ version: "3.8"
 
 services:
   frontend:
+    environment:
+      - REACT_APP_INDEXER_ENDPOINT=http://localhost:3003
+      - REACT_APP_SERVER_URL=http://localhost:5050
     build: 
       context: ./frontend
       dockerfile: Dockerfile
@@ -18,7 +21,7 @@ services:
       - UNSAFE_MODE=false
       - SUPPORTED_NETWORKS=
       - CRON_PRIVATE_KEY=
-      - REACT_APP_INDEXER_ENDPOINT=http://localhost:3003
+      - DEFAULT_INDEXER_ENDPOINT=http://localhost:3003
     build: 
       context: ./backend
       dockerfile: Dockerfile

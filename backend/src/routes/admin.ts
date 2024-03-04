@@ -8,6 +8,20 @@ import { encode, decode } from "../utils/crypto.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
+
+  server.post('/adminLogin', async function (request, reply) {
+    try {
+      const body: any = JSON.parse(request.body as string);
+      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!body.WALLET_ADDRESS) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      console.log(body, server.config.ADMIN_WALLET_ADDRESS)
+      if (ethers.utils.getAddress(body.WALLET_ADDRESS) === server.config.ADMIN_WALLET_ADDRESS) return reply.code(ReturnCode.SUCCESS).send({error: null, message: "Successfully Logged in"});
+      return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
+    } catch (err: any) {
+      return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
+    }
+  })
+
   server.get("/getConfig", async function (request, reply) {
     try {
       const result: any = await new Promise((resolve, reject) => {

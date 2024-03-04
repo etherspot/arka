@@ -1,5 +1,5 @@
 export const ENDPOINTS = {
   'getKeys': '/getKeys',
-  'saveKey' : '/saveKey',
+  'saveKey': '/saveKey',
   'deleteKey': '/deleteKey',
 }
