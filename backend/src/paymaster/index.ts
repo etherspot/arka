@@ -3,7 +3,7 @@ import { providers, Wallet, ethers, Contract } from 'ethers';
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
 import abi from "../abi/EtherspotAbi.js";
 import { PimlicoPaymaster, getERC20Paymaster } from './pimlico.js';
-import ErrorMessage from 'constants/ErrorMessage.js';
+import ErrorMessage from '../constants/ErrorMessage.js';
 
 export class Paymaster {
 
