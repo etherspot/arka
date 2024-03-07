@@ -38,7 +38,6 @@ export class Paymaster {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
       userOp.paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
-      userOp.signature = '0x';
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
       userOp.verificationGasLimit = response.verificationGasLimit;
       userOp.preVerificationGas = response.preVerificationGas;
@@ -68,7 +67,6 @@ export class Paymaster {
 
       let paymasterAndData = await erc20Paymaster.generatePaymasterAndData(userOp)
       userOp.paymasterAndData = paymasterAndData;
-      userOp.signature = '0x';
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
       userOp.verificationGasLimit = ethers.BigNumber.from(response.verificationGasLimit).add(100000).toString();
       userOp.preVerificationGas = response.preVerificationGas;

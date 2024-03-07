@@ -28,10 +28,9 @@ const routes: FastifyPluginAsync = async (server) => {
 
   let client: SecretsManagerClient;
 
-  const unsafeMode = process.env.UNSAFE_MODE ?? false;
+  const unsafeMode: boolean = process.env.UNSAFE_MODE == "true" ? true : false;
 
   if (!unsafeMode) {
-    console.log('initialised aws secrets');
     client = new SecretsManagerClient();
   }
 
@@ -372,7 +371,7 @@ const routes: FastifyPluginAsync = async (server) => {
       request.log.error(err);
       if (err.name == "ResourceNotFoundException")
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
-      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.SOMETHING_WENT_WRONG })
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS })
     }
   })
 
