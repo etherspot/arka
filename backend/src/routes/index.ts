@@ -58,7 +58,7 @@ const routes: FastifyPluginAsync = async (server) => {
     "/",
     async function (request, reply) {
       try {
-        printRequest(request, server.log);
+        printRequest("/", request, server.log);
         const query: any = request.query;
         const body: any = request.body;
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
@@ -188,7 +188,7 @@ const routes: FastifyPluginAsync = async (server) => {
     whitelistResponseSchema,
     async function (request, reply) {
       try {
-        printRequest(request, server.log);
+        printRequest("/pimlicoAddress", request, server.log);
         const query: any = request.query;
         const body: any = request.body;
         const entryPoint = body.params[0];
@@ -263,7 +263,7 @@ const routes: FastifyPluginAsync = async (server) => {
     "/whitelist",
     async function (request, reply) {
       try {
-        printRequest(request, server.log);
+        printRequest("/whiteList",request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const address = body.params[0];
@@ -379,7 +379,7 @@ const routes: FastifyPluginAsync = async (server) => {
     "/checkWhitelist",
     async function (request, reply) {
       try {
-        printRequest(request, server.log);
+        printRequest("/checkWhiteList", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const accountAddress = body.params[0];
@@ -438,7 +438,7 @@ const routes: FastifyPluginAsync = async (server) => {
     whitelistResponseSchema,
     async function (request, reply) {
       try {
-        printRequest(request, server.log);
+        printRequest("/deposit", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const amount = body.params[0];

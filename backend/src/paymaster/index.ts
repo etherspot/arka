@@ -164,7 +164,8 @@ export class Paymaster {
         throw new Error(`${signer.address} Balance is less than the amount to be deposited`)
       const encodedData = paymasterContract.interface.encodeFunctionData('depositFunds', []);
       const tx = await signer.sendTransaction({ to: paymasterAddress, data: encodedData, value: ethers.utils.parseEther(amount.toString()) });
-      await tx.wait();
+      // commented the below line to avoid timeouts for long delays in transaction confirmation.
+      // await tx.wait(); 
       return {
         message: `Successfully deposited with transaction Hash ${tx.hash}`
       };
