@@ -6,11 +6,13 @@ import { providers, ethers } from 'ethers';
 import fetch from 'node-fetch';
 import database from './plugins/db.js';
 import config from './plugins/config.js';
-import routes, { getNetworkConfig } from './routes/index.js';
+import routes from './routes/index.js';
 import adminRoutes from './routes/admin.js';
+import metadataRoutes from './routes/metadata.js';
 import EtherspotChainlinkOracleAbi from './abi/EtherspotChainlinkOracleAbi.js';
 import PimlicoAbi from './abi/PimlicoAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
+import { getNetworkConfig } from './utils/common.js';
 
 let server: FastifyInstance;
 
@@ -39,6 +41,8 @@ const initializeServer = async (): Promise<void> => {
   await server.register(routes);
 
   await server.register(adminRoutes);
+
+  await server.register(metadataRoutes);
 
   // Database
   await server.register(database);

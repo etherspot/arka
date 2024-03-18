@@ -1,4 +1,4 @@
-export const EtherspotPaymasterAbi = [
+export default [
   {
     "inputs": [
       {
@@ -125,51 +125,6 @@ export const EtherspotPaymasterAbi = [
     "type": "event"
   },
   {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "paymaster",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      }
-    ],
-    "name": "SponsorUnsuccessful",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
-    ],
-    "name": "WhitelistInitialized",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_account",
-        "type": "address"
-      }
-    ],
-    "name": "addToWhitelist",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address[]",
@@ -199,6 +154,19 @@ export const EtherspotPaymasterAbi = [
     "inputs": [
       {
         "internalType": "address",
+        "name": "_account",
+        "type": "address"
+      }
+    ],
+    "name": "addToWhitelist",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "_sponsor",
         "type": "address"
       },
@@ -214,25 +182,6 @@ export const EtherspotPaymasterAbi = [
         "internalType": "bool",
         "name": "",
         "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_sponsor",
-        "type": "address"
-      }
-    ],
-    "name": "checkSponsorFunds",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -358,6 +307,25 @@ export const EtherspotPaymasterAbi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_sponsor",
+        "type": "address"
+      }
+    ],
+    "name": "getSponsorBalance",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "owner",
     "outputs": [
@@ -425,12 +393,12 @@ export const EtherspotPaymasterAbi = [
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_account",
-        "type": "address"
+        "internalType": "address[]",
+        "name": "_accounts",
+        "type": "address[]"
       }
     ],
-    "name": "remove",
+    "name": "removeBatchFromWhitelist",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -438,12 +406,12 @@ export const EtherspotPaymasterAbi = [
   {
     "inputs": [
       {
-        "internalType": "address[]",
-        "name": "_accounts",
-        "type": "address[]"
+        "internalType": "address",
+        "name": "_account",
+        "type": "address"
       }
     ],
-    "name": "removeBatch",
+    "name": "removeFromWhitelist",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -568,11 +536,6 @@ export const EtherspotPaymasterAbi = [
   },
   {
     "inputs": [
-      {
-        "internalType": "address payable",
-        "name": "_sponsor",
-        "type": "address"
-      },
       {
         "internalType": "uint256",
         "name": "_amount",
