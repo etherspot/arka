@@ -23,7 +23,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
 
   server.get('/metadata', async function (request, reply) {
     try {
-      printRequest(request, server.log);
+      printRequest('/metadata', request, server.log);
       const query: any = request.query;
       const chainId = query['chainId'] ?? 1;
       const api_key = query['apiKey'];

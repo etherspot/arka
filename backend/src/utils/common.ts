@@ -2,7 +2,8 @@ import { FastifyBaseLogger, FastifyRequest } from "fastify";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { Database } from "sqlite3";
 
-export function printRequest(request: FastifyRequest, log: FastifyBaseLogger) {
+export function printRequest(methodName: string, request: FastifyRequest, log: FastifyBaseLogger) {
+  log.info(methodName, "called: ");
   log.info(request.query, "query passed: ");
   log.info(request.body, "body passed: ");
 }

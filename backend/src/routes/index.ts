@@ -49,7 +49,7 @@ const routes: FastifyPluginAsync = async (server) => {
     "/",
     async function (request, reply) {
       try {
-        printRequest(request, server.log);
+        printRequest("/", request, server.log);
         const query: any = request.query;
         const body: any = request.body;
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
@@ -154,7 +154,10 @@ const routes: FastifyPluginAsync = async (server) => {
             break;
           }
           case 'erc20': {
-            result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, customPaymasters[chainId] ? customPaymasters[chainId][gasToken] : PAYMASTER_ADDRESS[chainId][gasToken]);
+            let paymasterAddress: string;
+            if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
+            else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
+            result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, paymasterAddress);
             break;
           }
           case 'default': {
@@ -179,7 +182,7 @@ const routes: FastifyPluginAsync = async (server) => {
     whitelistResponseSchema,
     async function (request, reply) {
       try {
-        printRequest(request, server.log);
+        printRequest("/pimlicoAddress", request, server.log);
         const query: any = request.query;
         const body: any = request.body;
         const entryPoint = body.params[0];
@@ -253,7 +256,7 @@ const routes: FastifyPluginAsync = async (server) => {
     "/whitelist",
     async function (request, reply) {
       try {
-        printRequest(request, server.log);
+        printRequest("/whitelist", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const address = body.params[0];
@@ -311,6 +314,7 @@ const routes: FastifyPluginAsync = async (server) => {
 
   server.post("/removeWhitelist", async function (request, reply) {
     try {
+      printRequest("/removeWhitelist", request, server.log);
       const body: any = request.body;
         const query: any = request.query;
         const address = body.params[0];
@@ -368,7 +372,7 @@ const routes: FastifyPluginAsync = async (server) => {
     "/checkWhitelist",
     async function (request, reply) {
       try {
-        printRequest(request, server.log);
+        printRequest("/checkWhitelist", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const accountAddress = body.params[0];
@@ -427,7 +431,7 @@ const routes: FastifyPluginAsync = async (server) => {
     whitelistResponseSchema,
     async function (request, reply) {
       try {
-        printRequest(request, server.log);
+        printRequest("/deposit", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const amount = body.params[0];

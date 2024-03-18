@@ -16,7 +16,7 @@ export interface ERC20PaymasterBuildOptions {
 
 export class PimlicoPaymaster {
     private contract: Contract;
-    tokenAddress: string;
+    tokenAddress: Promise<string>;
     paymasterAddress: string;
 
     constructor(address: string, provider: providers.Provider) {
@@ -82,7 +82,7 @@ export class PimlicoPaymaster {
      * @param requiredPreFund the required token amount if already calculated
      * @returns the paymasterAndData to be filled in
      */
-    async generatePaymasterAndDataWithTokenAmount(userOp: NotPromise<UserOperationStruct>, tokenAmount: BigNumber): Promise<string> {
+    async generatePaymasterAndDataForTokenAmount(userOp: NotPromise<UserOperationStruct>, tokenAmount: BigNumber): Promise<string> {
         const paymasterAndData = utils.hexlify(
             utils.concat([this.contract.address, utils.hexZeroPad(utils.hexlify(tokenAmount), 32)])
         )

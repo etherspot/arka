@@ -83,12 +83,12 @@ export class Paymaster {
         },
       ]
       const tokenAmountRequired = await erc20Paymaster.calculateTokenAmount(userOp);
-      const tokenContract = new Contract(erc20Paymaster.tokenAddress, minABI, provider)
+      const tokenContract = new Contract(await erc20Paymaster.tokenAddress, minABI, provider)
       const tokenBalance = await tokenContract.balanceOf(userOp.sender);
 
       if (tokenAmountRequired.gte(tokenBalance)) throw new Error(`The required token amount ${tokenAmountRequired.toString()} is more than what the sender has ${tokenBalance}`)
       
-      let paymasterAndData = await erc20Paymaster.generatePaymasterAndDataWithTokenAmount(userOp, tokenAmountRequired)
+      let paymasterAndData = await erc20Paymaster.generatePaymasterAndDataForTokenAmount(userOp, tokenAmountRequired)
       userOp.paymasterAndData = paymasterAndData;
       
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
