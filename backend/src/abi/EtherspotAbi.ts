@@ -1,4 +1,4 @@
-export const EtherspotPaymasterAbi = [
+export default [
   {
     "inputs": [
       {
