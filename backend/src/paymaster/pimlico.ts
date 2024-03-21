@@ -16,10 +16,13 @@ export interface ERC20PaymasterBuildOptions {
 
 export class PimlicoPaymaster {
     private contract: Contract;
+    tokenAddress: Promise<string>;
     paymasterAddress: string;
+
     constructor(address: string, provider: providers.Provider) {
         this.paymasterAddress = address;
         this.contract = new Contract(address, abi, provider)
+        this.tokenAddress = this.contract.token();
     }
 
     /**
@@ -66,6 +69,20 @@ export class PimlicoPaymaster {
      */
     async generatePaymasterAndData(userOp: NotPromise<UserOperationStruct>): Promise<string> {
         const tokenAmount = await this.calculateTokenAmount(userOp)
+        const paymasterAndData = utils.hexlify(
+            utils.concat([this.contract.address, utils.hexZeroPad(utils.hexlify(tokenAmount), 32)])
+        )
+        return paymasterAndData
+    }
+
+    /**
+     * @dev Generates the paymaster and data for the UserOperation, given token amount
+     *
+     * @param userOp the UserOperation to generate the paymasterAndData for (with gas limits already set)
+     * @param requiredPreFund the required token amount if already calculated
+     * @returns the paymasterAndData to be filled in
+     */
+    async generatePaymasterAndDataForTokenAmount(userOp: NotPromise<UserOperationStruct>, tokenAmount: BigNumber): Promise<string> {
         const paymasterAndData = utils.hexlify(
             utils.concat([this.contract.address, utils.hexZeroPad(utils.hexlify(tokenAmount), 32)])
         )
@@ -182,7 +199,7 @@ export async function getERC20Paymaster(
             nativeAssetOracle: ORACLE_ADDRESS[chainId][NATIVE_ASSET[chainId]],
             tokenAddress: TOKEN_ADDRESS[chainId][erc20],
             tokenOracle: ORACLE_ADDRESS[chainId][erc20],
-            owner: "0x4337000c2828f5260d8921fd25829f606b9e8680" // pimlico address
+            owner: "0x4337000c2828F5260d8921fD25829F606b9E8680" // pimlico address
         }
     } else {
         parsedOptions = await validatePaymasterOptions(provider, erc20, options)

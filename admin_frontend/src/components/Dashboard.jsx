@@ -83,7 +83,7 @@ const Dashboard = () => {
             method: "GET",
           }
         );
-        const dataJson = data.json();
+        const dataJson = await data.json();
         setConfig(dataJson);
         setEdittedConfig(dataJson);
         let buffer;

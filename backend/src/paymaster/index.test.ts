@@ -1,13 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ethers, Wallet } from "ethers";
+import { ethers, providers, Wallet } from "ethers";
 import { Paymaster } from "./index.js";
+import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
 
 describe('Paymaster on Mumbai', () => {
-  const paymaster = new Paymaster();
+  const paymaster = new Paymaster('10');
   const paymasterAddress = '0x8350355c08aDAC387b443782124A30A8942BeC2e'; // Mumbai Etherspot Paymaster Address
   const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"; // EntryPoint v0.6 as default
   const bundlerUrl = 'https://mumbai-bundler.etherspot.io';
+  const chainId = 80001; // Mumbai chainId
   const relayerKey = '0xdd45837c9d94e7cc3ed3b24be7c1951eff6ed3c6fd0baf68fc1ba8c0e51debb2'; // Testing wallet private key only has Mumbai funds in it
+  const provider = new providers.JsonRpcProvider(bundlerUrl);
+  const signer = new Wallet(relayerKey, provider)
   const userOp = {
     sender: '0x7b3078b9A28DF76453CDfD2bA5E75f32f0676321',
     nonce: '0x1',
@@ -18,7 +22,7 @@ describe('Paymaster on Mumbai', () => {
     maxFeePerGas: '0x6fc23ac10',
     maxPriorityFeePerGas: '0x6fc23ac00',
     paymasterAndData: '0x0101010101010101010101010101010101010101000000000000000000000000000000000000000000000000000001010101010100000000000000000000000000000000000000000000000000000000000000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101',
-    signature: '0x0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101',
+    signature: '0x',
     preVerificationGas: '0xc6c4'
   };
 
@@ -26,8 +30,7 @@ describe('Paymaster on Mumbai', () => {
     const Mock_Valid_Until = '0x00000000deadbeef'; // max value
     const Mock_Valid_After = '0x0000000000001234'; // min value
     try {
-      const signResponse = await paymaster.sign(userOp, Mock_Valid_Until, Mock_Valid_After, entryPointAddress, paymasterAddress, bundlerUrl, relayerKey);
-
+      const signResponse = await paymaster.sign(userOp, Mock_Valid_Until, Mock_Valid_After, entryPointAddress, paymasterAddress, bundlerUrl, signer);
       try {
         expect(signResponse).toHaveProperty('paymasterAndData');
       } catch (e) {
@@ -59,7 +62,8 @@ describe('Paymaster on Mumbai', () => {
   test('SMOKE: validate the pimlico function with valid details', async () => {
     const gasToken = 'USDC';
     try {
-      const pimlicoResponse = await paymaster.pimlico(userOp, gasToken, bundlerUrl, entryPointAddress, null);
+      const tokenPaymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken];
+      const pimlicoResponse = await paymaster.pimlico(userOp, bundlerUrl, entryPointAddress, tokenPaymasterAddress);
 
       try {
         expect(pimlicoResponse).toHaveProperty('paymasterAndData');
@@ -93,7 +97,7 @@ describe('Paymaster on Mumbai', () => {
   test('SMOKE: validate the pimlicoAddress function with valid details', async () => {
     const gasToken = 'USDC';
     try {
-      const pimlicoAddressResponse = await paymaster.pimlicoAddress(gasToken, bundlerUrl, entryPointAddress);
+      const pimlicoAddressResponse = await paymaster.pimlicoAddress(gasToken, chainId);
 
       try {
         expect(pimlicoAddressResponse).toHaveProperty('message');
@@ -142,11 +146,11 @@ describe('Paymaster on Mumbai', () => {
     const Mock_Valid_Until = '0x00000000deadbeef';
     const Mock_Valid_After = '0x0000000000001234';
     try {
-      await paymaster.sign(userOp, Mock_Valid_Until, Mock_Valid_After, entryPointAddress, paymasterAddress, bundlerUrl, relayerKey);
+      await paymaster.sign(userOp, Mock_Valid_Until, Mock_Valid_After, entryPointAddress, paymasterAddress, bundlerUrl, signer);
       fail('The sign function is worked, however the sender address is invalid.')
 
     } catch (e: any) {
-      const actualMessage = 'Transaction Execution reverted';
+      const actualMessage = 'Please contact support team RawErrorMsg:invalid address';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The sender address is invalid while using the sign function.')
@@ -161,10 +165,10 @@ describe('Paymaster on Mumbai', () => {
     const gasToken = 'USDC';
     const address = ethers.Wallet.createRandom(); // random address
     try {
-      await paymaster.pimlico(userOp, gasToken, bundlerUrl, entryPointAddress, address.toString()); // invalid custom paymaster address
+      await paymaster.pimlico(userOp, bundlerUrl, entryPointAddress, address.toString()); // invalid custom paymaster address
       fail('The pimlico function is worked, however the customPaymasterAddress is invalid.')
     } catch (e: any) {
-      const actualMessage = 'Transaction Execution reverted network does not support ENS';
+      const actualMessage = 'Please contact support team RawErrorMsg: network does not support ENS';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The customPaymasterAddress is invalid while using the pimlico function.')
@@ -186,37 +190,20 @@ describe('Paymaster on Mumbai', () => {
       maxFeePerGas: '0x6fc23ac10',
       maxPriorityFeePerGas: '0x6fc23ac00',
       paymasterAndData: '0x0101010101010101010101010101010101010101000000000000000000000000000000000000000000000000000001010101010100000000000000000000000000000000000000000000000000000000000000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101',
-      signature: '0x0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101',
+      signature: '0x',
       preVerificationGas: '0xc6c4'
     };
 
     try {
-      await paymaster.pimlico(userOp, gasToken, bundlerUrl, entryPointAddress, null);
+      await paymaster.pimlico(userOp, bundlerUrl, entryPointAddress, PAYMASTER_ADDRESS[chainId][gasToken]);
       fail('The pimlico function is worked, however the sender address is invalid.')
     } catch (e: any) {
-      const actualMessage = 'Transaction Execution reverted';
+      const actualMessage = ' Please contact support team RawErrorMsg: invalid address';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The sender address is invalid while using the pimlico function.')
       } else {
         fail('The respective validation is not displayed for invalid sender address while using the pimlico function.')
-      }
-    }
-  })
-
-  test('REGRESSION: validate the pimlicoAddress function with invalid bundlerUrl', async () => {
-    const gasToken = 'USDC';
-    const bundlerUrl = 'http://mumbai-bundler.etherspot.io'; // invalid bundlerUrl
-    try {
-      await paymaster.pimlicoAddress(gasToken, bundlerUrl, entryPointAddress);
-      fail('The pimlicoAddress function is worked, however the bundlerUrl is invalid.')
-    } catch (e: any) {
-      const actualMessage = 'could not detect network';
-      const expectedMessage = e.message;
-      if (expectedMessage.includes(actualMessage)) {
-        console.log('The bundlerUrl is invalid while using the pimlicoAddress function.')
-      } else {
-        fail('The respective validation is not displayed for invalid bundlerUrl while using the pimlicoAddress function.')
       }
     }
   })
@@ -260,7 +247,7 @@ describe('Paymaster on Mumbai', () => {
       await paymaster.whitelistAddresses(address, paymasterAddress, bundlerUrl, relayerKey);
       fail('Address is whitelisted, however the relayerKey is invalid.')
     } catch (e: any) {
-      const actualMessage = 'Error while submitting transaction';
+      const actualMessage = 'Please try again later or contact support team RawErrorMsg: hex data is odd-length';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The relayerKey is invalid while whitelisting the address.')
@@ -322,7 +309,7 @@ describe('Paymaster on Mumbai', () => {
       await paymaster.deposit(amount, paymasterAddress, bundlerUrl, relayerKey);
       fail('The deposite action is performed with invalid amount.')
     } catch (e: any) {
-      const actualMessage = 'Error while submitting transaction';
+      const actualMessage = 'Balance is less than the amount to be deposited';
       const expectedMessage = e.message;
       if (expectedMessage.includes(actualMessage)) {
         console.log('The amount is invalid while performing the deposit.')

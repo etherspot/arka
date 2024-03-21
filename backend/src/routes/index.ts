@@ -3,26 +3,17 @@ import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
 import { Wallet, ethers, providers } from "ethers";
 import { gql, request as GLRequest } from "graphql-request";
+import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
-import { TOKEN_ADDRESS } from "../constants/Pimlico.js";
+import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
-import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { decode } from "../utils/crypto.js";
-import { printRequest } from "../utils/common.js";
-
-export function getNetworkConfig(key: any, supportedNetworks: any) {
-  if (supportedNetworks !== '') {
-    const buffer = Buffer.from(supportedNetworks, 'base64');
-    const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
-    return SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key });
-  } else
-    return SupportedNetworks.find((chain) => chain.chainId == key);
-}
+import { printRequest, getNetworkConfig, getSQLdata } from "../utils/common.js";
 
 const routes: FastifyPluginAsync = async (server) => {
-  const paymaster = new Paymaster();
+  const paymaster = new Paymaster(server.config.FEE_MARKUP);
 
   const prefixSecretId = 'arka_';
 
@@ -98,7 +89,7 @@ const routes: FastifyPluginAsync = async (server) => {
           txnMode = secrets['TRANSACTION_LIMIT'] ?? 0;
           indexerEndpoint = secrets['INDEXER_ENDPOINT'] ?? process.env.DEFAULT_INDEXER_ENDPOINT;
         } else {
-          const record: any = await getSQLdata(api_key);
+          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
           if (!record) {
             server.log.info("Invalid Api Key provided")
             return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -129,7 +120,7 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         if (
           mode.toLowerCase() == 'erc20' &&
-          !(TOKEN_ADDRESS[chainId] && TOKEN_ADDRESS[chainId][gasToken]) &&
+          !(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken]) &&
           !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
         ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
@@ -163,7 +154,10 @@ const routes: FastifyPluginAsync = async (server) => {
             break;
           }
           case 'erc20': {
-            result = await paymaster.pimlico(userOp, gasToken, networkConfig.bundler, entryPoint, customPaymasters[chainId] ? customPaymasters[chainId][gasToken] : null);
+            let paymasterAddress: string;
+            if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
+            else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
+            result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, paymasterAddress);
             break;
           }
           case 'default': {
@@ -216,8 +210,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key);
-          console.log(record);
+          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
           if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           if (record['ERC20_PAYMASTERS']) {
             const buffer = Buffer.from(record['ERC20_PAYMASTERS'], 'base64');
@@ -243,8 +236,8 @@ const routes: FastifyPluginAsync = async (server) => {
         let result;
         if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) result = { message: customPaymasters[chainId][gasToken] }
         else {
-          if (!(TOKEN_ADDRESS[chainId] && TOKEN_ADDRESS[chainId][gasToken])) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid network/token" })
-          result = await paymaster.pimlicoAddress(gasToken, networkConfig.bundler, entryPoint);
+          if (!(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken])) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid network/token" })
+          result = { message: PAYMASTER_ADDRESS[chainId][gasToken] }
         }
         server.log.info(result, 'Response sent: ');
         if (body.jsonrpc)
@@ -263,7 +256,7 @@ const routes: FastifyPluginAsync = async (server) => {
     "/whitelist",
     async function (request, reply) {
       try {
-        printRequest("/whiteList",request, server.log);
+        printRequest("/whitelist", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const address = body.params[0];
@@ -284,7 +277,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key);
+          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
           if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(record['PRIVATE_KEY']);
           supportedNetworks = record['SUPPORTED_NETWORKS'];
@@ -321,6 +314,7 @@ const routes: FastifyPluginAsync = async (server) => {
 
   server.post("/removeWhitelist", async function (request, reply) {
     try {
+      printRequest("/removeWhitelist", request, server.log);
       const body: any = request.body;
         const query: any = request.query;
         const address = body.params[0];
@@ -341,8 +335,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key);
-          console.log(record);
+          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
           if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(record['PRIVATE_KEY']);
           supportedNetworks = record['SUPPORTED_NETWORKS'];
@@ -379,12 +372,12 @@ const routes: FastifyPluginAsync = async (server) => {
     "/checkWhitelist",
     async function (request, reply) {
       try {
-        printRequest("/checkWhiteList", request, server.log);
+        printRequest("/checkWhitelist", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
         const accountAddress = body.params[0];
-        const chainId = query['chainId'] ?? body.params[2];
-        const api_key = query['apiKey'] ?? body.params[3];
+        const chainId = query['chainId'] ?? body.params[1];
+        const api_key = query['apiKey'] ?? body.params[2];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
@@ -400,7 +393,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key);
+          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
           if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(record['PRIVATE_KEY']);
           supportedNetworks = record['SUPPORTED_NETWORKS'];
@@ -459,7 +452,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key);
+          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
           if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(record['PRIVATE_KEY']);
           supportedNetworks = record['SUPPORTED_NETWORKS'];
@@ -485,21 +478,6 @@ const routes: FastifyPluginAsync = async (server) => {
       }
     }
   )
-
-  async function getSQLdata(apiKey: string) {
-    try {
-      const result: any[] = await new Promise((resolve, reject) => {
-        server.sqlite.db.get("SELECT * FROM api_keys WHERE API_KEY = ?", [apiKey], (err: any, rows: any[]) => {
-          if (err) reject(err);
-          resolve(rows);
-        })
-      })
-      return result;
-    } catch (err) {
-      server.log.error(err);
-      return null;
-    }
-  }
 
   async function getIndexerData(sponsor: string, sender: string, month: number, year: number, noOfTxns: number, endpoint: string): Promise<any[]> {
     try {
