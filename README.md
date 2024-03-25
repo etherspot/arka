@@ -66,6 +66,13 @@ There is an option to run the code locally without using AWS and only using loca
         "LINK": "0x0a6Aa1Bd30D6954cA525315287AdeeEcbb6eFB59"
     }
 } which also needs to be converted into `base64` value
+- FEE_MARKUP - this is used to add fee if it gets from the provider. This needs to be inputted as a number in terms of gwei
+- ETHERSCAN_GAS_ORACLES - the list of urls for all chains. Note that the response got is in terms of etherscan API Documentation https://docs.polygonscan.com/api-endpoints/gas-tracker#get-gas-oracle
+The structure should be as follows
+{
+  "137": "https://api.polygonscan.com/api?module=gastracker&action=gasoracle&apikey=YourApiKeyToken", // Note that you need to replace YourApiKeyToken to actual API key from etherscan
+  "1": "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=YourApiKeyToken"
+} which then needs to be converted into `base64` value
 
 ## API KEY VALIDATION
 - In ARKA Admin Frontend, create an API_KEY with the following format - 

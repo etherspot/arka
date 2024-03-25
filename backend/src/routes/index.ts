@@ -150,14 +150,14 @@ const routes: FastifyPluginAsync = async (server) => {
             }
             str += hex;
             str1 += hex1;
-            result = await paymaster.sign(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer);
+            result = await paymaster.sign(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer, server.log);
             break;
           }
           case 'erc20': {
             let paymasterAddress: string;
             if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
             else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
-            result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, paymasterAddress);
+            result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, paymasterAddress, server.log);
             break;
           }
           case 'default': {
@@ -298,7 +298,7 @@ const routes: FastifyPluginAsync = async (server) => {
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const validAddresses = address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
-        const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey);
+        const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
         server.log.info(result, 'Response sent: ');
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
@@ -356,7 +356,7 @@ const routes: FastifyPluginAsync = async (server) => {
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const validAddresses = address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
-        const result = await paymaster.removeWhitelistAddress(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey);
+        const result = await paymaster.removeWhitelistAddress(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(ReturnCode.SUCCESS).send(result);
@@ -412,7 +412,7 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        const response = await paymaster.checkWhitelistAddress(accountAddress, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey);
+        const response = await paymaster.checkWhitelistAddress(accountAddress, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, server.log);
         server.log.info(response, 'Response sent: ');
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result: { message: response === true ? 'Already added' : 'Not added yet' }, error: null })
@@ -469,7 +469,7 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey);
+        return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
       } catch (err: any) {
         request.log.error(err);
         if (err.name == "ResourceNotFoundException")

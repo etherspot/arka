@@ -1,6 +1,8 @@
 import { FastifyBaseLogger, FastifyRequest } from "fastify";
-import SupportedNetworks from "../../config.json" assert { type: "json" };
+import { ethers } from "ethers";
 import { Database } from "sqlite3";
+import SupportedNetworks from "../../config.json" assert { type: "json" };
+import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
 
 export function printRequest(methodName: string, request: FastifyRequest, log: FastifyBaseLogger) {
   log.info(methodName, "called: ");
@@ -28,6 +30,40 @@ export async function getSQLdata(apiKey: string, db: Database, log: FastifyBaseL
     return result;
   } catch (err) {
     log.error(err);
+    return null;
+  }
+}
+
+export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger): Promise<getEtherscanFeeResponse | null> {
+  try {
+    const etherscanUrlsBase64 = process.env.ETHERSCAN_GAS_ORACLES;
+    if (etherscanUrlsBase64) {
+      const buffer = Buffer.from(etherscanUrlsBase64, 'base64');
+      const etherscanUrls = JSON.parse(buffer.toString());
+
+      if (etherscanUrls[chainId]) {
+        const data = await fetch(etherscanUrls[chainId]);
+        const response: EtherscanResponse = await data.json();
+
+        if (response.result && response.result.FastGasPrice) {
+          const maxFeePerGas = ethers.utils.parseUnits(response.result.suggestBaseFee, 'gwei')
+          const fastGasPrice = ethers.utils.parseUnits(response.result.FastGasPrice, 'gwei')
+          return {
+            maxPriorityFeePerGas: fastGasPrice.sub(maxFeePerGas),
+            maxFeePerGas,
+            gasPrice: maxFeePerGas,
+          }
+        }
+        return null;
+      }
+      return null;
+    }
+    return null;
+  } catch (err) {
+    if (log) {
+      log.error(err);
+      log.info('fetching from provider');
+    }
     return null;
   }
 }
