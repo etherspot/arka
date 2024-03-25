@@ -113,7 +113,7 @@ describe('Paymaster on Mumbai', () => {
   test('SMOKE: validate the deposit function with valid details', async () => {
     const amount = '0.0000001'
     try {
-      const depositResponse = await paymaster.deposit(amount, paymasterAddress, bundlerUrl, relayerKey);
+      const depositResponse = await paymaster.deposit(amount, paymasterAddress, bundlerUrl, relayerKey, chainId);
 
       const expectedMessage = depositResponse.message;
       const actualMessage = 'Successfully deposited with transaction Hash';
@@ -212,7 +212,7 @@ describe('Paymaster on Mumbai', () => {
     const wallet = ethers.Wallet.createRandom();
     const address = [wallet.address]; // not whitelisted address
     try {
-      const whitelistAddresses = await paymaster.whitelistAddresses(address, paymasterAddress, bundlerUrl, relayerKey);
+      const whitelistAddresses = await paymaster.whitelistAddresses(address, paymasterAddress, bundlerUrl, relayerKey, chainId);
 
       if (whitelistAddresses.message.includes('Successfully whitelisted with transaction Hash')) {
         console.log('The address is whitelisted successfully.')
@@ -227,7 +227,7 @@ describe('Paymaster on Mumbai', () => {
   test('REGRESSION: validate the whitelistAddresses function with already whitelisted address', async () => {
     const address = ['0x7b3078b9A28DF76453CDfD2bA5E75f32f0676321']; // already whitelisted address
     try {
-      await paymaster.whitelistAddresses(address, paymasterAddress, bundlerUrl, relayerKey);
+      await paymaster.whitelistAddresses(address, paymasterAddress, bundlerUrl, relayerKey, chainId);
       fail('Address is whitelisted, However it was already whitelisted.')
     } catch (e: any) {
       const actualMessage = 'already whitelisted';
@@ -244,7 +244,7 @@ describe('Paymaster on Mumbai', () => {
     const address = ['0x7b3078b9A28DF76453CDfD2bA5E75f32f0676321']; // already whitelisted address
     const relayerKey = '0xdd45837c9d94e7cc3ed3b24be7c1951eff6ed3c6fd0baf68fc1ba8c0e51debb'; // invalid relayerKey
     try {
-      await paymaster.whitelistAddresses(address, paymasterAddress, bundlerUrl, relayerKey);
+      await paymaster.whitelistAddresses(address, paymasterAddress, bundlerUrl, relayerKey, chainId);
       fail('Address is whitelisted, however the relayerKey is invalid.')
     } catch (e: any) {
       const actualMessage = 'Please try again later or contact support team RawErrorMsg: hex data is odd-length';
@@ -306,7 +306,7 @@ describe('Paymaster on Mumbai', () => {
   test('REGRESSION: validate the deposit function with invalid amount', async () => {
     const amount = '10000' // invalid amount
     try {
-      await paymaster.deposit(amount, paymasterAddress, bundlerUrl, relayerKey);
+      await paymaster.deposit(amount, paymasterAddress, bundlerUrl, relayerKey, chainId);
       fail('The deposite action is performed with invalid amount.')
     } catch (e: any) {
       const actualMessage = 'Balance is less than the amount to be deposited';

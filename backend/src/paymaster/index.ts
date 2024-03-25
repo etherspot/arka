@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { providers, Wallet, ethers, Contract, BigNumber } from 'ethers';
 import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
+import { FastifyBaseLogger } from 'fastify';
 import abi from "../abi/EtherspotAbi.js";
-import { PimlicoPaymaster, getERC20Paymaster } from './pimlico.js';
+import { PimlicoPaymaster } from './pimlico.js';
 import ErrorMessage from '../constants/ErrorMessage.js';
 import { PAYMASTER_ADDRESS } from '../constants/Pimlico.js';
+import { getEtherscanFee } from '../utils/common.js';
 
 export class Paymaster {
   feeMarkUp: BigNumber;
@@ -35,7 +37,7 @@ export class Paymaster {
     return paymasterAndData;
   }
 
-  async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, bundlerRpc: string, signer: Wallet) {
+  async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, bundlerRpc: string, signer: Wallet, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
@@ -57,11 +59,12 @@ export class Paymaster {
 
       return returnValue;
     } catch (err: any) {
+      if (log) log.error(err, 'sign');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
     }
   }
 
-  async pimlico(userOp: any, bundlerRpc: string, entryPoint: string, PaymasterAddress: string) {
+  async pimlico(userOp: any, bundlerRpc: string, entryPoint: string, PaymasterAddress: string, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const erc20Paymaster = new PimlicoPaymaster(PaymasterAddress, provider)
@@ -87,10 +90,10 @@ export class Paymaster {
       const tokenBalance = await tokenContract.balanceOf(userOp.sender);
 
       if (tokenAmountRequired.gte(tokenBalance)) throw new Error(`The required token amount ${tokenAmountRequired.toString()} is more than what the sender has ${tokenBalance}`)
-      
+
       let paymasterAndData = await erc20Paymaster.generatePaymasterAndDataForTokenAmount(userOp, tokenAmountRequired)
       userOp.paymasterAndData = paymasterAndData;
-      
+
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
       userOp.verificationGasLimit = ethers.BigNumber.from(response.verificationGasLimit).add(100000).toString();
       userOp.preVerificationGas = response.preVerificationGas;
@@ -105,21 +108,23 @@ export class Paymaster {
       };
     } catch (err: any) {
       if (err.message.includes('The required token amount')) throw new Error(err.message);
+      if (log) log.error(err, 'pimlico');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg: ' + err.message)
     }
   }
 
-  async pimlicoAddress(gasToken: string, chainId: number) {
+  async pimlicoAddress(gasToken: string, chainId: number, log?: FastifyBaseLogger) {
     try {
       return {
         message: PAYMASTER_ADDRESS[chainId][gasToken] ?? 'Requested Token Paymaster is not available/deployed',
       }
     } catch (err: any) {
+      if (log) log.error(err, 'pimlicoAddress');
       throw new Error(err.message)
     }
   }
 
-  async whitelistAddresses(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
+  async whitelistAddresses(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
@@ -131,34 +136,47 @@ export class Paymaster {
         }
       }
       const encodedData = paymasterContract.interface.encodeFunctionData('addBatchToWhitelist', [address]);
-      const feeData = await provider.getFeeData();
+
+      const etherscanFeeData = await getEtherscanFee(chainId);
+      let feeData;
+      if (etherscanFeeData) {
+        feeData = etherscanFeeData;
+      } else {
+        feeData = await provider.getFeeData();
+        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
+        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
+        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
+      }
+
       let tx: providers.TransactionResponse;
       if (!feeData.maxFeePerGas) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
-          gasPrice: feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : undefined,
+          gasPrice: feeData.gasPrice ?? undefined,
         })
       } else {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
-          maxFeePerGas: feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : undefined,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : undefined,
+          maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
           type: 2,
         });
       }
       await tx.wait();
+
       return {
         message: `Successfully whitelisted with transaction Hash ${tx.hash}`
       };
     } catch (err: any) {
       if (err.message.includes('already whitelisted')) throw new Error(err.message);
+      if (log) log.error(err, 'whitelistAddresses')
       throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN + ` RawErrorMsg: ${err.message}`);
     }
   }
 
-  async removeWhitelistAddress(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
+  async removeWhitelistAddress(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
@@ -169,81 +187,108 @@ export class Paymaster {
           throw new Error(`${address[i]} is not whitelisted`)
         }
       }
+
       const encodedData = paymasterContract.interface.encodeFunctionData('removeBatchFromWhitelist', [address]);
-      const feeData = await provider.getFeeData();
+      const etherscanFeeData = await getEtherscanFee(chainId);
+      let feeData;
+      if (etherscanFeeData) {
+        feeData = etherscanFeeData;
+      } else {
+        feeData = await provider.getFeeData();
+        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
+        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
+        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
+      }
+
       let tx: providers.TransactionResponse;
       if (!feeData.maxFeePerGas) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
-          gasPrice: feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : undefined,
+          gasPrice: feeData.gasPrice ?? undefined,
         })
       } else {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
-          maxFeePerGas: feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : undefined,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : undefined,
+          maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
           type: 2,
         });
       }
       await tx.wait();
+
       return {
         message: `Successfully removed whitelisted addresses with transaction Hash ${tx.hash}`
       };
     } catch (err: any) {
       if (err.message.includes('is not whitelisted')) throw new Error(err.message);
+      if (log) log.error(err, 'removeWhitelistAddress');
       throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
   }
 
-  async checkWhitelistAddress(accountAddress: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
+  async checkWhitelistAddress(accountAddress: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const signer = new Wallet(relayerKey, provider)
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
       return paymasterContract.check(signer.address, accountAddress);
     } catch (err) {
+      if (log) log.error(err, 'checkWhitelistAddress');
       throw new Error(ErrorMessage.RPC_ERROR);
     }
   }
 
-  async deposit(amount: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string) {
+  async deposit(amount: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
       const signer = new Wallet(relayerKey, provider)
       const balance = await signer.getBalance();
-      const amountInWei = ethers.utils.parseEther(amount);
+      const amountInWei = ethers.utils.parseEther(amount.toString());
       if (amountInWei.gte(balance))
         throw new Error(`${signer.address} Balance is less than the amount to be deposited`)
 
       const encodedData = paymasterContract.interface.encodeFunctionData('depositFunds', []);
-      const feeData = await provider.getFeeData();
+
+      const etherscanFeeData = await getEtherscanFee(chainId);
+      let feeData;
+      if (etherscanFeeData) {
+        feeData = etherscanFeeData;
+      } else {
+        feeData = await provider.getFeeData();
+        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
+        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
+        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
+      }
+
       let tx: providers.TransactionResponse;
       if (!feeData.maxFeePerGas) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
           value: amountInWei,
-          gasPrice: feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : undefined,
+          gasPrice: feeData.gasPrice ?? undefined,
         })
       } else {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
           value: amountInWei,
-          maxFeePerGas: feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : undefined,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : undefined,
+          maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
           type: 2,
         });
       }
       // commented the below line to avoid timeouts for long delays in transaction confirmation.
       // await tx.wait(); 
+
       return {
         message: `Successfully deposited with transaction Hash ${tx.hash}`
       };
     } catch (err: any) {
+      if (log) log.error(err, 'deposit');
       if (err.message.includes('Balance is less than the amount to be deposited')) throw new Error(err.message);
       throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
