@@ -171,7 +171,7 @@
         "chainId": 123,
         "bundler": "https://fusetestnet-bundler-bundler.etherspot.io",
         "contracts": {
-            "etherspotPaymasterAddress": "	0xAF628C207513c5E51d894b3733056B8080634923"
+            "etherspotPaymasterAddress": "0xAF628C207513c5E51d894b3733056B8080634923"
         }
     },
     {
