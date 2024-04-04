@@ -166,5 +166,61 @@
         "contracts": {
             "etherspotPaymasterAddress": "0xcaDBADcFeD5530A49762DFc9d1d712CcD6b09b25"
         }
+    },
+    {
+        "chainId": 123,
+        "bundler": "https://fusetestnet-bundler-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "	0xAF628C207513c5E51d894b3733056B8080634923"
+        }
+    },
+    {
+        "chainId": 31,
+        "bundler": "https://rootstocktestnet-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "0x898c530A5fA37720DcF1843AeCC34b6B0cBaEB8a"
+        }
+    },
+    {
+        "chainId": 421614,
+        "bundler": "https://arbitrumsepolia-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "0xe893A26DD53b325BffAacDfA224692EfF4C448c4"
+        }
+    },
+    {
+        "chainId": 11155420,
+        "bundler": "https://optimismsepolia-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "0xB3AD9B9B06c6016f81404ee8FcCD0526F018Cf0C"
+        }
+    },
+    {
+        "chainId": 84532,
+        "bundler": "https://basesepolia-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "0xe893A26DD53b325BffAacDfA224692EfF4C448c4"
+        }
+    },
+    {
+        "chainId": 30,
+        "bundler": "https://rootstock-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "0xe893A26dD53b325bFFaACdFA224692EFF4C448C4"
+        }
+    },
+    {
+        "chainId": 534352,
+        "bundler": "https://scroll-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "0xB3AD9B9B06c6016f81404ee8FcCD0526F018Cf0C"
+        }
+    },
+    {
+        "chainId": 28122024,
+        "bundler": "https://ancient8testnet-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "0xe893A26DD53b325BffAacDfA224692EfF4C448c4"
+        }
     }
 ]
