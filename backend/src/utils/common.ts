@@ -40,11 +40,14 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
     if (etherscanUrlsBase64) {
       const buffer = Buffer.from(etherscanUrlsBase64, 'base64');
       const etherscanUrls = JSON.parse(buffer.toString());
+      console.log('etherscanUrl: ', etherscanUrls[chainId]);
 
       if (etherscanUrls[chainId]) {
         const data = await fetch(etherscanUrls[chainId]);
         const response: EtherscanResponse = await data.json();
+        console.log('Etherscan Response: ', response);
         if (response.result && typeof response.result === "object" && response.status === "1") {
+          console.log('setting maxFeePerGas and maxPriorityFeePerGas as received')
           const maxFeePerGas = ethers.utils.parseUnits(response.result.suggestBaseFee, 'gwei')
           const fastGasPrice = ethers.utils.parseUnits(response.result.FastGasPrice, 'gwei')
           return {
@@ -55,6 +58,7 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
         }
         if (response.result && typeof response.result === "string" && response.jsonrpc) {
           const gasPrice = BigNumber.from(response.result)
+          console.log('setting gas price as received')
           return {
             maxFeePerGas: gasPrice,
             maxPriorityFeePerGas: gasPrice,
