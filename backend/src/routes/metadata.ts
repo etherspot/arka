@@ -33,6 +33,8 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       if (!chainId)
         return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_DATA})
       let customPaymasters = [];
+      let multiTokenPaymasters = [];
+      let multiTokenOracles = [];
       let privateKey = '';
       let supportedNetworks;
       if (!unsafeMode) {
@@ -50,6 +52,10 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
           const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
           customPaymasters = JSON.parse(buffer.toString());
         }
+        if (secrets['MULTI_TOKEN_PAYMASTERS']) {
+          const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
+          multiTokenPaymasters = JSON.parse(buffer.toString()); 
+        }
         privateKey = secrets['PRIVATE_KEY'];
         supportedNetworks = secrets['SUPPORTED_NETWORKS'];
       } else {
@@ -61,6 +67,10 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         if (record['ERC20_PAYMASTERS']) {
           const buffer = Buffer.from(record['ERC20_PAYMASTERS'], 'base64');
           customPaymasters = JSON.parse(buffer.toString());
+        }
+        if (record['MULTI_TOKEN_PAYMASTERS']) {
+          const buffer = Buffer.from(record['MULTI_TOKEN_PAYMASTERS'], 'base64');
+          multiTokenPaymasters = JSON.parse(buffer.toString()); 
         }
         privateKey = decode(record['PRIVATE_KEY']);
         supportedNetworks = record['SUPPORTED_NETWORKS'];
@@ -95,6 +105,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         sponsorWalletBalance: balance,
         chainsSupported: chainsSupported,
         tokenPaymasters: tokenPaymasterAddresses,
+        multiTokenPaymasters,
       })
     } catch (err: any) {
       request.log.error(err);
