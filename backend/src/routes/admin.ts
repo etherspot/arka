@@ -97,6 +97,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           PRIVATE_KEY, \
           SUPPORTED_NETWORKS, \
           ERC20_PAYMASTERS, \
+          MULTI_TOKEN_PAYMASTERS, \
+          MULTI_TOKEN_ORACLES, \
           TRANSACTION_LIMIT, \
           NO_OF_TRANSACTIONS_IN_A_MONTH, \
           INDEXER_ENDPOINT) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
@@ -105,6 +107,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           hmac,
           body.SUPPORTED_NETWORKS,
           body.ERC20_PAYMASTERS,
+          body.MULTI_TOKEN_PAYMASTERS ?? null,
+          body.MULTI_TOKEN_ORACLES ?? null,
           body.TRANSACTION_LIMIT ?? 0,
           body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
           body.INDEXER_ENDPOINT ?? process.env.DEFAULT_INDEXER_ENDPOINT

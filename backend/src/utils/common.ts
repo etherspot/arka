@@ -1,5 +1,5 @@
 import { FastifyBaseLogger, FastifyRequest } from "fastify";
-import { ethers } from "ethers";
+import { BigNumber, ethers } from "ethers";
 import { Database } from "sqlite3";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
@@ -44,14 +44,21 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
       if (etherscanUrls[chainId]) {
         const data = await fetch(etherscanUrls[chainId]);
         const response: EtherscanResponse = await data.json();
-
-        if (response.result && response.result.FastGasPrice) {
+        if (response.result && typeof response.result === "object" && response.status === "1") {
           const maxFeePerGas = ethers.utils.parseUnits(response.result.suggestBaseFee, 'gwei')
           const fastGasPrice = ethers.utils.parseUnits(response.result.FastGasPrice, 'gwei')
           return {
             maxPriorityFeePerGas: fastGasPrice.sub(maxFeePerGas),
             maxFeePerGas,
             gasPrice: maxFeePerGas,
+          }
+        }
+        if (response.result && typeof response.result === "string" && response.jsonrpc) {
+          const gasPrice = BigNumber.from(response.result)
+          return {
+            maxFeePerGas: gasPrice,
+            maxPriorityFeePerGas: gasPrice,
+            gasPrice: gasPrice
           }
         }
         return null;

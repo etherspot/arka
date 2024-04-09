@@ -1,8 +1,10 @@
 import { BigNumber } from "ethers";
 
 export interface EtherscanResponse {
-  status: string;
-  message: string;
+  jsonrpc?: string;
+  id?: string;
+  status?: string;
+  message?: string;
   result?: {
     LastBlock: string;
     SafeGasPrice: string;
@@ -10,7 +12,7 @@ export interface EtherscanResponse {
     FastGasPrice: string;
     suggestBaseFee: string;
     gasUsedRatio: string;
-  }
+  } | string;
 }
 
 export interface getEtherscanFeeResponse {
