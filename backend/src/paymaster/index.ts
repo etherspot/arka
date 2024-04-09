@@ -7,6 +7,7 @@ import { PimlicoPaymaster } from './pimlico.js';
 import ErrorMessage from '../constants/ErrorMessage.js';
 import { PAYMASTER_ADDRESS } from '../constants/Pimlico.js';
 import { getEtherscanFee } from '../utils/common.js';
+import MultiTokenPaymasterAbi from '../abi/MultiTokenPaymasterAbi.js';
 
 export class Paymaster {
   feeMarkUp: BigNumber;
@@ -60,6 +61,64 @@ export class Paymaster {
       return returnValue;
     } catch (err: any) {
       if (log) log.error(err, 'sign');
+      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
+    }
+  }
+
+  async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string, oracleAggregator: string, paymasterContract: Contract, signer: Wallet) {
+    const exchangeRate = 10000000; // This is for setting min tokens required for the txn that gets validated on estimate
+    const priceMarkup = 1100000; // 10% more of the actual cost. Can be anything between 1e6 to 2e6
+    // actual signing...
+    // priceSource inputs available 0 - for using external exchange price and 1 - for oracle based price
+    const hash = await paymasterContract.getHash(
+      userOp,
+      1,
+      validUntil,
+      validAfter,
+      feeToken,
+      oracleAggregator,
+      exchangeRate,
+      priceMarkup,
+    );
+
+    const sig = await signer.signMessage(arrayify(hash));
+
+    const paymasterAndData = hexConcat([
+      paymasterContract.address,
+      '0x01',
+      defaultAbiCoder.encode(
+        ['uint48', 'uint48', 'address', 'address', 'uint256', 'uint32'],
+        [validUntil, validAfter, feeToken, oracleAggregator, exchangeRate, priceMarkup]
+      ),
+      sig,
+    ]);
+
+    return paymasterAndData;
+  }
+
+  async signMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, feeToken: string, oracleAggregator: string, bundlerRpc: string, signer: Wallet, log?: FastifyBaseLogger) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbi, provider);
+      userOp.paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, oracleAggregator, paymasterContract, signer);
+  
+      if (!userOp.signature) userOp.signature = '0x';
+      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+      userOp.verificationGasLimit = response.verificationGasLimit;
+      userOp.preVerificationGas = response.preVerificationGas;
+      userOp.callGasLimit = response.callGasLimit;
+      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, oracleAggregator, paymasterContract, signer);
+
+      const returnValue = {
+        paymasterAndData,
+        verificationGasLimit: response.verificationGasLimit,
+        preVerificationGas: response.preVerificationGas,
+        callGasLimit: response.callGasLimit,
+      }
+
+      return returnValue;
+    } catch (err: any) {
+      if (log) log.error(err, 'signCombinedPaymaster');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
     }
   }
@@ -253,6 +312,7 @@ export class Paymaster {
       const encodedData = paymasterContract.interface.encodeFunctionData('depositFunds', []);
 
       const etherscanFeeData = await getEtherscanFee(chainId);
+      console.log('etherscanFeeData: ', etherscanFeeData);
       let feeData;
       if (etherscanFeeData) {
         feeData = etherscanFeeData;

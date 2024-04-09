@@ -1,6 +1,6 @@
 {
   "name": "admin_frontend",
-  "version": "1.1.7",
+  "version": "1.2.0",
   "private": true,
   "dependencies": {
     "@emotion/react": "11.11.3",

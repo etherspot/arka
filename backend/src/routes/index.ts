@@ -56,13 +56,15 @@ const routes: FastifyPluginAsync = async (server) => {
         const userOp = body.params[0];
         const entryPoint = body.params[1];
         const context = body.params[2];
-        const gasToken = context?.token ? context.token : null;
+        let gasToken = context?.token ? context.token : null;
         const mode = context?.mode ? String(context.mode) : null;
         const chainId = query['chainId'] ?? body.params[3];
         const api_key = query['apiKey'] ?? body.params[4];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let customPaymasters = [];
+        let multiTokenPaymasters = [];
+        let multiTokenOracles = [];
         let privateKey = '';
         let supportedNetworks;
         let noOfTxns;
@@ -83,6 +85,14 @@ const routes: FastifyPluginAsync = async (server) => {
             const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
             customPaymasters = JSON.parse(buffer.toString());
           }
+          if (secrets['MULTI_TOKEN_PAYMASTERS']) {
+            const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
+            multiTokenPaymasters = JSON.parse(buffer.toString()); 
+          }
+          if (secrets['MULTI_TOKEN_ORACLES']) {
+            const buffer = Buffer.from(secrets['MULTI_TOKEN_ORACLES'], 'base64');
+            multiTokenOracles = JSON.parse(buffer.toString());
+          }
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
           noOfTxns = secrets['NO_OF_TRANSACTIONS_IN_A_MONTH'] ?? 10;
@@ -98,12 +108,21 @@ const routes: FastifyPluginAsync = async (server) => {
             const buffer = Buffer.from(record['ERC20_PAYMASTERS'], 'base64');
             customPaymasters = JSON.parse(buffer.toString());
           }
+          if (record['MULTI_TOKEN_PAYMASTERS']) {
+            const buffer = Buffer.from(record['MULTI_TOKEN_PAYMASTERS'], 'base64');
+            multiTokenPaymasters = JSON.parse(buffer.toString()); 
+          }
+          if (record['MULTI_TOKEN_ORACLES']) {
+            const buffer = Buffer.from(record['MULTI_TOKEN_ORACLES'], 'base64');
+            multiTokenOracles = JSON.parse(buffer.toString());
+          }
           privateKey = decode(record['PRIVATE_KEY']);
           supportedNetworks = record['SUPPORTED_NETWORKS'];
           noOfTxns = record['NO_OF_TRANSACTIONS_IN_A_MONTH'];
           txnMode = record['TRANSACTION_LIMIT'];
           indexerEndpoint = record['INDEXER_ENDPOINT'] ?? process.env.DEFAULT_INDEXER_ENDPOINT;
         }
+
         if (
           !userOp ||
           !entryPoint ||
@@ -118,13 +137,23 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
+
         if (
           mode.toLowerCase() == 'erc20' &&
           !(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken]) &&
           !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
         ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
+
+        if (gasToken && ethers.utils.isAddress(gasToken)) gasToken = ethers.utils.getAddress(gasToken)
+
+        if (mode.toLowerCase() == 'multitoken' &&
+          !(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
+          !(multiTokenOracles[chainId] && multiTokenOracles[chainId][gasToken])
+        ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
+
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+
         let result;
         switch (mode.toLowerCase()) {
           case 'sponsor': {
@@ -160,7 +189,28 @@ const routes: FastifyPluginAsync = async (server) => {
             result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, paymasterAddress, server.log);
             break;
           }
-          case 'default': {
+          case 'multitoken': {
+            const date = new Date();
+            const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+            const signer = new Wallet(privateKey, provider)
+            const validUntil = context.validUntil ? new Date(context.validUntil) : date;
+            const validAfter = context.validAfter ? new Date(context.validAfter) : date;
+            const hex = (Number((validUntil.valueOf() / 1000).toFixed(0)) + 600).toString(16);
+            const hex1 = (Number((validAfter.valueOf() / 1000).toFixed(0)) - 60).toString(16);
+            let str = '0x'
+            let str1 = '0x'
+            for (let i = 0; i < 14 - hex.length; i++) {
+              str += '0';
+            }
+            for (let i = 0; i < 14 - hex1.length; i++) {
+              str1 += '0';
+            }
+            str += hex;
+            str1 += hex1;
+            result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], networkConfig.bundler, signer, server.log);
+            break;
+          }
+          default : {
             return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_MODE });
           }
         }
