@@ -73,6 +73,8 @@ The structure should be as follows
   "137": "https://api.polygonscan.com/api?module=gastracker&action=gasoracle&apikey=YourApiKeyToken", // Note that you need to replace YourApiKeyToken to actual API key from etherscan
   "1": "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=YourApiKeyToken"
 } which then needs to be converted into `base64` value
+- DEFAULT_API_KEY - this is used for checking token paymaster deposits. Please use an apiKey which has the list of token paymasters that needs to be monitored. Please note that it only tracks the token paymasters in `ERC20_PAYMASTERS` and `MULTI_TOKEN_PAYMASTERS` variable specified inside the apiKey.
+- WEBHOOK_URL - this is used to notify if the token paymaster deposit comes below 'thresholdValue' specified in backend/config.json and please note that each chain has configured threshold as approx. 50 USD worth of native tokens
 
 ## API KEY VALIDATION
 - In ARKA Admin Frontend, create an API_KEY with the following format - 
