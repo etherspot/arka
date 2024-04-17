@@ -24,6 +24,8 @@ services:
       - DEFAULT_INDEXER_ENDPOINT=http://localhost:3003
       - FEE_MARKUP=
       - ETHERSCAN_GAS_ORACLES=
+      - DEFAULT_API_KEY=
+      - WEBHOOK_URL=
     build: 
       context: ./backend
       dockerfile: Dockerfile

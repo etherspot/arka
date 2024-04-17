@@ -3,6 +3,7 @@ import fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import fastifyCron from 'fastify-cron';
 import { providers, ethers } from 'ethers';
+import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import fetch from 'node-fetch';
 import database from './plugins/db.js';
 import config from './plugins/config.js';
@@ -12,7 +13,8 @@ import metadataRoutes from './routes/metadata.js';
 import EtherspotChainlinkOracleAbi from './abi/EtherspotChainlinkOracleAbi.js';
 import PimlicoAbi from './abi/PimlicoAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
-import { getNetworkConfig } from './utils/common.js';
+import { getNetworkConfig, getSQLdata } from './utils/common.js';
+import { checkDeposit } from './utils/monitorTokenPaymaster.js';
 
 let server: FastifyInstance;
 
@@ -146,6 +148,60 @@ const initializeServer = async (): Promise<void> => {
             }
           } else {
             server.log.info('no private key found in env')
+          }
+        }
+      },
+      {
+        // Only these two properties are required,
+        // the rest is from the node-cron API:
+        // https://github.com/kelektiv/node-cron#api
+        cronTime: '0 * * * *', // Every Hour,
+        name: 'checkTokenPaymasterDeposit',
+
+        // Note: the callbacks (onTick & onComplete) take the server
+        // as an argument, as opposed to nothing in the node-cron API:
+        onTick: async () => {
+          if (process.env.DEFAULT_API_KEY && process.env.WEBHOOK_URL) {
+            const prefixSecretId = 'arka_';
+            let client: SecretsManagerClient;
+            const unsafeMode: boolean = process.env.UNSAFE_MODE == "true" ? true : false;
+            const api_key = process.env.DEFAULT_API_KEY;
+            let customPaymasters = [], multiTokenPaymasters = [];
+            if (!unsafeMode) {
+              client = new SecretsManagerClient();
+              const AWSresponse = await client.send(
+                new GetSecretValueCommand({
+                  SecretId: prefixSecretId + api_key,
+                })
+              );
+              client.destroy();
+              const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+              if (secrets['ERC20_PAYMASTERS']) {
+                const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
+                customPaymasters = JSON.parse(buffer.toString());
+              }
+              if (secrets['MULTI_TOKEN_PAYMASTERS']) {
+                const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
+                multiTokenPaymasters = JSON.parse(buffer.toString());
+              }
+            } else {
+              const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
+              if (record['ERC20_PAYMASTERS']) {
+                const buffer = Buffer.from(record['ERC20_PAYMASTERS'], 'base64');
+                customPaymasters = JSON.parse(buffer.toString());
+              }
+              if (record['MULTI_TOKEN_PAYMASTERS']) {
+                const buffer = Buffer.from(record['MULTI_TOKEN_PAYMASTERS'], 'base64');
+                multiTokenPaymasters = JSON.parse(buffer.toString()); 
+              }
+            }
+            customPaymasters = {...customPaymasters, ...multiTokenPaymasters};
+            for (const chainId in customPaymasters) {
+              const networkConfig = getNetworkConfig(chainId, '');
+              for (const symbol in customPaymasters[chainId]) {
+                checkDeposit(customPaymasters[chainId][symbol], networkConfig.bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)
+              }
+            }
           }
         }
       }
