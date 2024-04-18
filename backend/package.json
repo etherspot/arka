@@ -31,7 +31,7 @@
     "@aws-sdk/client-secrets-manager": "3.450.0",
     "@fastify/cors": "8.4.1",
     "@ponder/core": "0.2.7",
-    "@sinclair/typebox": "0.31.28",
+    "@sinclair/typebox": "0.32.20",
     "ajv": "8.11.2",
     "crypto": "^1.0.1",
     "dotenv": "16.0.3",
