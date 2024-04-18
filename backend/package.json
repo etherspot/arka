@@ -28,7 +28,7 @@
   "dependencies": {
     "@account-abstraction/contracts": "0.6.0",
     "@account-abstraction/utils": "0.5.0",
-    "@aws-sdk/client-secrets-manager": "3.450.0",
+    "@aws-sdk/client-secrets-manager": "3.543.0",
     "@fastify/cors": "8.4.1",
     "@ponder/core": "0.2.7",
     "@sinclair/typebox": "0.31.28",
