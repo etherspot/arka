@@ -34,7 +34,7 @@
     "@sinclair/typebox": "0.31.28",
     "ajv": "8.11.2",
     "crypto": "^1.0.1",
-    "dotenv": "16.0.3",
+    "dotenv": "16.4.5",
     "env-schema": "5.1.1",
     "ethers": "5.7.2",
     "fastify": "4.24.3",
