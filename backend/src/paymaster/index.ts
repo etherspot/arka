@@ -8,6 +8,7 @@ import ErrorMessage from '../constants/ErrorMessage.js';
 import { PAYMASTER_ADDRESS } from '../constants/Pimlico.js';
 import { getEtherscanFee } from '../utils/common.js';
 import MultiTokenPaymasterAbi from '../abi/MultiTokenPaymasterAbi.js';
+import OrochiOracleAbi from '../abi/OrochiOracleAbi.js';
 
 export class Paymaster {
   feeMarkUp: BigNumber;
@@ -65,19 +66,20 @@ export class Paymaster {
     }
   }
 
-  async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string, oracleAggregator: string, paymasterContract: Contract, signer: Wallet) {
-    const exchangeRate = 10000000; // This is for setting min tokens required for the txn that gets validated on estimate
-    const priceMarkup = 1100000; // 10% more of the actual cost. Can be anything between 1e6 to 2e6
+  async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string, ethPrice: string, paymasterContract: Contract, signer: Wallet) {
+    const exchangeRate = 1000000; // This is for setting min tokens required for the txn that gets validated on estimate
+    const rate = ethers.BigNumber.from(exchangeRate).mul(ethPrice);
+    const priceMarkup = 1000000; // 10% more of the actual cost. Can be anything between 1e6 to 2e6
     // actual signing...
     // priceSource inputs available 0 - for using external exchange price and 1 - for oracle based price
     const hash = await paymasterContract.getHash(
       userOp,
-      1,
+      0,
       validUntil,
       validAfter,
       feeToken,
-      oracleAggregator,
-      exchangeRate,
+      ethers.constants.AddressZero,
+      rate.toNumber().toFixed(0),
       priceMarkup,
     );
 
@@ -85,10 +87,10 @@ export class Paymaster {
 
     const paymasterAndData = hexConcat([
       paymasterContract.address,
-      '0x01',
+      '0x00',
       defaultAbiCoder.encode(
         ['uint48', 'uint48', 'address', 'address', 'uint256', 'uint32'],
-        [validUntil, validAfter, feeToken, oracleAggregator, exchangeRate, priceMarkup]
+        [validUntil, validAfter, feeToken, ethers.constants.AddressZero, rate.toNumber().toFixed(0), priceMarkup]
       ),
       sig,
     ]);
@@ -100,14 +102,17 @@ export class Paymaster {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbi, provider);
-      userOp.paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, oracleAggregator, paymasterContract, signer);
-  
+      const oracleContract = new ethers.Contract(oracleAggregator, OrochiOracleAbi, provider);
+      const result = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
+      const ethPrice = Number(ethers.utils.formatEther(result)).toFixed(0);
+      userOp.paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
+      
       if (!userOp.signature) userOp.signature = '0x';
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
       userOp.verificationGasLimit = response.verificationGasLimit;
       userOp.preVerificationGas = response.preVerificationGas;
       userOp.callGasLimit = response.callGasLimit;
-      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, oracleAggregator, paymasterContract, signer);
+      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
 
       const returnValue = {
         paymasterAndData,
@@ -223,7 +228,8 @@ export class Paymaster {
           type: 2,
         });
       }
-      await tx.wait();
+      // commented the below line to avoid timeouts for long delays in transaction confirmation.
+      // await tx.wait();
 
       return {
         message: `Successfully whitelisted with transaction Hash ${tx.hash}`
@@ -275,7 +281,8 @@ export class Paymaster {
           type: 2,
         });
       }
-      await tx.wait();
+      // commented the below line to avoid timeouts for long delays in transaction confirmation.
+      // await tx.wait();
 
       return {
         message: `Successfully removed whitelisted addresses with transaction Hash ${tx.hash}`
