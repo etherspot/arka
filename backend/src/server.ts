@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import fastify, { FastifyInstance } from 'fastify';
+import fastifyHealthcheck from 'fastify-healthcheck';
 import cors from '@fastify/cors';
 import fastifyCron from 'fastify-cron';
 import { providers, ethers } from 'ethers';
@@ -39,6 +40,11 @@ const initializeServer = async (): Promise<void> => {
     // put your options here
     preflightContinue: true
   })
+
+  await server.register(fastifyHealthcheck, {
+    healthcheckUrl: "/healthcheck",
+    logLevel: "warn"
+  });
 
   await server.register(routes);
 
@@ -198,8 +204,10 @@ const initializeServer = async (): Promise<void> => {
             customPaymasters = {...customPaymasters, ...multiTokenPaymasters};
             for (const chainId in customPaymasters) {
               const networkConfig = getNetworkConfig(chainId, '');
-              for (const symbol in customPaymasters[chainId]) {
-                checkDeposit(customPaymasters[chainId][symbol], networkConfig.bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)
+              if (networkConfig) {
+                for (const symbol in customPaymasters[chainId]) {
+                  checkDeposit(customPaymasters[chainId][symbol], networkConfig.bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)
+                }
               }
             }
           }
