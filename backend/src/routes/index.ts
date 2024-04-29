@@ -13,7 +13,7 @@ import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig, getSQLdata } from "../utils/common.js";
 
 const routes: FastifyPluginAsync = async (server) => {
-  const paymaster = new Paymaster(server.config.FEE_MARKUP);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP);
 
   const prefixSecretId = 'arka_';
 
