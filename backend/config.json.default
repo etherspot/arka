@@ -214,5 +214,13 @@
             "etherspotPaymasterAddress": "0xB3AD9B9B06c6016f81404ee8FcCD0526F018Cf0C"
         },
         "thresholdValue": "21.8"
+    },
+    {
+        "chainId": 888888888,
+        "bundler": "https://ancient8-bundler.etherspot.io",
+        "contracts": {
+            "etherspotPaymasterAddress": "0x810FA4C915015b703db0878CF2B9344bEB254a40"
+        },
+        "thresholdValue": "0.016"
     }
 ]
