@@ -12,9 +12,12 @@ import OrochiOracleAbi from '../abi/OrochiOracleAbi.js';
 
 export class Paymaster {
   feeMarkUp: BigNumber;
+  multiTokenMarkUp: Number;
 
-  constructor(feeMarkUp: string) {
+  constructor(feeMarkUp: string, multiTokenMarkUp: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
+    if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
+    else this.multiTokenMarkUp = Number(multiTokenMarkUp);
   }
 
   async getPaymasterAndData(userOp: any, validUntil: string, validAfter: string, paymasterContract: Contract, signer: Wallet) {
@@ -69,7 +72,7 @@ export class Paymaster {
   async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string, ethPrice: string, paymasterContract: Contract, signer: Wallet) {
     const exchangeRate = 1000000; // This is for setting min tokens required for the txn that gets validated on estimate
     const rate = ethers.BigNumber.from(exchangeRate).mul(ethPrice);
-    const priceMarkup = 1000000; // 10% more of the actual cost. Can be anything between 1e6 to 2e6
+    const priceMarkup = this.multiTokenMarkUp; 
     // actual signing...
     // priceSource inputs available 0 - for using external exchange price and 1 - for oracle based price
     const hash = await paymasterContract.getHash(
