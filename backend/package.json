@@ -46,7 +46,7 @@
     "node-fetch": "3.3.2",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7-rc.0",
-    "viem": "2.7.6"
+    "viem": "2.9.15"
   },
   "devDependencies": {
     "@babel/core": "7.23.2",
