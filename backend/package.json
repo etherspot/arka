@@ -30,7 +30,7 @@
     "@account-abstraction/utils": "0.5.0",
     "@aws-sdk/client-secrets-manager": "3.450.0",
     "@fastify/cors": "8.4.1",
-    "@ponder/core": "0.2.7",
+    "@ponder/core": "0.3.11",
     "@sinclair/typebox": "0.31.28",
     "ajv": "8.11.2",
     "crypto": "^1.0.1",
