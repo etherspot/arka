@@ -200,7 +200,10 @@ const routes: FastifyPluginAsync = async (server) => {
             }
             str += hex;
             str1 += hex1;
-            result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], networkConfig.bundler, signer, server.log);
+            if (!networkConfig.MultiTokenPaymasterOracleUsed || 
+              !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink")) 
+              throw new Error("Oracle is not Defined/Invalid");
+            result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], networkConfig.bundler, signer, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
             break;
           }
           default : {
