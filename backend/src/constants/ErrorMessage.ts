@@ -13,4 +13,6 @@ export default {
     INVALID_USER: 'Unauthorised User',
     RECORD_NOT_FOUND: 'Api Key provided not found',
     API_KEY_VALIDATION_FAILED: 'Api Key is not in the right format as described in readme file',
+    UNSUPPORTED_METHOD: 'Unsupported method name received',
+    UNSUPPORTED_ENTRYPOINT: 'Unsupported EntryPoint Address',
 }

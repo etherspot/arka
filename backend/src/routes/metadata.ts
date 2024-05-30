@@ -37,6 +37,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       let multiTokenOracles = [];
       let privateKey = '';
       let supportedNetworks;
+      let sponsorName = '', sponsorImage = '';
       if (!unsafeMode) {
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
@@ -56,6 +57,8 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
           const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
           multiTokenPaymasters = JSON.parse(buffer.toString()); 
         }
+        sponsorName = secrets['SPONSOR_NAME'];
+        sponsorImage = secrets['LOGO_URL'];
         privateKey = secrets['PRIVATE_KEY'];
         supportedNetworks = secrets['SUPPORTED_NETWORKS'];
       } else {
@@ -72,28 +75,30 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
           const buffer = Buffer.from(record['MULTI_TOKEN_PAYMASTERS'], 'base64');
           multiTokenPaymasters = JSON.parse(buffer.toString()); 
         }
+        sponsorName = record['SPONSOR_NAME'];
+        sponsorImage = record['LOGO_URL'];
         privateKey = decode(record['PRIVATE_KEY']);
         supportedNetworks = record['SUPPORTED_NETWORKS'];
       }
       if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
       }
-      const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
+      const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
       if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
       const provider = new providers.JsonRpcProvider(networkConfig.bundler);
       const signer = new Wallet(privateKey, provider)
       const balance = await signer.getBalance();
       const address = await signer.getAddress();
-      const chainsSupported: number[] = [];
+      const chainsSupported: {chainId: number, entryPoint: string}[] = [];
       if (supportedNetworks) {
         const buffer = Buffer.from(supportedNetworks, 'base64');
         const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
-        SUPPORTED_NETWORKS.map((element: { chainId: number; }) => {
-          chainsSupported.push(element.chainId);
+        SUPPORTED_NETWORKS.map((element: { chainId: number, entryPoint: string }) => {
+          chainsSupported.push({chainId: element.chainId, entryPoint: element.entryPoint ?? "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"});
         })
       } else {
         SupportedNetworks.map(element => {
-          chainsSupported.push(element.chainId);
+          chainsSupported.push({chainId: element.chainId, entryPoint: element.entryPoint ?? "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"});
         })
       }
       const tokenPaymasterAddresses = {
@@ -106,6 +111,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         chainsSupported: chainsSupported,
         tokenPaymasters: tokenPaymasterAddresses,
         multiTokenPaymasters,
+        sponsorDetails: { name: sponsorName, icon: sponsorImage }
       })
     } catch (err: any) {
       request.log.error(err);
