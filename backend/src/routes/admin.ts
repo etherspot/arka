@@ -15,8 +15,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.WALLET_ADDRESS) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       console.log(body, server.config.ADMIN_WALLET_ADDRESS)
-      if (ethers.utils.getAddress(body.WALLET_ADDRESS) === server.config.ADMIN_WALLET_ADDRESS) return reply.code(ReturnCode.SUCCESS).send({error: null, message: "Successfully Logged in"});
-      return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
+      if (ethers.utils.getAddress(body.WALLET_ADDRESS) === ethers.utils.getAddress(server.config.ADMIN_WALLET_ADDRESS)) return reply.code(ReturnCode.SUCCESS).send({error: null, message: "Successfully Logged in"});      return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
     } catch (err: any) {
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
     }
@@ -73,6 +72,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/saveKey', async function (request, reply) {
     try {
       const body: any = JSON.parse(request.body as string);
+      console.log(`Body: ${JSON.stringify(body)}`)
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.API_KEY || !body.PRIVATE_KEY)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
@@ -86,8 +86,10 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           resolve(row);
         })
       })
-      if (result && result.length > 0)
+      if (result && result.length > 0){
+        console.log(`Duplicate record found: ${JSON.stringify(result)}`)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.DUPLICATE_RECORD });
+      }
       const privateKey = body.PRIVATE_KEY;
       const hmac = encode(privateKey);
       await new Promise((resolve, reject) => {
@@ -101,7 +103,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           MULTI_TOKEN_ORACLES, \
           TRANSACTION_LIMIT, \
           NO_OF_TRANSACTIONS_IN_A_MONTH, \
-          INDEXER_ENDPOINT) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+          INDEXER_ENDPOINT) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
           body.API_KEY,
           publicAddress,
           hmac,
@@ -127,6 +129,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/updateKey', async function (request, reply) {
     try {
       const body: any = JSON.parse(request.body as string);
+      console.log(`Body: ${JSON.stringify(body)}`)
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.API_KEY)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
@@ -149,7 +152,10 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           WHERE API_KEY = ?", [body.SUPPORTED_NETWORKS, body.ERC20_PAYMASTERS, body.TRANSACTION_LIMIT ?? 0, body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
         body.INDEXER_ENDPOINT ?? process.env.DEFAULT_INDEXER_ENDPOINT, body.API_KEY
         ], (err: any, row: any) => {
-          if (err) reject(err);
+          if (err) {
+            console.error(`Error while saving APIKeys: ${err}`)
+            reject(err);
+          }
           resolve(row);
         })
       });
@@ -168,6 +174,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           resolve(rows);
         })
       })
+      console.log(`APIKeys saved are: ${JSON.stringify(result)}`)
       result.map((value) => {
         value.PRIVATE_KEY = decode(value.PRIVATE_KEY)
       });
