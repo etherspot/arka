@@ -99,9 +99,11 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           ERC20_PAYMASTERS, \
           MULTI_TOKEN_PAYMASTERS, \
           MULTI_TOKEN_ORACLES, \
+          SPONSOR_NAME, \
+          LOGO_URL, \
           TRANSACTION_LIMIT, \
           NO_OF_TRANSACTIONS_IN_A_MONTH, \
-          INDEXER_ENDPOINT) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+          INDEXER_ENDPOINT) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
           body.API_KEY,
           publicAddress,
           hmac,
@@ -109,6 +111,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           body.ERC20_PAYMASTERS,
           body.MULTI_TOKEN_PAYMASTERS ?? null,
           body.MULTI_TOKEN_ORACLES ?? null,
+          body.SPONSOR_NAME ?? null,
+          body.LOGO_URL ?? null,
           body.TRANSACTION_LIMIT ?? 0,
           body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
           body.INDEXER_ENDPOINT ?? process.env.DEFAULT_INDEXER_ENDPOINT

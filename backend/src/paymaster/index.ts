@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { providers, Wallet, ethers, Contract, BigNumber } from 'ethers';
-import { arrayify, defaultAbiCoder, hexConcat } from 'ethers/lib/utils.js';
+import { providers, Wallet, ethers, Contract, BigNumber, BigNumberish, utils } from 'ethers';
+import { arrayify, BytesLike, defaultAbiCoder, hexConcat, hexZeroPad } from 'ethers/lib/utils.js';
 import { FastifyBaseLogger } from 'fastify';
-import abi from "../abi/EtherspotAbi.js";
+import EtherspotAbiV06 from '../abi/EtherspotAbi.js';
+import EtherspotAbiV07 from "../abi/EtherspotVerifyingSignerAbi.js";
 import { PimlicoPaymaster } from './pimlico.js';
 import ErrorMessage from '../constants/ErrorMessage.js';
 import { PAYMASTER_ADDRESS } from '../constants/Pimlico.js';
@@ -19,6 +20,93 @@ export class Paymaster {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
+  }
+
+  packUint (high128: BigNumberish, low128: BigNumberish): string {
+    return hexZeroPad(BigNumber.from(high128).shl(128).add(low128).toHexString(), 32)
+  }
+
+  packPaymasterData (paymaster: string, paymasterVerificationGasLimit: BigNumberish, postOpGasLimit: BigNumberish, paymasterData?: BytesLike): BytesLike {
+    return ethers.utils.hexConcat([
+      paymaster,
+      this.packUint(paymasterVerificationGasLimit, postOpGasLimit),
+      paymasterData ?? '0x'
+    ])
+  }
+
+  async getPaymasterData(userOp: any, validUntil: string, validAfter: string, paymasterContract: Contract, signer: Wallet) {
+    // actual signing...
+    const hash = await paymasterContract.getHash(
+      userOp,
+      validUntil,
+      validAfter
+    );
+
+    const sig = await signer.signMessage(arrayify(hash));
+
+    const paymasterData = hexConcat([
+      defaultAbiCoder.encode(
+        ['uint48', 'uint48'],
+        [validUntil, validAfter]
+      ),
+      sig,
+    ]);
+
+    return paymasterData;
+  }
+
+  async signV07(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, 
+    bundlerRpc: string, signer: Wallet, estimate: boolean, log?: FastifyBaseLogger) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV07, provider);
+      if (!userOp.signature) userOp.signature = '0x';
+      if (userOp.factory && userOp.factoryData) userOp.initCode = hexConcat([userOp.factory, userOp.factoryData ?? ''])
+      if (!userOp.initCode) userOp.initCode = "0x";
+      if (estimate) {
+        const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+        userOp.verificationGasLimit = response.verificationGasLimit;
+        userOp.callGasLimit = response.callGasLimit;
+        userOp.preVerificationGas = response.preVerificationGas;
+      }
+      const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
+      const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
+      let packedUserOp = {
+        sender: userOp.sender,
+        nonce: userOp.nonce,
+        initCode: userOp.initCode,
+        callData: userOp.callData,
+        accountGasLimits: accountGasLimits,
+        preVerificationGas: userOp.preVerificationGas,
+        gasFees: gasFees,
+        paymasterAndData: this.packPaymasterData(paymasterAddress, BigNumber.from(30000), "0x1"),
+        signature: userOp.signature
+      }
+
+      let paymasterData = await this.getPaymasterData(packedUserOp, validUntil, validAfter, paymasterContract, signer);
+      let returnValue;
+      if (estimate) {
+        returnValue = {
+          paymaster: paymasterAddress,
+          paymasterData: paymasterData,
+          preVerificationGas: packedUserOp.preVerificationGas.toString(),
+          verificationGasLimit: userOp.verificationGasLimit,
+          callGasLimit: userOp.callGasLimit,
+          paymasterVerificationGasLimit: BigNumber.from(30000).toString(),
+          paymasterPostOpGasLimit: "0x1"
+        }
+      } else {
+        returnValue = {
+          paymaster: paymasterAddress,
+          paymasterData: paymasterData,
+        }
+      }
+
+      return returnValue;
+    } catch (err: any) {
+      if (log) log.error(err, 'signv07');
+      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
+    }
   }
 
   async getPaymasterAndData(userOp: any, validUntil: string, validAfter: string, paymasterContract: Contract, signer: Wallet) {
@@ -43,33 +131,40 @@ export class Paymaster {
     return paymasterAndData;
   }
 
-  async sign(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, 
-    bundlerRpc: string, signer: Wallet, log?: FastifyBaseLogger) {
+  async signV06(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, 
+    bundlerRpc: string, signer: Wallet, estimate: boolean, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV06, provider);
       userOp.paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
       if (!userOp.signature) userOp.signature = '0x';
+      if (estimate) {
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
-      userOp.verificationGasLimit = response.verificationGasLimit;
-      userOp.preVerificationGas = response.preVerificationGas;
-      userOp.callGasLimit = response.callGasLimit;
-
+        userOp.verificationGasLimit = response.verificationGasLimit;
+        userOp.preVerificationGas = response.preVerificationGas;
+        userOp.callGasLimit = response.callGasLimit;
+      }
       const paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
-
-      const returnValue = {
-        paymasterAndData,
-        verificationGasLimit: response.verificationGasLimit,
-        preVerificationGas: response.preVerificationGas,
-        callGasLimit: response.callGasLimit,
+      let returnValue;
+      if (estimate) {
+        returnValue = {
+          paymasterAndData,
+          verificationGasLimit: userOp.verificationGasLimit,
+          preVerificationGas: userOp.preVerificationGas,
+          callGasLimit: userOp.callGasLimit,
+        }
+      } else {
+        returnValue = {
+          paymasterAndData
+        }
       }
 
       return returnValue;
     } catch (err: any) {
-      if (log) log.error(err, 'sign');
+      if (log) log.error(err, 'signV06');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
     }
-  }
+  } 
 
   async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string, 
     ethPrice: string, paymasterContract: Contract, signer: Wallet) {
@@ -207,7 +302,7 @@ export class Paymaster {
   async whitelistAddresses(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV06, provider);
       const signer = new Wallet(relayerKey, provider)
       for (let i = 0; i < address.length; i++) {
         const isAdded = await paymasterContract.check(signer.address, address[i]);
@@ -260,7 +355,7 @@ export class Paymaster {
   async removeWhitelistAddress(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV06, provider);
       const signer = new Wallet(relayerKey, provider)
       for (let i = 0; i < address.length; i++) {
         const isAdded = await paymasterContract.check(signer.address, address[i]);
@@ -314,7 +409,7 @@ export class Paymaster {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const signer = new Wallet(relayerKey, provider)
-      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV06, provider);
       return paymasterContract.check(signer.address, accountAddress);
     } catch (err) {
       if (log) log.error(err, 'checkWhitelistAddress');
@@ -325,7 +420,7 @@ export class Paymaster {
   async deposit(amount: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, abi, provider);
+      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV06, provider);
       const signer = new Wallet(relayerKey, provider)
       const balance = await signer.getBalance();
       const amountInWei = ethers.utils.parseEther(amount.toString());
