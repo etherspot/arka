@@ -1,0 +1,47 @@
+@startuml
+' Define classes for tables with alias
+class API_KEYS {
+    + API_KEY : TEXT (PK)
+    + WALLET_ADDRESS : TEXT
+    + PRIVATE_KEY : VARCHAR
+    + SUPPORTED_NETWORKS : VARCHAR
+    + ERC20_PAYMASTERS : VARCHAR
+    + MULTI_TOKEN_PAYMASTERS : VARCHAR
+    + MULTI_TOKEN_ORACLES : VARCHAR
+    + TRANSACTION_LIMIT : INT
+    + NO_OF_TRANSACTIONS_IN_A_MONTH : INT
+    + INDEXER_ENDPOINT : VARCHAR
+}
+
+class POLICIES {
+    + POLICY_ID : INT (PK)
+    + WALLET_ADDRESS : TEXT (FK)
+    + NAME : VARCHAR
+    + DESCRIPTION : TEXT
+    + START_DATE : DATE
+    + END_DATE : DATE
+    + IS_PERPETUAL : BOOLEAN = FALSE
+    + IS_UNIVERSAL : BOOLEAN = FALSE
+    + CONTRACT_RESTRICTIONS : TEXT ' JSON storing contract addresses with function names and signatures '
+}
+
+class POLICY_LIMITS {
+    + LIMIT_ID : INT (PK)
+    + POLICY_ID : INT (FK)
+    + LIMIT_TYPE : VARCHAR
+    + MAX_USD : NUMERIC
+    + MAX_ETH : NUMERIC
+    + MAX_OPERATIONS : INT
+}
+
+class POLICY_CHAINS {
+    + POLICY_CHAIN_ID : INT (PK)
+    + POLICY_ID : INT (FK)
+    + CHAIN_NAME : VARCHAR
+}
+
+' Define relationships
+API_KEYS "1" -- "many" POLICIES : contains >
+POLICIES "1" -- "many" POLICY_LIMITS : contains >
+POLICIES "1" -- "many" POLICY_CHAINS : contains >
+@enduml
