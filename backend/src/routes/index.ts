@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
-import { Wallet, ethers, providers } from "ethers";
+import { BigNumber, Wallet, ethers, providers } from "ethers";
 import { gql, request as GLRequest } from "graphql-request";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { Paymaster } from "../paymaster/index.js";
@@ -11,6 +11,11 @@ import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig, getSQLdata } from "../utils/common.js";
+
+const SUPPORTED_ENTRYPOINTS = {
+  'EPV_06' : "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+  'EPV_07' : "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+}
 
 const routes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP);
@@ -48,13 +53,39 @@ const routes: FastifyPluginAsync = async (server) => {
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
         const userOp = body.params[0];
         const entryPoint = body.params[1];
-        const context = body.params[2];
+        let context = body.params[2];
         let gasToken = context?.token ? context.token : null;
-        const mode = context?.mode ? String(context.mode) : null;
-        const chainId = query['chainId'] ?? body.params[3];
+        let mode = context?.mode ? String(context.mode) : "sponsor";
+        let chainId = query['chainId'] ?? body.params[3];
         const api_key = query['apiKey'] ?? body.params[4];
+        let sponsorDetails = false, estimate = true;
+        if (body.method) {
+          switch(body.method) {
+            case 'pm_getPaymasterData': {
+              estimate = false;
+              sponsorDetails = true;
+            }
+            case 'pm_getPaymasterStubData': {
+              chainId = BigNumber.from(body.params[2]).toNumber();
+              context = body.params[3];
+              gasToken = context?.token ? context.token : null;
+              mode = context?.mode ? String(context.mode) : "sponsor";
+              break;
+            };
+            case 'pm_sponsorUserOperation': {
+              break;
+            };
+            default: {
+              return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_METHOD });
+              break;
+            }
+          }
+        }
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        console.log('entryPoint: ', entryPoint);
+        if ((entryPoint != SUPPORTED_ENTRYPOINTS.EPV_06) && (entryPoint != SUPPORTED_ENTRYPOINTS.EPV_07))
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
         let customPaymasters = [];
         let multiTokenPaymasters = [];
         let multiTokenOracles = [];
@@ -63,6 +94,7 @@ const routes: FastifyPluginAsync = async (server) => {
         let noOfTxns;
         let txnMode;
         let indexerEndpoint;
+        let sponsorName = '', sponsorImage = '';
         if (!unsafeMode) {
           const AWSresponse = await client.send(
             new GetSecretValueCommand({
@@ -86,6 +118,8 @@ const routes: FastifyPluginAsync = async (server) => {
             const buffer = Buffer.from(secrets['MULTI_TOKEN_ORACLES'], 'base64');
             multiTokenOracles = JSON.parse(buffer.toString());
           }
+          sponsorName = secrets['SPONSOR_NAME'];
+          sponsorImage = secrets['LOGO_URL'];
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
           noOfTxns = secrets['NO_OF_TRANSACTIONS_IN_A_MONTH'] ?? 10;
@@ -109,6 +143,8 @@ const routes: FastifyPluginAsync = async (server) => {
             const buffer = Buffer.from(record['MULTI_TOKEN_ORACLES'], 'base64');
             multiTokenOracles = JSON.parse(buffer.toString());
           }
+          sponsorName = record['SPONSOR_NAME'];
+          sponsorImage = record['LOGO_URL'];
           privateKey = decode(record['PRIVATE_KEY']);
           supportedNetworks = record['SUPPORTED_NETWORKS'];
           noOfTxns = record['NO_OF_TRANSACTIONS_IN_A_MONTH'];
@@ -144,10 +180,10 @@ const routes: FastifyPluginAsync = async (server) => {
           !(multiTokenOracles[chainId] && multiTokenOracles[chainId][gasToken])
         ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
 
-        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', entryPoint);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
 
-        let result;
+        let result: any;
         switch (mode.toLowerCase()) {
           case 'sponsor': {
             const date = new Date();
@@ -158,8 +194,8 @@ const routes: FastifyPluginAsync = async (server) => {
               const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
               if (IndexerData.length >= noOfTxns) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.QUOTA_EXCEEDED })
             }
-            const validUntil = context.validUntil ? new Date(context.validUntil) : date;
-            const validAfter = context.validAfter ? new Date(context.validAfter) : date;
+            const validUntil = context?.validUntil ? new Date(context.validUntil) : date;
+            const validAfter = context?.validAfter ? new Date(context.validAfter) : date;
             const hex = (Number((validUntil.valueOf() / 1000).toFixed(0)) + 600).toString(16);
             const hex1 = (Number((validAfter.valueOf() / 1000).toFixed(0)) - 60).toString(16);
             let str = '0x'
@@ -172,10 +208,14 @@ const routes: FastifyPluginAsync = async (server) => {
             }
             str += hex;
             str1 += hex1;
-            result = await paymaster.sign(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer, server.log);
+            if (entryPoint == SUPPORTED_ENTRYPOINTS.EPV_06)
+              result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer, estimate, server.log);
+            else result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer, estimate, server.log);
             break;
           }
           case 'erc20': {
+            if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06) 
+              throw new Error('Currently only 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 entryPoint address is supported')
             let paymasterAddress: string;
             if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
             else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
@@ -183,6 +223,8 @@ const routes: FastifyPluginAsync = async (server) => {
             break;
           }
           case 'multitoken': {
+            if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06) 
+              throw new Error('Currently only 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 entryPoint address is supported')
             const date = new Date();
             const provider = new providers.JsonRpcProvider(networkConfig.bundler);
             const signer = new Wallet(privateKey, provider)
@@ -211,6 +253,7 @@ const routes: FastifyPluginAsync = async (server) => {
           }
         }
         server.log.info(result, 'Response sent: ');
+        if (sponsorDetails) result.sponsor = { name: sponsorName, icon: sponsorImage };
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(ReturnCode.SUCCESS).send(result);
@@ -277,7 +320,7 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', entryPoint);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         let result;
         if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) result = { message: customPaymasters[chainId][gasToken] }
@@ -340,7 +383,7 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const validAddresses = address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
@@ -398,7 +441,7 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const validAddresses = address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
@@ -456,7 +499,7 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const response = await paymaster.checkWhitelistAddress(accountAddress, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, server.log);
         server.log.info(response, 'Response sent: ');
@@ -513,7 +556,60 @@ const routes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '');
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
+        if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
+      } catch (err: any) {
+        request.log.error(err);
+        if (err.name == "ResourceNotFoundException")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS })
+      }
+    }
+  )
+
+  server.post(
+    "/deposit/v2",
+    whitelistResponseSchema,
+    async function (request, reply) {
+      try {
+        printRequest("/deposit/v2", request, server.log);
+        const body: any = request.body;
+        const query: any = request.query;
+        const amount = body.params[0];
+        const chainId = query['chainId'] ?? body.params[1];
+        const api_key = query['apiKey'] ?? body.params[2];
+        if (!api_key)
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        let privateKey = '';
+        let supportedNetworks;
+        if (!unsafeMode) {
+          const AWSresponse = await client.send(
+            new GetSecretValueCommand({
+              SecretId: prefixSecretId + api_key,
+            })
+          );
+          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = secrets['PRIVATE_KEY'];
+          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+        } else {
+          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
+          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(record['PRIVATE_KEY']);
+          supportedNetworks = record['SUPPORTED_NETWORKS'];
+        }
+        if (
+          isNaN(amount) ||
+          !chainId ||
+          isNaN(chainId)
+        ) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        }
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
       } catch (err: any) {

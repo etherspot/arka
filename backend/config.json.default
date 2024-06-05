@@ -6,7 +6,8 @@
             "etherspotPaymasterAddress": "0x7F690e93CecFca5A31E6e1dF50A33F6d3059048c"
         },
         "thresholdValue": "0.016",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 10,
@@ -15,7 +16,8 @@
             "etherspotPaymasterAddress": "0x805650ce74561C85baA44a8Bd13E19633Fd0F79d"
         },
         "thresholdValue": "21.8",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 14,
@@ -24,7 +26,8 @@
             "etherspotPaymasterAddress": "0x8A41594e5c6Fe492e437414c24eA6f401186b8d2"
         },
         "thresholdValue": "1556",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 30,
@@ -33,7 +36,8 @@
             "etherspotPaymasterAddress": "0xe893A26dD53b325bFFaACdFA224692EFF4C448C4"
         },
         "thresholdValue": "0.00079",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 31,
@@ -42,7 +46,8 @@
             "etherspotPaymasterAddress": "0xD302BE6e9D3fE0fBf8122a0C34611E31c0D0E792"
         },
         "thresholdValue": "0.00079",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 56,
@@ -51,7 +56,8 @@
             "etherspotPaymasterAddress": "0xEA5ecE95D3A28f9faB161779d20128b449F9EC9C"
         },
         "thresholdValue": "0.09",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
         {
         "chainId": 97,
@@ -60,7 +66,8 @@
             "etherspotPaymasterAddress": "0x153e26707DF3787183945B88121E4Eb188FDCAAA"
         },
         "thresholdValue": "0.09",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 100,
@@ -69,7 +76,8 @@
             "etherspotPaymasterAddress": "0x373aBcF1EA9e5802778E32870e7f72C8A6a90349"
         },
         "thresholdValue": "50",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
         {
         "chainId": 114,
@@ -78,7 +86,8 @@
             "etherspotPaymasterAddress": "0x2a18C360b525824B3e5656B5a705554f2a5036Be"
         },
         "thresholdValue": "1556",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 122,
@@ -86,7 +95,9 @@
         "contracts": {
             "etherspotPaymasterAddress": "0xEC2EE24E79C73DB13Dd9bC782856a5296626b7eb"
         },
-        "thresholdValue": "669"
+        "thresholdValue": "669",
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 123,
@@ -95,7 +106,8 @@
             "etherspotPaymasterAddress": "0xAF628C207513c5E51d894b3733056B8080634923"
         },
         "thresholdValue": "669",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 137,
@@ -104,7 +116,8 @@
             "etherspotPaymasterAddress": "0x26FeC24b0D467C9de105217B483931e8f944ff50"
         },
         "thresholdValue": "69.85",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 5000,
@@ -113,7 +126,8 @@
             "etherspotPaymasterAddress": "0x8A41594e5c6Fe492e437414c24eA6f401186b8d2"
         },
         "thresholdValue": "44.24",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 5003,
@@ -122,7 +136,8 @@
             "etherspotPaymasterAddress": "0x8350355c08aDAC387b443782124A30A8942BeC2e"
         },
         "thresholdValue": "44.24",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 8217,
@@ -131,7 +146,8 @@
             "etherspotPaymasterAddress": "0x4ebd86AAF89151b5303DB072e0205C668e31E5E7"
         },
         "thresholdValue": "275.2",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 8453,
@@ -140,7 +156,8 @@
             "etherspotPaymasterAddress": "0x810FA4C915015b703db0878CF2B9344bEB254a40"
         },
         "thresholdValue": "15.19",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 42161,
@@ -149,7 +166,8 @@
             "etherspotPaymasterAddress": "0xEC2EE24E79C73DB13Dd9bC782856a5296626b7eb"
         },
         "thresholdValue": "43.10",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 43114,
@@ -158,7 +176,8 @@
             "etherspotPaymasterAddress": "0x527569794781671319f20374A050BDbef4181aB3"
         },
         "thresholdValue": "1.4",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 59144,
@@ -167,7 +186,8 @@
             "etherspotPaymasterAddress": "0xB3AD9B9B06c6016f81404ee8FcCD0526F018Cf0C"
         },
         "thresholdValue": "0.016",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 84532,
@@ -176,7 +196,8 @@
             "etherspotPaymasterAddress": "0xe893A26DD53b325BffAacDfA224692EfF4C448c4"
         },
         "thresholdValue": "15.19",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 421614,
@@ -185,7 +206,8 @@
             "etherspotPaymasterAddress": "0xe893A26DD53b325BffAacDfA224692EfF4C448c4"
         },
         "thresholdValue": "43.10",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 534351,
@@ -194,7 +216,8 @@
             "etherspotPaymasterAddress": "0xe893A26DD53b325BffAacDfA224692EfF4C448c4"
         },
         "thresholdValue": "0.016",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 534352,
@@ -203,7 +226,8 @@
             "etherspotPaymasterAddress": "0xB3AD9B9B06c6016f81404ee8FcCD0526F018Cf0C"
         },
         "thresholdValue": "0.016",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 11155111,
@@ -212,7 +236,8 @@
             "etherspotPaymasterAddress": "0xcaDBADcFeD5530A49762DFc9d1d712CcD6b09b25"
         },
         "thresholdValue": "0.016",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 28122024,
@@ -221,7 +246,8 @@
             "etherspotPaymasterAddress": "0xe893A26DD53b325BffAacDfA224692EfF4C448c4"
         },
         "thresholdValue": "0.016",
-        "MultiTokenPaymasterOracleUsed": "orochi"
+        "MultiTokenPaymasterOracleUsed": "orochi",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 11155420,
@@ -230,7 +256,8 @@
             "etherspotPaymasterAddress": "0xB3AD9B9B06c6016f81404ee8FcCD0526F018Cf0C"
         },
         "thresholdValue": "21.8",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 888888888,
@@ -239,7 +266,8 @@
             "etherspotPaymasterAddress": "0x810FA4C915015b703db0878CF2B9344bEB254a40"
         },
         "thresholdValue": "0.016",
-        "MultiTokenPaymasterOracleUsed": "orochi"
+        "MultiTokenPaymasterOracleUsed": "orochi",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
         "chainId": 80002,
@@ -248,6 +276,17 @@
             "etherspotPaymasterAddress": "0xe893a26dd53b325bffaacdfa224692eff4c448c4"
         },
         "thresholdValue": "0.01",
-        "MultiTokenPaymasterOracleUsed": "chainlink"
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
+    },
+    {
+        "chainId": 80002,
+        "bundler": "https://testnet-rpc.etherspot.io/v2/80002",
+        "contracts": {
+            "etherspotPaymasterAddress": "0x810FA4C915015b703db0878CF2B9344bEB254a40"
+        },
+        "thresholdValue": "0.01",
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
     }
 ]

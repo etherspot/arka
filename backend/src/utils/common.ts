@@ -10,13 +10,13 @@ export function printRequest(methodName: string, request: FastifyRequest, log: F
   log.info(request.body, "body passed: ");
 }
 
-export function getNetworkConfig(key: any, supportedNetworks: any) {
+export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint: string) {
   if (supportedNetworks !== '') {
     const buffer = Buffer.from(supportedNetworks, 'base64');
     const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
-    return SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key });
+    return SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key && chain["entryPoint"] == entryPoint });
   } else
-    return SupportedNetworks.find((chain) => chain.chainId == key);
+    return SupportedNetworks.find((chain) => chain.chainId == key && chain.entryPoint == entryPoint);
 }
 
 export async function getSQLdata(apiKey: string, db: Database, log: FastifyBaseLogger) {
