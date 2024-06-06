@@ -14,7 +14,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.WALLET_ADDRESS) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-      console.log(body, server.config.ADMIN_WALLET_ADDRESS)
       if (ethers.utils.getAddress(body.WALLET_ADDRESS) === ethers.utils.getAddress(server.config.ADMIN_WALLET_ADDRESS)) return reply.code(ReturnCode.SUCCESS).send({error: null, message: "Successfully Logged in"});      return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
     } catch (err: any) {
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
@@ -72,7 +71,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/saveKey', async function (request, reply) {
     try {
       const body: any = JSON.parse(request.body as string);
-      console.log(`Body: ${JSON.stringify(body)}`)
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.API_KEY || !body.PRIVATE_KEY)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
@@ -87,7 +85,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         })
       })
       if (result && result.length > 0){
-        console.log(`Duplicate record found: ${JSON.stringify(result)}`)
+        request.log.error(`Duplicate record found: ${JSON.stringify(result)}`)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.DUPLICATE_RECORD });
       }
       const privateKey = body.PRIVATE_KEY;
@@ -133,7 +131,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/updateKey', async function (request, reply) {
     try {
       const body: any = JSON.parse(request.body as string);
-      console.log(`Body: ${JSON.stringify(body)}`)
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.API_KEY)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
@@ -178,7 +175,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           resolve(rows);
         })
       })
-      console.log(`APIKeys saved are: ${JSON.stringify(result)}`)
       result.map((value) => {
         value.PRIVATE_KEY = decode(value.PRIVATE_KEY)
       });
