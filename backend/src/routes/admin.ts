@@ -154,7 +154,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         body.INDEXER_ENDPOINT ?? process.env.DEFAULT_INDEXER_ENDPOINT, body.API_KEY
         ], (err: any, row: any) => {
           if (err) {
-            console.error(`Error while saving APIKeys: ${err}`)
+            request.log.error(`Error while saving APIKeys: ${err}`)
             reject(err);
           }
           resolve(row);
