@@ -1,6 +1,6 @@
 {
   "name": "arka",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "ARKA - (Albanian for Cashier's case) is the first open source Paymaster as a service software",
   "type": "module",
   "directories": {
