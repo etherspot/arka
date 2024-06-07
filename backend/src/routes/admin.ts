@@ -125,21 +125,21 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
     try {
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
-      if (!body.API_KEY)
+      if (!body.apiKey)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.API_KEY))
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.apiKey))
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED });
 
-      const apiKeyInstance = await server.sequelize.models.APIKey.findOne({ where: { apiKey: body.API_KEY } });
+      const apiKeyInstance = await server.sequelize.models.APIKey.findOne({ where: { apiKey: body.apiKey } });
       if (!apiKeyInstance)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
 
       await apiKeyInstance.update({
-        supportedNetworks: body.SUPPORTED_NETWORKS,
-        erc20Paymasters: body.ERC20_PAYMASTERS,
-        transactionLimit: body.TRANSACTION_LIMIT ?? 0,
-        noOfTransactionsInAMonth: body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
-        indexerEndpoint: body.INDEXER_ENDPOINT ?? process.env.DEFAULT_INDEXER_ENDPOINT
+        supportedNetworks: body.supportedNetworks,
+        erc20Paymasters: body.erc20Paymasters,
+        transactionLimit: body.transactionLimit ?? 0,
+        noOfTransactionsInAMonth: body.noOfTransactionsInAMonth ?? 10,
+        indexerEndpoint: body.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT
       });
 
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully updated' });
@@ -168,12 +168,12 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
     try {
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
-      if (!body.API_KEY)
+      if (!body.apiKey)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.API_KEY))
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.apiKey))
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED });
 
-      const apiKeyInstance = await server.sequelize.models.APIKey.findOne({ where: { apiKey: body.API_KEY } });
+      const apiKeyInstance = await server.sequelize.models.APIKey.findOne({ where: { apiKey: body.apiKey } });
       if (!apiKeyInstance)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
 

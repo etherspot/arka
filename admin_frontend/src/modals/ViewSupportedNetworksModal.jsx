@@ -25,6 +25,7 @@ const ViewSupportedNetworksModal = ({
   open,
   handleClose,
 }) => {
+  console.log(`supportedNetworks: ${JSON.stringify(supportedNetworks)}`);
   return (
     <Modal
       open={open}

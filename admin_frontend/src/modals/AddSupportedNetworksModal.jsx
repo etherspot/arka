@@ -180,7 +180,9 @@ const AddSupportedNetworksModal = ({
                   </Button>
                 </TableCell>
               </TableRow>
-              {supportedNetworks.map((network, index) => {
+              {console.log(typeof supportedNetworks)}
+                {console.log(`supportedNetworks loop: ${JSON.stringify(supportedNetworks)}`)}
+              {Array.isArray(supportedNetworks) && supportedNetworks.map((network, index) => {
                 return (
                   <TableRow key={network.chainId}>
                     <TableCell>{network.chainId}</TableCell>

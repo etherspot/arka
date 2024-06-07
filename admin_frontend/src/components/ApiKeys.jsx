@@ -72,6 +72,7 @@ const ApiKeysPage = () => {
     setViewErc20Open(false);
   };
   const handleViewOpen = (networks) => {
+    console.log(`setting received supportedNetworks value to state: ${JSON.stringify(networks)}`);
     setSupportedNetworks(networks);
     setViewModalOpen(true);
   };
@@ -97,15 +98,16 @@ const ApiKeysPage = () => {
       );
       const dataJson = await data.json();
       dataJson.filter((element) => {
-        if (element.SUPPORTED_NETWORKS) {
-          const buffer = Buffer.from(element.SUPPORTED_NETWORKS, "base64");
+        if (element.supportedNetworks) {
+          const buffer = Buffer.from(element.supportedNetworks, "base64");
           const parsedSupportedNetowrks = JSON.parse(buffer.toString());
-          element.SUPPORTED_NETWORKS = parsedSupportedNetowrks;
+          element.supportedNetworks = parsedSupportedNetowrks;
         }
-        if (element.ERC20_PAYMASTERS) {
-          const buffer = Buffer.from(element.ERC20_PAYMASTERS, "base64");
+        if (element.erc20Paymasters) {
+          const buffer = Buffer.from(element.erc20Paymasters, "base64");
           const parsedErc20Paymasters = JSON.parse(buffer.toString());
-          element.ERC20_PAYMASTERS = parsedErc20Paymasters;
+          console.log(`parsedErc20Paymasters: ${JSON.stringify(parsedErc20Paymasters)}`);
+          element.erc20Paymasters = parsedErc20Paymasters;
         }
         return element;
       });
@@ -174,7 +176,7 @@ const ApiKeysPage = () => {
         `${process.env.REACT_APP_SERVER_URL}${ENDPOINTS["deleteKey"]}`,
         {
           method: "POST",
-          body: JSON.stringify({ API_KEY: key }),
+          body: JSON.stringify({ apiKey: key }),
         }
       );
       const dataJson = data.json();
