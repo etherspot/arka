@@ -6,16 +6,18 @@ import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { encode, decode } from "../utils/crypto.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
+import { Op } from 'sequelize';
+import { APIKey } from "models/APIKey.js";
+import { APIKeyRepository } from "repository/APIKeyRepository.js";
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
-
   server.post('/adminLogin', async function (request, reply) {
     try {
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.WALLET_ADDRESS) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       console.log(body, server.config.ADMIN_WALLET_ADDRESS)
-      if (ethers.utils.getAddress(body.WALLET_ADDRESS) === server.config.ADMIN_WALLET_ADDRESS) return reply.code(ReturnCode.SUCCESS).send({error: null, message: "Successfully Logged in"});
+      if (ethers.utils.getAddress(body.WALLET_ADDRESS) === server.config.ADMIN_WALLET_ADDRESS) return reply.code(ReturnCode.SUCCESS).send({ error: null, message: "Successfully Logged in" });
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
     } catch (err: any) {
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
@@ -74,59 +76,50 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
     try {
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
-      if (!body.API_KEY || !body.PRIVATE_KEY)
+      if (!body.apiKey || !body.privateKey)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.API_KEY))
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.apiKey))
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED })
-      const wallet = new ethers.Wallet(body.PRIVATE_KEY);
+      const wallet = new ethers.Wallet(body.privateKey);
       const publicAddress = await wallet.getAddress();
-      const result: any[] = await new Promise((resolve, reject) => {
-        server.sqlite.db.get("SELECT * FROM api_keys WHERE WALLET_ADDRESS=?", [publicAddress], (err: any, row: any) => {
-          if (err) reject(err);
-          resolve(row);
-        })
-      })
-      if (result && result.length > 0)
+
+      // Use Sequelize to find the API key
+      const result = await server.sequelize.models.APIKey.findOne({ where: { walletAddress: publicAddress } });
+      if (result) {
+        request.log.error('Duplicate record found');
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.DUPLICATE_RECORD });
-      const privateKey = body.PRIVATE_KEY;
+      }
+
+      const privateKey = body.privateKey;
       const hmac = encode(privateKey);
-      await new Promise((resolve, reject) => {
-        server.sqlite.db.run("INSERT INTO api_keys ( \
-          API_KEY, \
-          WALLET_ADDRESS, \
-          PRIVATE_KEY, \
-          SUPPORTED_NETWORKS, \
-          ERC20_PAYMASTERS, \
-          MULTI_TOKEN_PAYMASTERS, \
-          MULTI_TOKEN_ORACLES, \
-          SPONSOR_NAME, \
-          LOGO_URL, \
-          TRANSACTION_LIMIT, \
-          NO_OF_TRANSACTIONS_IN_A_MONTH, \
-          INDEXER_ENDPOINT) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-          body.API_KEY,
-          publicAddress,
-          hmac,
-          body.SUPPORTED_NETWORKS,
-          body.ERC20_PAYMASTERS,
-          body.MULTI_TOKEN_PAYMASTERS ?? null,
-          body.MULTI_TOKEN_ORACLES ?? null,
-          body.SPONSOR_NAME ?? null,
-          body.LOGO_URL ?? null,
-          body.TRANSACTION_LIMIT ?? 0,
-          body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
-          body.INDEXER_ENDPOINT ?? process.env.DEFAULT_INDEXER_ENDPOINT
-        ], (err: any, row: any) => {
-          if (err) reject(err);
-          resolve(row);
-        });
+
+      // console.log(`support network on request.body is: ${body.supportedNetworks}`);
+      // console.log(`erc20 paymasters on request.body is: ${body.erc20Paymasters}`);
+      // console.log(`request body is: ${JSON.stringify(body)}`);
+
+      // Use Sequelize to insert the new API key
+      await server.sequelize.models.APIKey.create({
+        apiKey: body.apiKey,
+        walletAddress: publicAddress,
+        privateKey: hmac,
+        supportedNetworks: body.supportedNetworks,
+        erc20Paymasters: body.erc20Paymasters,
+        multiTokenPaymasters: body.multiTokenPaymasters ?? null,
+        multiTokenOracles: body.multiTokenOracles ?? null,
+        sponsorName: body.sponsorName ?? null,
+        logoUrl: body.logoUrl ?? null,
+        transactionLimit: body.transactionLimit ?? 0,
+        noOfTransactionsInAMonth: body.noOfTransactionsInAMonth ?? 10,
+        indexerEndpoint: body.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT
       });
+
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully saved' });
     } catch (err: any) {
       request.log.error(err);
       return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
   })
+
 
   server.post('/updateKey', async function (request, reply) {
     try {
@@ -135,28 +128,20 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!body.API_KEY)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.API_KEY))
-        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED })
-      const result: any[] = await new Promise((resolve, reject) => {
-        server.sqlite.db.get("SELECT * FROM api_keys WHERE API_KEY=?", [body.API_KEY], (err: any, row: any) => {
-          if (err) reject(err);
-          resolve(row);
-        })
-      });
-      if (!result || result.length == 0)
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED });
+
+      const apiKeyInstance = await server.sequelize.models.APIKey.findOne({ where: { apiKey: body.API_KEY } });
+      if (!apiKeyInstance)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
-      await new Promise((resolve, reject) => {
-        server.sqlite.db.run("UPDATE api_keys SET SUPPORTED_NETWORKS = ?, \
-          ERC20_PAYMASTERS = ?, \
-          TRANSACTION_LIMIT = ?, \
-          NO_OF_TRANSACTIONS_IN_A_MONTH = ?, \
-          INDEXER_ENDPOINT = ?, \
-          WHERE API_KEY = ?", [body.SUPPORTED_NETWORKS, body.ERC20_PAYMASTERS, body.TRANSACTION_LIMIT ?? 0, body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
-        body.INDEXER_ENDPOINT ?? process.env.DEFAULT_INDEXER_ENDPOINT, body.API_KEY
-        ], (err: any, row: any) => {
-          if (err) reject(err);
-          resolve(row);
-        })
+
+      await apiKeyInstance.update({
+        supportedNetworks: body.SUPPORTED_NETWORKS,
+        erc20Paymasters: body.ERC20_PAYMASTERS,
+        transactionLimit: body.TRANSACTION_LIMIT ?? 0,
+        noOfTransactionsInAMonth: body.NO_OF_TRANSACTIONS_IN_A_MONTH ?? 10,
+        indexerEndpoint: body.INDEXER_ENDPOINT ?? process.env.DEFAULT_INDEXER_ENDPOINT
       });
+
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully updated' });
     } catch (err: any) {
       server.log.error(err);
@@ -166,16 +151,13 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.get('/getKeys', async function (request, reply) {
     try {
-      const result: any[] = await new Promise((resolve, reject) => {
-        server.sqlite.db.all("SELECT * FROM api_keys", (err: any, rows: any[]) => {
-          if (err) reject(err);
-          resolve(rows);
-        })
-      })
-      result.map((value) => {
-        value.PRIVATE_KEY = decode(value.PRIVATE_KEY)
+      if(!server.sequelize) throw new Error('Sequelize instance is not available');
+      const apiKeyRepository = new APIKeyRepository(server.sequelize);
+      const apiKeys: APIKey[] = await apiKeyRepository.findAll();
+      apiKeys.forEach((apiKeyEntity: APIKey) => {
+        apiKeyEntity.privateKey = decode(apiKeyEntity.privateKey);
       });
-      return reply.code(ReturnCode.SUCCESS).send(result);
+      return reply.code(ReturnCode.SUCCESS).send(apiKeys);
     } catch (err: any) {
       request.log.error(err);
       return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
@@ -189,13 +171,14 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!body.API_KEY)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.API_KEY))
-        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED })
-      await new Promise((resolve, reject) => {
-        server.sqlite.db.run("DELETE FROM api_keys WHERE API_KEY=?", [body.API_KEY], (err: any, rows: any) => {
-          if (err) reject(err);
-          resolve(rows);
-        })
-      })
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED });
+
+      const apiKeyInstance = await server.sequelize.models.APIKey.findOne({ where: { apiKey: body.API_KEY } });
+      if (!apiKeyInstance)
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
+
+      await apiKeyInstance.destroy();
+
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully deleted' });
     } catch (err: any) {
       request.log.error(err);

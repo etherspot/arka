@@ -3,6 +3,7 @@ import { BigNumber, ethers } from "ethers";
 import { Database } from "sqlite3";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
+import { APIKey } from "models/APIKey";
 
 export function printRequest(methodName: string, request: FastifyRequest, log: FastifyBaseLogger) {
   log.info(methodName, "called: ");
@@ -17,21 +18,6 @@ export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint: s
     return SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key && chain["entryPoint"] == entryPoint });
   } else
     return SupportedNetworks.find((chain) => chain.chainId == key && chain.entryPoint == entryPoint);
-}
-
-export async function getSQLdata(apiKey: string, db: Database, log: FastifyBaseLogger) {
-  try {
-    const result: any[] = await new Promise((resolve, reject) => {
-      db.get("SELECT * FROM api_keys WHERE API_KEY = ?", [apiKey], (err: any, rows: any[]) => {
-        if (err) reject(err);
-        resolve(rows);
-      })
-    })
-    return result;
-  } catch (err) {
-    log.error(err);
-    return null;
-  }
 }
 
 export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger): Promise<getEtherscanFeeResponse | null> {
@@ -50,7 +36,7 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
           console.log('setting maxFeePerGas and maxPriorityFeePerGas as received')
           const maxFeePerGas = ethers.utils.parseUnits(response.result.suggestBaseFee, 'gwei')
           const fastGasPrice = ethers.utils.parseUnits(response.result.FastGasPrice, 'gwei')
-          return {
+          return { 
             maxPriorityFeePerGas: fastGasPrice.sub(maxFeePerGas),
             maxFeePerGas,
             gasPrice: maxFeePerGas,

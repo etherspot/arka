@@ -1,0 +1,86 @@
+import { Sequelize, DataTypes, Model } from 'sequelize';
+
+export class APIKey extends Model {
+  declare apiKey: string;
+  declare walletAddress: string;
+  declare privateKey: string;
+  declare supportedNetworks: string | null;
+  declare erc20Paymasters: string | null;
+  declare multiTokenPaymasters: string | null;
+  declare multiTokenOracles: string | null;
+  declare sponsorName: string | null;
+  declare logoUrl: string | null;
+  declare transactionLimit: number;
+  declare noOfTransactionsInAMonth: number | null;
+  declare indexerEndpoint: string | null;
+}
+
+export function initializeAPIKeyModel(sequelize: Sequelize) {
+  APIKey.init({
+    apiKey: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      primaryKey: true,
+      field: 'API_KEY'
+    },
+    walletAddress: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      field: 'WALLET_ADDRESS'
+    },
+    privateKey: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: 'PRIVATE_KEY'
+    },
+    supportedNetworks: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'SUPPORTED_NETWORKS'
+    },
+    erc20Paymasters: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'ERC20_PAYMASTERS'
+    },
+    multiTokenPaymasters: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'MULTI_TOKEN_PAYMASTERS'
+    },
+    multiTokenOracles: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'MULTI_TOKEN_ORACLES'
+    },
+    sponsorName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'SPONSOR_NAME'
+    },
+    logoUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'LOGO_URL'
+    },
+    transactionLimit: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'TRANSACTION_LIMIT'
+    },
+    noOfTransactionsInAMonth: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'NO_OF_TRANSACTIONS_IN_A_MONTH'
+    },
+    indexerEndpoint: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'INDEXER_ENDPOINT'
+    },
+  }, {
+    tableName: 'api_keys',
+    sequelize, // passing the `sequelize` instance is required
+    timestamps: false, // this will deactivate the `createdAt` and `updatedAt` columns
+  });
+}

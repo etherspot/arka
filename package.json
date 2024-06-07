@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "sequelize": "^6.37.3"
+  },
+  "devDependencies": {
+    "@types/sequelize": "^4.28.20",
+    "@types/sqlite3": "^3.1.11"
+  }
+}

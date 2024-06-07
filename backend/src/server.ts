@@ -7,6 +7,7 @@ import { providers, ethers } from 'ethers';
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import fetch from 'node-fetch';
 import database from './plugins/db.js';
+import sequelizePlugin from './plugins/sequelizePlugin.js';
 import config from './plugins/config.js';
 import routes from './routes/index.js';
 import adminRoutes from './routes/admin.js';
@@ -14,8 +15,10 @@ import metadataRoutes from './routes/metadata.js';
 import EtherspotChainlinkOracleAbi from './abi/EtherspotChainlinkOracleAbi.js';
 import PimlicoAbi from './abi/PimlicoAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
-import { getNetworkConfig, getSQLdata } from './utils/common.js';
+import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
+import { APIKey, initializeAPIKeyModel } from 'models/APIKey.js';
+import { APIKeyRepository } from 'repository/APIKeyRepository.js';
 
 let server: FastifyInstance;
 
@@ -54,6 +57,12 @@ const initializeServer = async (): Promise<void> => {
 
   // Database
   await server.register(database);
+
+  // Register the sequelizePlugin
+  await server.register(sequelizePlugin);
+
+  // Initialize the APIKey model
+  initializeAPIKeyModel(server.sequelize);
 
   const ConfigData: any = await new Promise(resolve => {
     server.sqlite.db.get("SELECT * FROM config", (err, row) => {
@@ -191,17 +200,19 @@ const initializeServer = async (): Promise<void> => {
                 multiTokenPaymasters = JSON.parse(buffer.toString());
               }
             } else {
-              const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
-              if (record['ERC20_PAYMASTERS']) {
-                const buffer = Buffer.from(record['ERC20_PAYMASTERS'], 'base64');
+              const apiKeyRepository = new APIKeyRepository(server.sequelize);
+              const apiKeyEntity: APIKey | null = await apiKeyRepository.findOneByApiKey(api_key);
+
+              if (apiKeyEntity?.erc20Paymasters) {
+                const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
                 customPaymasters = JSON.parse(buffer.toString());
               }
-              if (record['MULTI_TOKEN_PAYMASTERS']) {
-                const buffer = Buffer.from(record['MULTI_TOKEN_PAYMASTERS'], 'base64');
-                multiTokenPaymasters = JSON.parse(buffer.toString()); 
+              if (apiKeyEntity?.multiTokenPaymasters) {
+                const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
+                multiTokenPaymasters = JSON.parse(buffer.toString());
               }
             }
-            customPaymasters = {...customPaymasters, ...multiTokenPaymasters};
+            customPaymasters = { ...customPaymasters, ...multiTokenPaymasters };
             for (const chainId in customPaymasters) {
               const networkConfig = getNetworkConfig(chainId, '');
               if (networkConfig) {

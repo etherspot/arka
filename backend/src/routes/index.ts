@@ -10,7 +10,9 @@ import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
-import { printRequest, getNetworkConfig, getSQLdata } from "../utils/common.js";
+import { printRequest, getNetworkConfig } from "../utils/common.js";
+import { APIKeyRepository } from "repository/APIKeyRepository.js";
+import { APIKey } from "models/APIKey.js";
 
 const SUPPORTED_ENTRYPOINTS = {
   'EPV_06' : "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -126,30 +128,33 @@ const routes: FastifyPluginAsync = async (server) => {
           txnMode = secrets['TRANSACTION_LIMIT'] ?? 0;
           indexerEndpoint = secrets['INDEXER_ENDPOINT'] ?? process.env.DEFAULT_INDEXER_ENDPOINT;
         } else {
-          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
-          if (!record) {
+          const apiKeyEntity = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+
+          if (!apiKeyEntity) {
             server.log.info("Invalid Api Key provided")
             return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           }
-          if (record['ERC20_PAYMASTERS']) {
-            const buffer = Buffer.from(record['ERC20_PAYMASTERS'], 'base64');
+
+          if (apiKeyEntity.erc20Paymasters) {
+            const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
             customPaymasters = JSON.parse(buffer.toString());
           }
-          if (record['MULTI_TOKEN_PAYMASTERS']) {
-            const buffer = Buffer.from(record['MULTI_TOKEN_PAYMASTERS'], 'base64');
+          
+          if (apiKeyEntity.multiTokenPaymasters) {
+            const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
             multiTokenPaymasters = JSON.parse(buffer.toString()); 
           }
-          if (record['MULTI_TOKEN_ORACLES']) {
-            const buffer = Buffer.from(record['MULTI_TOKEN_ORACLES'], 'base64');
+          if (apiKeyEntity.multiTokenOracles) {
+            const buffer = Buffer.from(apiKeyEntity.multiTokenOracles, 'base64');
             multiTokenOracles = JSON.parse(buffer.toString());
           }
-          sponsorName = record['SPONSOR_NAME'];
-          sponsorImage = record['LOGO_URL'];
-          privateKey = decode(record['PRIVATE_KEY']);
-          supportedNetworks = record['SUPPORTED_NETWORKS'];
-          noOfTxns = record['NO_OF_TRANSACTIONS_IN_A_MONTH'];
-          txnMode = record['TRANSACTION_LIMIT'];
-          indexerEndpoint = record['INDEXER_ENDPOINT'] ?? process.env.DEFAULT_INDEXER_ENDPOINT;
+          sponsorName = apiKeyEntity.sponsorName ? apiKeyEntity.sponsorName : '';
+          sponsorImage = apiKeyEntity.logoUrl ? apiKeyEntity.logoUrl : '';
+          privateKey = decode(apiKeyEntity.privateKey);
+          supportedNetworks = apiKeyEntity.supportedNetworks;
+          noOfTxns = apiKeyEntity.noOfTransactionsInAMonth;
+          txnMode = apiKeyEntity.transactionLimit;
+          indexerEndpoint = apiKeyEntity.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT;
         }
 
         if (
@@ -299,14 +304,17 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
-          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          if (record['ERC20_PAYMASTERS']) {
-            const buffer = Buffer.from(record['ERC20_PAYMASTERS'], 'base64');
+          const result = await server.sequelize.models.APIKey.findOne({ where: { apiKey: api_key } });
+          if (!result) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          const apiKeyEntity: APIKey = result as APIKey;
+          if (apiKeyEntity.erc20Paymasters) {
+            const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
             customPaymasters = JSON.parse(buffer.toString());
           }
-          privateKey = decode(record['PRIVATE_KEY']);
-          supportedNetworks = record['SUPPORTED_NETWORKS'];
+         
+          privateKey = decode(apiKeyEntity.privateKey);
+         
+          supportedNetworks = apiKeyEntity.supportedNetworks;
         }
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
@@ -366,10 +374,10 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
-          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          privateKey = decode(record['PRIVATE_KEY']);
-          supportedNetworks = record['SUPPORTED_NETWORKS'];
+          const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(apiKeyEntity.privateKey);
+          supportedNetworks = apiKeyEntity.supportedNetworks;
         }
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
@@ -424,10 +432,10 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
-          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          privateKey = decode(record['PRIVATE_KEY']);
-          supportedNetworks = record['SUPPORTED_NETWORKS'];
+          const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(apiKeyEntity.apiKey);
+          supportedNetworks = apiKeyEntity.supportedNetworks;
         }
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
@@ -482,10 +490,10 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
-          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          privateKey = decode(record['PRIVATE_KEY']);
-          supportedNetworks = record['SUPPORTED_NETWORKS'];
+          const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(apiKeyEntity.privateKey);
+          supportedNetworks = apiKeyEntity.supportedNetworks;
         }
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
@@ -541,10 +549,10 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
-          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          privateKey = decode(record['PRIVATE_KEY']);
-          supportedNetworks = record['SUPPORTED_NETWORKS'];
+          const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(apiKeyEntity.apiKey);
+          supportedNetworks = apiKeyEntity.supportedNetworks;
         }
         if (
           isNaN(amount) ||
@@ -594,10 +602,10 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
-          if (!record) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          privateKey = decode(record['PRIVATE_KEY']);
-          supportedNetworks = record['SUPPORTED_NETWORKS'];
+          const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(apiKeyEntity.privateKey);
+          supportedNetworks = apiKeyEntity.supportedNetworks;
         }
         if (
           isNaN(amount) ||

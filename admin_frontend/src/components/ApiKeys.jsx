@@ -135,12 +135,12 @@ const ApiKeysPage = () => {
           JSON.stringify(customErc20Paymaster)
         ).toString("base64");
       const requestData = {
-        API_KEY: apiKey,
-        PRIVATE_KEY: privateKey,
-        SUPPORTED_NETWORKS:
+        apiKey: apiKey,
+        privateKey: privateKey,
+        supportedNetworks:
           Buffer.from(JSON.stringify(supportedNetworks)).toString("base64") ??
           "",
-        ERC20_PAYMASTERS: base64Erc20 ?? "",
+          erc20Paymasters: base64Erc20 ?? "",
       };
       const data = await fetch(
         `${process.env.REACT_APP_SERVER_URL}${ENDPOINTS["saveKey"]}`,
@@ -280,12 +280,12 @@ const ApiKeysPage = () => {
               </TableCell>
             </TableRow>
             {keys.map((row, index) => (
-              <TableRow key={row.API_KEY}>
-                <TableCell>{row.WALLET_ADDRESS}</TableCell>
-                <TableCell>{row.API_KEY}</TableCell>
+              <TableRow key={row.apiKey}>
+                <TableCell>{row.walletAddress}</TableCell>
+                <TableCell>{row.apiKey}</TableCell>
                 <TableCell>
                   <div className="flex flex-row">
-                    <div>{showPassword ? row.PRIVATE_KEY : "*****"} </div>
+                    <div>{showPassword ? row.privateKey : "*****"} </div>
                     <div>
                       <InputAdornment position="end">
                         <IconButton
@@ -302,16 +302,16 @@ const ApiKeysPage = () => {
                 </TableCell>
                 <TableCell>
                   <Button
-                    disabled={row.SUPPORTED_NETWORKS === ""}
-                    onClick={() => handleViewOpen(row.SUPPORTED_NETWORKS)}
+                    disabled={row.supportedNetworks === ""}
+                    onClick={() => handleViewOpen(row.supportedNetworks)}
                   >
                     View
                   </Button>
                 </TableCell>
                 <TableCell>
                   <Button
-                    disabled={row.ERC20_PAYMASTERS === ""}
-                    onClick={() => handleViewERC20Open(row.ERC20_PAYMASTERS)}
+                    disabled={row.erc20Paymasters === ""}
+                    onClick={() => handleViewERC20Open(row.erc20Paymasters)}
                   >
                     View
                   </Button>
@@ -324,7 +324,7 @@ const ApiKeysPage = () => {
                     startIcon={<RemoveCircleIcon />}
                     variant="contained"
                     onClick={() => {
-                      handleDelete(row.API_KEY);
+                      handleDelete(row.apiKey);
                     }}
                   >
                     Delete Row
