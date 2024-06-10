@@ -18,6 +18,9 @@ export class APIKey extends Model {
 }
 
 export function initializeAPIKeyModel(sequelize: Sequelize) {
+
+  console.log('Initializing APIKey model...')
+
   APIKey.init({
     apiKey: {
       type: DataTypes.TEXT,
@@ -85,4 +88,6 @@ export function initializeAPIKeyModel(sequelize: Sequelize) {
     tableName: 'api_keys',
     sequelize, // passing the `sequelize` instance is required
   });
+
+  console.log('APIKey model initialized.')
 }

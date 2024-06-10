@@ -19,6 +19,7 @@ import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
 import { APIKey } from 'models/APIKey.js';
 import { APIKeyRepository } from 'repository/APIKeyRepository.js';
+import { Sequelize, QueryTypes } from 'sequelize';
 
 let server: FastifyInstance;
 
@@ -61,12 +62,9 @@ const initializeServer = async (): Promise<void> => {
   // Register the sequelizePlugin
   await server.register(sequelizePlugin);
 
-  const ConfigData: any = await new Promise(resolve => {
-    server.sqlite.db.get("SELECT * FROM config", (err, row) => {
-      if (err) resolve(null);
-      resolve(row);
-    });
-  });
+  console.log('registered sequelizePlugin...')
+
+  const ConfigData: any = await server.sequelize.query("SELECT * FROM config", { type: QueryTypes.SELECT });
 
   await server.register(fastifyCron, {
     jobs: [

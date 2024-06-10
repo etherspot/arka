@@ -32,6 +32,7 @@
     "@fastify/cors": "8.4.1",
     "@ponder/core": "0.2.7",
     "@sinclair/typebox": "0.31.28",
+    "@types/sequelize": "^4.28.20",
     "ajv": "8.11.2",
     "crypto": "^1.0.1",
     "dotenv": "16.0.3",
@@ -44,8 +45,14 @@
     "getmac": "6.6.0",
     "graphql-request": "6.1.0",
     "node-fetch": "3.3.2",
+    "node-pg-migrate": "^7.4.0",
+    "pg": "^8.12.0",
+    "postgrator": "^7.2.0",
+    "sequelize": "^6.37.3",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7-rc.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5",
     "viem": "2.7.6"
   },
   "devDependencies": {
@@ -53,6 +60,8 @@
     "@babel/preset-env": "7.23.2",
     "@types/jest": "29.5.3",
     "@types/node": "18.11.15",
+    "@types/node-pg-migrate": "^2.3.1",
+    "@types/pg": "^8.11.6",
     "@typescript-eslint/eslint-plugin": "5.45.0",
     "@typescript-eslint/parser": "5.45.0",
     "babel-jest": "29.6.2",
@@ -65,7 +74,6 @@
     "prettier": "2.8.0",
     "ts-jest": "29.1.1",
     "tsx": "3.12.1",
-    "typescript": "5.0.4",
     "vitest": "0.25.8"
   }
 }
