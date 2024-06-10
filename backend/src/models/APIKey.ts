@@ -13,6 +13,8 @@ export class APIKey extends Model {
   declare transactionLimit: number;
   declare noOfTransactionsInAMonth: number | null;
   declare indexerEndpoint: string | null;
+  declare createdAt: Date; // Added this line
+  declare updatedAt: Date; // Added this line
 }
 
 export function initializeAPIKeyModel(sequelize: Sequelize) {
@@ -26,6 +28,7 @@ export function initializeAPIKeyModel(sequelize: Sequelize) {
     walletAddress: {
       type: DataTypes.TEXT,
       allowNull: false,
+      unique: true,
       field: 'WALLET_ADDRESS'
     },
     privateKey: {
@@ -81,6 +84,5 @@ export function initializeAPIKeyModel(sequelize: Sequelize) {
   }, {
     tableName: 'api_keys',
     sequelize, // passing the `sequelize` instance is required
-    timestamps: false, // this will deactivate the `createdAt` and `updatedAt` columns
   });
 }

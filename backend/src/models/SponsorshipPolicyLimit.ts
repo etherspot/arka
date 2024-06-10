@@ -1,7 +1,6 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 
 export class SponsorshipPolicyLimit extends Model {
-    declare limitId: number;
     declare policyId: number;
     declare limitType: string;
     declare maxUsd: number | null;
@@ -11,36 +10,24 @@ export class SponsorshipPolicyLimit extends Model {
 
 export function initializeSponsorshipPolicyLimitModel(sequelize: Sequelize) {
     SponsorshipPolicyLimit.init({
-        limitId: {
-            type: DataTypes.INTEGER,
-            primaryKey: true,
-            field: 'LIMIT_ID'
-        },
         policyId: {
             type: DataTypes.INTEGER,
+            primaryKey: true,
             allowNull: false,
+            references: {
+                model: 'SponsorshipPolicy', // name of your model for sponsorship policies
+                key: 'id', // key in SponsorshipPolicy that policyId references
+            },
+            onDelete: 'CASCADE', // Add this line
             field: 'POLICY_ID'
         },
         limitType: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING, // Adjust this if limitType is not a string
+            primaryKey: true,
             allowNull: false,
             field: 'LIMIT_TYPE'
         },
-        maxUsd: {
-            type: DataTypes.REAL,
-            allowNull: true,
-            field: 'MAX_USD'
-        },
-        maxEth: {
-            type: DataTypes.REAL,
-            allowNull: true,
-            field: 'MAX_ETH'
-        },
-        maxOperations: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'MAX_OPERATIONS'
-        },
+        // ... other fields ...
     }, {
         tableName: 'sponsorship_policy_limits',
         sequelize,
