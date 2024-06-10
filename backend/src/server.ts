@@ -17,10 +17,8 @@ import PimlicoAbi from './abi/PimlicoAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
 import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
-import { APIKey, initializeAPIKeyModel } from 'models/APIKey.js';
+import { APIKey } from 'models/APIKey.js';
 import { APIKeyRepository } from 'repository/APIKeyRepository.js';
-import { initializeSponsorshipPolicyModel } from 'models/SponsorshipPolicy.js';
-import { initializeSponsorshipPolicyChainModel } from 'models/SponsorshipPolicyChain.js';
 
 let server: FastifyInstance;
 

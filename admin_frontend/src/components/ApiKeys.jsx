@@ -151,7 +151,7 @@ const ApiKeysPage = () => {
           body: JSON.stringify(requestData),
         }
       );
-      const dataJson = data.json();
+      const dataJson = await data.json();
       if (!dataJson.error) {
         toast.success("Saved Successfully");
         setApiKey("");
@@ -159,7 +159,7 @@ const ApiKeysPage = () => {
         fetchData();
       } else {
         setLoading(false);
-        toast.error(`${dataJson.message} Please try again or contant Arka support team`);
+        toast.error(`${dataJson.error} Please try again or contant Arka support team`);
       }
     } catch (err) {
       if (err?.message?.includes("Failed to fetch")) {

@@ -75,13 +75,19 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/saveKey', async function (request, reply) {
     try {
       const body: any = JSON.parse(request.body as string);
+      request.log.info(`Request body is: ${JSON.stringify(body)}`);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.apiKey || !body.privateKey)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+
+      request.log.info(`API Key is: ${body.apiKey}`);
+      request.log.info(`Private Key is: ${body.privateKey}`);  
       if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.apiKey))
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED })
+      request.log.info(`API Key is valid`);
       const wallet = new ethers.Wallet(body.privateKey);
       const publicAddress = await wallet.getAddress();
+      request.log.info(`Public address is: ${publicAddress}`);
 
       // Use Sequelize to find the API key
       const result = await server.sequelize.models.APIKey.findOne({ where: { walletAddress: publicAddress } });

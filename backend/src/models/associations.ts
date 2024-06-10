@@ -8,13 +8,15 @@ export function setupAssociations() {
     // APIKey to Policy
     APIKey.hasMany(SponsorshipPolicy, {
         foreignKey: 'walletAddress',
-        as: 'policies',  // Optional alias for easier access in code
-        onDelete: 'CASCADE',  // Ensures related policies are deleted when an APIKey is deleted
-        onUpdate: 'CASCADE'  // Ensures changes in APIKey are cascaded to policies
+        sourceKey: 'walletAddress', // This is the new line
+        as: 'sponsorshipPolicies',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
     });
 
     SponsorshipPolicy.belongsTo(APIKey, {
         foreignKey: 'walletAddress',
+        targetKey: 'walletAddress',
         as: 'apiKey',  // Optional alias
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
