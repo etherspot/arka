@@ -19,6 +19,8 @@ import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
 import { APIKey, initializeAPIKeyModel } from 'models/APIKey.js';
 import { APIKeyRepository } from 'repository/APIKeyRepository.js';
+import { initializeSponsorshipPolicyModel } from 'models/SponsorshipPolicy.js';
+import { initializeSponsorshipPolicyChainModel } from 'models/SponsorshipPolicyChain.js';
 
 let server: FastifyInstance;
 
@@ -60,9 +62,6 @@ const initializeServer = async (): Promise<void> => {
 
   // Register the sequelizePlugin
   await server.register(sequelizePlugin);
-
-  // Initialize the APIKey model
-  initializeAPIKeyModel(server.sequelize);
 
   const ConfigData: any = await new Promise(resolve => {
     server.sqlite.db.get("SELECT * FROM config", (err, row) => {

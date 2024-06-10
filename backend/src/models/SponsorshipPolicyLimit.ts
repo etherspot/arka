@@ -1,6 +1,6 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 
-export class PolicyLimit extends Model {
+export class SponsorshipPolicyLimit extends Model {
     declare limitId: number;
     declare policyId: number;
     declare limitType: string;
@@ -9,8 +9,8 @@ export class PolicyLimit extends Model {
     declare maxOperations: number | null;
 }
 
-export function initializePolicyLimitModel(sequelize: Sequelize) {
-    PolicyLimit.init({
+export function initializeSponsorshipPolicyLimitModel(sequelize: Sequelize) {
+    SponsorshipPolicyLimit.init({
         limitId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -42,7 +42,7 @@ export function initializePolicyLimitModel(sequelize: Sequelize) {
             field: 'MAX_OPERATIONS'
         },
     }, {
-        tableName: 'policy_limits',
+        tableName: 'sponsorship_policy_limits',
         sequelize,
         timestamps: false,
     });

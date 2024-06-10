@@ -1,13 +1,13 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 
-export class PolicyChain extends Model {
+export class SponsorshipPolicyChain extends Model {
     declare policyChainId: number;
     declare policyId: number;
     declare chainName: string;
 }
 
-export function initializePolicyChainModel(sequelize: Sequelize) {
-    PolicyChain.init({
+export function initializeSponsorshipPolicyChainModel(sequelize: Sequelize) {
+    SponsorshipPolicyChain.init({
         policyChainId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -24,7 +24,7 @@ export function initializePolicyChainModel(sequelize: Sequelize) {
             field: 'CHAIN_NAME'
         },
     }, {
-        tableName: 'policy_chains',
+        tableName: 'sponsorship_policy_chains',
         sequelize,
         timestamps: false,
     });

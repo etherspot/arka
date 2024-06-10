@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 
 -- Create POLICIES Table
-CREATE TABLE IF NOT EXISTS policies (
+CREATE TABLE IF NOT EXISTS sponsorship_policies (
     POLICY_ID INTEGER PRIMARY KEY,
     WALLET_ADDRESS TEXT NOT NULL,
     NAME TEXT NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS policies (
 );
 
 -- Create POLICY_LIMITS Table
-CREATE TABLE IF NOT EXISTS policy_limits (
+CREATE TABLE IF NOT EXISTS sponsorship_policy_limits (
     LIMIT_ID INTEGER PRIMARY KEY,
     POLICY_ID INTEGER NOT NULL,
     LIMIT_TYPE TEXT NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS policy_limits (
 );
 
 -- Create POLICY_CHAINS Table
-CREATE TABLE IF NOT EXISTS policy_chains (
+CREATE TABLE IF NOT EXISTS sponsorship_policy_chains (
     POLICY_CHAIN_ID INTEGER PRIMARY KEY,
     POLICY_ID INTEGER NOT NULL,
     CHAIN_NAME TEXT NOT NULL,
@@ -40,6 +40,6 @@ CREATE TABLE IF NOT EXISTS policy_chains (
 -- Down
 --------------------------------------------------------------------------------
 
-DROP TABLE IF EXISTS policy_chains;
-DROP TABLE IF EXISTS policy_limits;
-DROP TABLE IF EXISTS policies;
+DROP TABLE IF EXISTS sponsorship_policy_chains;
+DROP TABLE IF EXISTS sponsorship_policy_limits;
+DROP TABLE IF EXISTS sponsorship_policies;

@@ -1,6 +1,6 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 
-export class Policy extends Model {
+export class SponsorshipPolicy extends Model {
     declare policyId: number;
     declare walletAddress: string;
     declare name: string;
@@ -12,8 +12,8 @@ export class Policy extends Model {
     declare contractRestrictions: string | null;
 }
 
-export function initializePolicyModel(sequelize: Sequelize) {
-    Policy.init({
+export function initializeSponsorshipPolicyModel(sequelize: Sequelize) {
+    SponsorshipPolicy.init({
         policyId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -66,7 +66,7 @@ export function initializePolicyModel(sequelize: Sequelize) {
             field: 'CONTRACT_RESTRICTIONS'
         },
     }, {
-        tableName: 'policies',
+        tableName: 'sponsorship_policies',
         sequelize,
         timestamps: false,
     });
