@@ -45,7 +45,7 @@
     "graphql-request": "6.1.0",
     "node-fetch": "3.3.2",
     "sqlite": "5.1.1",
-    "sqlite3": "5.1.7-rc.0",
+    "sqlite3": "5.1.7",
     "viem": "2.7.6"
   },
   "devDependencies": {
