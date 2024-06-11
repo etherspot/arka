@@ -417,17 +417,17 @@ export class Paymaster {
     }
   }
 
-  async deposit(amount: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, log?: FastifyBaseLogger) {
+  async deposit(amount: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, isEpv06: boolean, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV06, provider);
+      const paymasterContract = new ethers.Contract(paymasterAddress, isEpv06 ? EtherspotAbiV06 : EtherspotAbiV07, provider);
       const signer = new Wallet(relayerKey, provider)
       const balance = await signer.getBalance();
       const amountInWei = ethers.utils.parseEther(amount.toString());
       if (amountInWei.gte(balance))
         throw new Error(`${signer.address} Balance is less than the amount to be deposited`)
 
-      const encodedData = paymasterContract.interface.encodeFunctionData('depositFunds', []);
+      const encodedData = paymasterContract.interface.encodeFunctionData(isEpv06 ? 'depositFunds': 'deposit', []);
 
       const etherscanFeeData = await getEtherscanFee(chainId);
       console.log('etherscanFeeData: ', etherscanFeeData);
