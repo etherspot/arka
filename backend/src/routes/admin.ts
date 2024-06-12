@@ -97,6 +97,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       }
 
       const privateKey = body.privateKey;
+
       const hmac = encode(privateKey);
 
       // console.log(`support network on request.body is: ${body.supportedNetworks}`);

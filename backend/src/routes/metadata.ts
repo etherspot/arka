@@ -1,14 +1,15 @@
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { FastifyPluginAsync } from "fastify";
-import { Wallet, providers } from "ethers";
+import { Contract, Wallet, providers } from "ethers";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { getNetworkConfig, printRequest } from "../utils/common.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import { decode } from "../utils/crypto.js";
 import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
-import { APIKey } from "models/APIKey";
+import { APIKey } from "../models/APIKey";
 import { APIKeyRepository } from "repository/APIKeyRepository";
+import * as EtherspotAbi from "../abi/EtherspotAbi.js";
 
 const metadataRoutes: FastifyPluginAsync = async (server) => {
 
@@ -88,8 +89,13 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
       const provider = new providers.JsonRpcProvider(networkConfig.bundler);
       const signer = new Wallet(privateKey, provider)
-      const balance = await signer.getBalance();
-      const address = await signer.getAddress();
+      const sponsorWalletBalance = await signer.getBalance();
+      const sponsorAddress = await signer.getAddress();
+
+      //get native balance of the sponsor in the EtherSpotPaymaster-contract
+      const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
+      const sponsorBalance = await paymasterContract.getSponsorBalance(sponsorAddress);
+
       const chainsSupported: {chainId: number, entryPoint: string}[] = [];
       if (supportedNetworks) {
         const buffer = Buffer.from(supportedNetworks, 'base64');
@@ -107,8 +113,9 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         ...customPaymasters,
       }
       return reply.code(ReturnCode.SUCCESS).send({
-        sponsorAddress: address,
-        sponsorWalletBalance: balance,
+        sponsorAddress: sponsorAddress,
+        sponsorWalletBalance: sponsorWalletBalance,
+        sponsorBalance: sponsorBalance,
         chainsSupported: chainsSupported,
         tokenPaymasters: tokenPaymasterAddresses,
         multiTokenPaymasters,
