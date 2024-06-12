@@ -165,10 +165,11 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED });
 
       const apiKeyInstance = await server.apiKeyRepository.findOneByApiKey(body.apiKey);
+      console.log(`before delete: ${JSON.stringify(apiKeyInstance)}`);
       if (!apiKeyInstance)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
 
-      await apiKeyInstance.destroy();
+      await server.apiKeyRepository.delete(body.apiKey);
 
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully deleted' });
     } catch (err: any) {

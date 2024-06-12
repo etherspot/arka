@@ -35,15 +35,15 @@ const InfoTextStyle = {
 
 const Dashboard = () => {
   const defaultConfig = {
-    COINGECKO_API_URL: "",
-    COINGECKO_IDS: "",
-    CRON_TIME: "",
-    CUSTOM_CHAINLINK_DEPLOYED: "",
-    DEPLOYED_ERC20_PAYMASTERS: "",
-    PYTH_MAINNET_CHAIN_IDS: "",
-    PYTH_MAINNET_URL: "",
-    PYTH_TESTNET_CHAIN_IDS: "",
-    PYTH_TESTNET_URL: "",
+    coinGeckoApiUrl: "",
+    coingeckoIds: "",
+    cronTime: "",
+    customChainlinkDeployed: "",
+    deployedErc20Paymasters: "",
+    pythMainnetChainIds: "",
+    pythMainnetUrl: "",
+    pythTestnetChainIds: "",
+    pythTestnetUrl: "",
     id: 1,
   };
   const [config, setConfig] = useState(defaultConfig);
@@ -84,8 +84,10 @@ const Dashboard = () => {
           }
         );
         const dataJson = await data.json();
+        console.log(`getConfig on admin-frontend dataJson: ${JSON.stringify(dataJson)}`);
         setConfig(dataJson);
         setEdittedConfig(dataJson);
+        console.log(`set config: ${JSON.stringify(dataJson)}`)
         let buffer;
         if (data.coingeckoIds && data.coingeckoIds !== "") {
           buffer = Buffer.from(data.coingeckoIds, "base64");
@@ -135,13 +137,13 @@ const Dashboard = () => {
     if (signedIn) {
       try {
         setLoading(true);
-        edittedConfig.COINGECKO_IDS = Buffer.from(
+        edittedConfig.coingeckoIds = Buffer.from(
           JSON.stringify(coingeckoIds)
         ).toString("base64");
-        edittedConfig.DEPLOYED_ERC20_PAYMASTERS = Buffer.from(
+        edittedConfig.deployedErc20Paymasters = Buffer.from(
           JSON.stringify(deployedPaymasters)
         ).toString("base64");
-        edittedConfig.CUSTOM_CHAINLINK_DEPLOYED = Buffer.from(
+        edittedConfig.customChainlinkDeployed = Buffer.from(
           JSON.stringify(customChainlink)
         ).toString("base64");
         const data = await fetch(
@@ -202,16 +204,16 @@ const Dashboard = () => {
           onChange={(e) => {
             setEdittedConfig({
               ...edittedConfig,
-              COINGECKO_API_URL: e.target.value,
+              coinGeckoApiUrl: e.target.value,
             });
             if (disableSave) setDisableSave(false);
             else if (
               !disableSave &&
-              e.target.value === config.COINGECKO_API_URL
+              e.target.value === config.coinGeckoApiUrl
             )
               setDisableSave(true);
           }}
-          value={edittedConfig.COINGECKO_API_URL}
+          value={edittedConfig.coinGeckoApiUrl}
           required
           fullWidth
           multiline
@@ -232,13 +234,13 @@ const Dashboard = () => {
           onChange={(e) => {
             setEdittedConfig({
               ...edittedConfig,
-              CRON_TIME: e.target.value,
+              cronTime: e.target.value,
             });
             if (disableSave) setDisableSave(false);
-            else if (!disableSave && e.target.value === config.CRON_TIME)
+            else if (!disableSave && e.target.value === config.cronTime)
               setDisableSave(true);
           }}
-          value={edittedConfig.CRON_TIME}
+          value={edittedConfig.cronTime}
           required
           fullWidth
         />
@@ -291,16 +293,16 @@ const Dashboard = () => {
           onChange={(e) => {
             setEdittedConfig({
               ...edittedConfig,
-              PYTH_MAINNET_CHAIN_IDS: e.target.value,
+              pythMainnetChainIds: e.target.value,
             });
             if (disableSave) setDisableSave(false);
             else if (
               !disableSave &&
-              e.target.value === config.PYTH_MAINNET_CHAIN_IDS
+              e.target.value === config.pythMainnetChainIds
             )
               setDisableSave(true);
           }}
-          value={edittedConfig.PYTH_MAINNET_CHAIN_IDS}
+          value={edittedConfig.pythMainnetChainIds}
           required
           fullWidth
           multiline
@@ -322,13 +324,13 @@ const Dashboard = () => {
           onChange={(e) => {
             setEdittedConfig({
               ...edittedConfig,
-              PYTH_MAINNET_URL: e.target.value,
+              pythMainnetUrl: e.target.value,
             });
             if (disableSave) setDisableSave(false);
-            else if (!disableSave && e.target.value === config.PYTH_MAINNET_URL)
+            else if (!disableSave && e.target.value === config.pythMainnetUrl)
               setDisableSave(true);
           }}
-          value={edittedConfig.PYTH_MAINNET_URL}
+          value={edittedConfig.pythMainnetUrl}
           required
           fullWidth
           multiline
@@ -350,16 +352,16 @@ const Dashboard = () => {
           onChange={(e) => {
             setEdittedConfig({
               ...edittedConfig,
-              PYTH_TESTNET_CHAIN_IDS: e.target.value,
+              pythTestnetChainIds: e.target.value,
             });
             if (disableSave) setDisableSave(false);
             else if (
               !disableSave &&
-              e.target.value === config.PYTH_TESTNET_CHAIN_IDS
+              e.target.value === config.pythTestnetChainIds
             )
               setDisableSave(true);
           }}
-          value={edittedConfig.PYTH_TESTNET_CHAIN_IDS}
+          value={edittedConfig.pythTestnetChainIds}
           required
           fullWidth
           multiline
@@ -381,13 +383,13 @@ const Dashboard = () => {
           onChange={(e) => {
             setEdittedConfig({
               ...edittedConfig,
-              PYTH_TESTNET_URL: e.target.value,
+              pythTestnetUrl: e.target.value,
             });
             if (disableSave) setDisableSave(false);
-            else if (!disableSave && e.target.value === config.PYTH_TESTNET_URL)
+            else if (!disableSave && e.target.value === config.pythTestnetUrl)
               setDisableSave(true);
           }}
-          value={edittedConfig.PYTH_TESTNET_URL}
+          value={edittedConfig.pythTestnetUrl}
           required
           fullWidth
           multiline

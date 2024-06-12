@@ -13,6 +13,13 @@ export class APIKeyRepository {
     return result ? result.get() as APIKey : null;
   }
 
+  async delete(apiKey: string): Promise<number> {
+    return await this.sequelize.models.APIKey.destroy({
+      where
+        : { apiKey: apiKey }
+    });
+  }
+
   async findAll(): Promise<APIKey[]> {
     const result = await this.sequelize.models.APIKey.findAll();
     return result.map(apiKey => apiKey.get() as APIKey);

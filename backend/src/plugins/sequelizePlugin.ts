@@ -56,7 +56,9 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     server.decorate('sequelize', sequelize);
 
     const apiKeyRepository : APIKeyRepository = new APIKeyRepository(sequelize);
+    server.decorate('apiKeyRepository', apiKeyRepository);
     const configRepository : ConfigRepository = new ConfigRepository(sequelize);
+    server.decorate('configRepository', configRepository);
 
     console.log('decorated fastify server with models...');
 
