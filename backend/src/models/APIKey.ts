@@ -17,11 +17,11 @@ export class APIKey extends Model {
   declare updatedAt: Date; // Added this line
 }
 
-export function initializeAPIKeyModel(sequelize: Sequelize) {
+export function initializeAPIKeyModel(sequelize: Sequelize, schema: string) {
 
   console.log('Initializing APIKey model...')
 
-  APIKey.init({
+  const initializedAPIKeyModel = APIKey.init({
     apiKey: {
       type: DataTypes.TEXT,
       allowNull: false,
@@ -84,10 +84,30 @@ export function initializeAPIKeyModel(sequelize: Sequelize) {
       allowNull: true,
       field: 'INDEXER_ENDPOINT'
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'CREATED_AT'
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'UPDATED_AT'
+    },
   }, {
     tableName: 'api_keys',
     sequelize, // passing the `sequelize` instance is required
+    //modelName: 'APIKey',
+    timestamps: true, // enabling timestamps
+    createdAt: 'createdAt', // mapping 'createdAt' to 'CREATED_AT'
+    updatedAt: 'updatedAt', // mapping 'updatedAt' to 'UPDATED_AT'
+    freezeTableName: true,
+    schema: schema,
   });
 
+  console.log(`apiKey inited as: ${initializedAPIKeyModel}`)
+
   console.log('APIKey model initialized.')
+
+  return initializedAPIKeyModel;
 }

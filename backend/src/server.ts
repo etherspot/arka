@@ -18,8 +18,9 @@ import PythOracleAbi from './abi/PythOracleAbi.js';
 import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
 import { APIKey } from 'models/APIKey.js';
-import { APIKeyRepository } from 'repository/APIKeyRepository.js';
-import { Sequelize, QueryTypes } from 'sequelize';
+import { APIKeyRepository } from './repository/APIKeyRepository.js';
+import { Config } from 'models/Config.js';
+import { ConfigRepository } from 'repository/ConfigRepository.js';
 
 let server: FastifyInstance;
 
@@ -62,9 +63,16 @@ const initializeServer = async (): Promise<void> => {
   // Register the sequelizePlugin
   await server.register(sequelizePlugin);
 
+  // Synchronize all models
+  await server.sequelize.sync();
+
   console.log('registered sequelizePlugin...')
 
-  const ConfigData: any = await server.sequelize.query("SELECT * FROM config", { type: QueryTypes.SELECT });
+  const configRepository = new ConfigRepository(server.sequelize);
+  const configDatas = await configRepository.findAll();
+  const configData: Config | null = configDatas.length > 0 ? configDatas[0] : null;
+  console.log('configData:', configData);
+
 
   await server.register(fastifyCron, {
     jobs: [
@@ -72,14 +80,14 @@ const initializeServer = async (): Promise<void> => {
         // Only these two properties are required,
         // the rest is from the node-cron API:
         // https://github.com/kelektiv/node-cron#api
-        cronTime: ConfigData?.CRON_TIME ?? '0 0 * * *', // Default: Everyday at midnight UTC,
+        cronTime: configData?.cronTime ?? '0 0 * * *', // Default: Everyday at midnight UTC,
         name: 'PriceUpdate',
 
         // Note: the callbacks (onTick & onComplete) take the server
         // as an argument, as opposed to nothing in the node-cron API:
         onTick: async () => {
           if (process.env.CRON_PRIVATE_KEY) {
-            const paymastersAdrbase64 = ConfigData.DEPLOYED_ERC20_PAYMASTERS ?? ''
+            const paymastersAdrbase64 = configData?.deployedErc20Paymasters ?? ''
             if (paymastersAdrbase64) {
               const buffer = Buffer.from(paymastersAdrbase64, 'base64');
               const DEPLOYED_ERC20_PAYMASTERS = JSON.parse(buffer.toString());
@@ -91,15 +99,15 @@ const initializeServer = async (): Promise<void> => {
                   const signer = new ethers.Wallet(process.env.CRON_PRIVATE_KEY ?? '', provider);
                   deployedPaymasters.forEach(async (deployedPaymaster) => {
                     const paymasterContract = new ethers.Contract(deployedPaymaster, PimlicoAbi, signer)
-                    const pythMainnetChains = ConfigData.PYTH_MAINNET_CHAIN_IDS?.split(',') ?? [];
-                    const pythTestnetChains = ConfigData.PYTH_TESTNET_CHAIN_IDS?.split(',') ?? [];
+                    const pythMainnetChains = configData?.pythMainnetChainIds?.split(',') ?? [];
+                    const pythTestnetChains = configData?.pythTestnetChainIds?.split(',') ?? [];
                     if (pythMainnetChains?.includes(chain) || pythTestnetChains?.includes(chain)) {
                       try {
                         const oracleAddress = await paymasterContract.tokenOracle();
                         const oracleContract = new ethers.Contract(oracleAddress, PythOracleAbi, provider)
                         const priceId = await oracleContract.priceLocator();
-                        const TESTNET_API_URL = ConfigData.PYTH_TESTNET_URL;
-                        const MAINNET_API_URL = ConfigData.PYTH_MAINNET_URL;
+                        const TESTNET_API_URL = configData?.pythTestnetUrl;
+                        const MAINNET_API_URL = configData?.pythMainnetUrl;
                         const requestURL = `${chain === '5000' ? MAINNET_API_URL : TESTNET_API_URL}${priceId}`;
                         const response = await fetch(requestURL);
                         const vaa: any = await response.json();
@@ -116,8 +124,8 @@ const initializeServer = async (): Promise<void> => {
                         server.log.error(err);
                       }
                     }
-                    const customChainlinkDeploymentsbase64 = ConfigData.CUSTOM_CHAINLINK_DEPLOYED;
-                    const coingeckoIdsbase64 = ConfigData.COINGECKO_IDS;
+                    const customChainlinkDeploymentsbase64 = configData?.customChainlinkDeployed;
+                    const coingeckoIdsbase64 = configData?.coingeckoIds as string;
                     if (customChainlinkDeploymentsbase64) {
                       try {
                         let buffer = Buffer.from(customChainlinkDeploymentsbase64, 'base64');
@@ -127,7 +135,7 @@ const initializeServer = async (): Promise<void> => {
                         const customChainlinkDeployments = customChainlinks[chain] ?? [];
                         if (customChainlinkDeployments.includes(deployedPaymaster)) {
                           const coingeckoId = coingeckoIds[chain][customChainlinkDeployments.indexOf(deployedPaymaster)]
-                          const response: any = await (await fetch(`${ConfigData.COINGECKO_API_URL}${coingeckoId}`)).json();
+                          const response: any = await (await fetch(`${configData.coingeckoApiUrl}${coingeckoId}`)).json();
                           const price = ethers.utils.parseUnits(response[coingeckoId].usd.toString(), 8);
                           if (price) {
                             const oracleAddress = await paymasterContract.tokenOracle();

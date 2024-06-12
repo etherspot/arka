@@ -22,6 +22,7 @@ const ConfigSchema = Type.Strict(
     MULTI_TOKEN_MARKUP: Type.String() || undefined,
     DATABASE_URL: Type.String() || undefined,
     DATABASE_SSL_ENABLED: Type.Boolean() || undefined,
+    DATABASE_SCHEMA_NAME: Type.String() || undefined,
   })
 );
 
@@ -55,6 +56,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     MULTI_TOKEN_MARKUP: process.env.MULTI_TOKEN_MARKUP ?? '1150000',
     DATABASE_URL: process.env.DATABASE_URL ?? '',
     DATABASE_SSL_ENABLED: process.env.DATABASE_SSL_ENABLED === 'true',
+    DATABASE_SCHEMA_NAME: process.env.DATABASE_SCHEMA_NAME ?? 'arka',
   }
 
   server.decorate("config", config);

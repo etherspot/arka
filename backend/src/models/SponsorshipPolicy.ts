@@ -1,18 +1,20 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 
 export class SponsorshipPolicy extends Model {
-    declare id: number;
-    declare walletAddress: string;
-    declare name: string;
-    declare description: string | null;
-    declare startDate: Date | null;
-    declare endDate: Date | null;
-    declare isPerpetual: boolean;
-    declare isUniversal: boolean;
-    declare contractRestrictions: string | null;
+    public id!: number;
+    public walletAddress!: string;
+    public name!: string;
+    public description!: string | null;
+    public startDate!: Date | null;
+    public endDate!: Date | null;
+    public isPerpetual!: boolean;
+    public isUniversal!: boolean;
+    public contractRestrictions!: string | null;
+    public readonly createdAt!: Date;
+    public readonly updatedAt!: Date;
 }
 
-export function initializeSponsorshipPolicyModel(sequelize: Sequelize) {
+export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: string) {
     SponsorshipPolicy.init({
         id: {
             type: DataTypes.INTEGER,
@@ -65,9 +67,26 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize) {
             allowNull: true,
             field: 'CONTRACT_RESTRICTIONS'
         },
+        createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW,
+            field: 'CREATED_AT'
+        },
+        updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW,
+            field: 'UPDATED_AT'
+        },
     }, {
-        tableName: 'sponsorship_policies',
         sequelize,
-        timestamps: false,
+        tableName: 'sponsorship_policies',
+        modelName: 'SponsorshipPolicy',
+        timestamps: true,
+        createdAt: 'createdAt',
+        updatedAt: 'updatedAt',
+        freezeTableName: true,
+        schema: schema,
     });
 }

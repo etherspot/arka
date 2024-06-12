@@ -2,10 +2,13 @@ import fp from "fastify-plugin";
 import { FastifyPluginAsync } from "fastify";
 import { Sequelize, QueryTypes } from 'sequelize';
 import dotenv from 'dotenv';
-import { initializeAPIKeyModel } from '../models/APIKey';  // Assuming path correctness
+import { APIKey, initializeAPIKeyModel } from '../models/APIKey';  // Assuming path correctness
 import { initializeSponsorshipPolicyModel } from '../models/SponsorshipPolicy';
 import { initializeSponsorshipPolicyChainModel } from '../models/SponsorshipPolicyChain';
-import { initializeSponsorshipPolicyLimitModel } from "models/SponsorshipPolicyLimit";
+import { initializeSponsorshipPolicyLimitModel } from "../models/SponsorshipPolicyLimit";
+import { initializeConfigModel } from "../models/Config";
+import { APIKeyRepository } from "repository/APIKeyRepository";
+import { ConfigRepository } from "repository/ConfigRepository";
 const pg = await import('pg');
 const Client = pg.default.Client;
 
@@ -35,21 +38,25 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
         },
     });
 
-    sequelize.authenticate()
-        .then(() => console.log('Connection has been established successfully.'))
-        .catch(err => console.error('Unable to connect to the database:', err));
-
-    console.log('Initializing models...');
+    await sequelize.authenticate();
+       
+    console.log(`Initializing models... with schema name: ${server.config.DATABASE_SCHEMA_NAME}`);
 
     // Initialize models
-    initializeAPIKeyModel(sequelize);
-    initializeSponsorshipPolicyModel(sequelize);
-    initializeSponsorshipPolicyChainModel(sequelize);
-    initializeSponsorshipPolicyLimitModel(sequelize);
+    initializeConfigModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
+    const initializedAPIKeyModel = initializeAPIKeyModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
+    sequelize.models.APIKey = initializedAPIKeyModel;
+    console.log(`Initialized APIKey model... ${sequelize.models.APIKey}`);
+    initializeSponsorshipPolicyModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
+    initializeSponsorshipPolicyChainModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
+    initializeSponsorshipPolicyLimitModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
 
     console.log('Initialized all models...');
 
     server.decorate('sequelize', sequelize);
+
+    const apiKeyRepository : APIKeyRepository = new APIKeyRepository(sequelize);
+    const configRepository : ConfigRepository = new ConfigRepository(sequelize);
 
     console.log('decorated fastify server with models...');
 
@@ -63,33 +70,8 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
 declare module "fastify" {
     interface FastifyInstance {
         sequelize: Sequelize;
-    }
-}
-
-async function runQuery() {
-
-    console.log('Running test query...');
-
-    // Replace with your actual connection string
-    const sequelize = new Sequelize('postgresql://arkauser:paymaster@localhost:5432/arkadev', {
-        dialect: 'postgres',
-        protocol: 'postgres',
-        dialectOptions: {
-            searchPath: 'arka',
-        },
-    });
-
-    try {
-        await sequelize.authenticate();
-        console.log('Connection has been established successfully.');
-
-        // Replace with your actual SQL query
-        const result = await sequelize.query('SELECT * FROM arka.config', { type: QueryTypes.SELECT });
-        console.log(result);
-    } catch (error) {
-        console.error('Unable to connect to the database:', error);
-    } finally {
-        await sequelize.close();
+        apiKeyRepository: APIKeyRepository;
+        configRepository: ConfigRepository;
     }
 }
 

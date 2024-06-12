@@ -1,4 +1,3 @@
-// associations.ts
 import { APIKey } from './APIKey';
 import { SponsorshipPolicy } from './SponsorshipPolicy';
 import { SponsorshipPolicyChain } from './SponsorshipPolicyChain';

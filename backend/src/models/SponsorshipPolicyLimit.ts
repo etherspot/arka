@@ -1,14 +1,16 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 
 export class SponsorshipPolicyLimit extends Model {
-    declare policyId: number;
-    declare limitType: string;
-    declare maxUsd: number | null;
-    declare maxEth: number | null;
-    declare maxOperations: number | null;
+    public policyId!: number;
+    public limitType!: string;
+    public maxUsd!: number | null;
+    public maxEth!: number | null;
+    public maxOperations!: number | null;
+    public readonly createdAt!: Date;
+    public readonly updatedAt!: Date;
 }
 
-export function initializeSponsorshipPolicyLimitModel(sequelize: Sequelize) {
+export function initializeSponsorshipPolicyLimitModel(sequelize: Sequelize, schema: string) {
     SponsorshipPolicyLimit.init({
         policyId: {
             type: DataTypes.INTEGER,
@@ -18,19 +20,50 @@ export function initializeSponsorshipPolicyLimitModel(sequelize: Sequelize) {
                 model: 'SponsorshipPolicy', // name of your model for sponsorship policies
                 key: 'id', // key in SponsorshipPolicy that policyId references
             },
-            onDelete: 'CASCADE', // Add this line
+            onDelete: 'CASCADE',
             field: 'POLICY_ID'
         },
         limitType: {
-            type: DataTypes.STRING, // Adjust this if limitType is not a string
+            type: DataTypes.STRING,
             primaryKey: true,
             allowNull: false,
             field: 'LIMIT_TYPE'
         },
-        // ... other fields ...
+        maxUsd: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+            field: 'MAX_USD'
+        },
+        maxEth: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+            field: 'MAX_ETH'
+        },
+        maxOperations: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'MAX_OPERATIONS'
+        },
+        createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW,
+            field: 'CREATED_AT'
+        },
+        updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW,
+            field: 'UPDATED_AT'
+        },
     }, {
-        tableName: 'sponsorship_policy_limits',
         sequelize,
-        timestamps: false,
+        tableName: 'sponsorship_policy_limits',
+        modelName: 'SponsorshipPolicyLimit',
+        timestamps: true,
+        createdAt: 'createdAt',
+        updatedAt: 'updatedAt',
+        freezeTableName: true,
+        schema: schema,
     });
 }

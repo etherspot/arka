@@ -1,6 +1,5 @@
 import { FastifyBaseLogger, FastifyRequest } from "fastify";
 import { BigNumber, ethers } from "ethers";
-import { Database } from "sqlite3";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
 import { APIKey } from "models/APIKey";

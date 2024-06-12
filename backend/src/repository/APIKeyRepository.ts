@@ -8,6 +8,11 @@ export class APIKeyRepository {
     this.sequelize = sequelize;
   }
 
+  async create(apiKey: APIKeyCreationAttributes): Promise<APIKey | null> {
+    const result = await this.sequelize.models.APIKey.create(apiKey);
+    return result ? result.get() as APIKey : null;
+  }
+
   async findAll(): Promise<APIKey[]> {
     const result = await this.sequelize.models.APIKey.findAll();
     return result.map(apiKey => apiKey.get() as APIKey);

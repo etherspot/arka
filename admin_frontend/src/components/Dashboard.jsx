@@ -87,23 +87,23 @@ const Dashboard = () => {
         setConfig(dataJson);
         setEdittedConfig(dataJson);
         let buffer;
-        if (data.COINGECKO_IDS && data.COINGECKO_IDS !== "") {
-          buffer = Buffer.from(data.COINGECKO_IDS, "base64");
+        if (data.coingeckoIds && data.coingeckoIds !== "") {
+          buffer = Buffer.from(data.coingeckoIds, "base64");
           const coingeckoIds = JSON.parse(buffer.toString());
           setCoingeckoIds(coingeckoIds);
         }
         if (
-          data.DEPLOYED_ERC20_PAYMASTERS &&
-          data.DEPLOYED_ERC20_PAYMASTERS !== ""
+          data.deployedErc20Paymasters &&
+          data.deployedErc20Paymasters !== ""
         ) {
-          buffer = Buffer.from(data.DEPLOYED_ERC20_PAYMASTERS, "base64");
+          buffer = Buffer.from(data.deployedErc20Paymasters, "base64");
           setDeployedPaymasters(JSON.parse(buffer.toString()));
         }
         if (
-          data.CUSTOM_CHAINLINK_DEPLOYED &&
-          data.CUSTOM_CHAINLINK_DEPLOYED !== ""
+          data.customChainlinkDeployed &&
+          data.customChainlinkDeployed !== ""
         ) {
-          buffer = Buffer.from(data.CUSTOM_CHAINLINK_DEPLOYED, "base64");
+          buffer = Buffer.from(data.customChainlinkDeployed, "base64");
           setCustomChainlink(JSON.parse(buffer.toString()));
         }
         setDisableSave(true);

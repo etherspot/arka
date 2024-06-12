@@ -6,9 +6,9 @@ import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { encode, decode } from "../utils/crypto.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
-import { Op } from 'sequelize';
-import { APIKey } from "models/APIKey.js";
-import { APIKeyRepository } from "repository/APIKeyRepository.js";
+import { APIKey } from "../models/APIKey.js";
+import { Config } from "models/Config.js";
+import { ConfigUpdateData } from "types/config-data.js";
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/adminLogin', async function (request, reply) {
@@ -26,12 +26,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.get("/getConfig", async function (request, reply) {
     try {
-      const result: any = await new Promise((resolve, reject) => {
-        server.sqlite.db.get("SELECT * FROM config", (err: any, row: any) => {
-          if (err) reject(err);
-          resolve(row);
-        })
-      })
+      const result: Config[] = await server.configRepository.findAll();
       return reply.code(ReturnCode.SUCCESS).send(result);
     } catch (err: any) {
       request.log.error(err);
@@ -41,32 +36,26 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.post("/saveConfig", async function (request, reply) {
     try {
-      const body: any = JSON.parse(request.body as string);
+      const body: ConfigUpdateData = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
-      if (!body.DEPLOYED_ERC20_PAYMASTERS || !body.PYTH_MAINNET_URL || !body.PYTH_TESTNET_URL || !body.PYTH_TESTNET_CHAIN_IDS ||
-        !body.PYTH_MAINNET_CHAIN_IDS || !body.CRON_TIME || !body.CUSTOM_CHAINLINK_DEPLOYED || !body.COINGECKO_IDS || !body.COINGECKO_API_URL || !body.id)
+      if (Object.values(body).every(value => value)) {
+        try {
+          const result = await server.configRepository.updateConfig(body);
+          server.log.info(`config entity after database update: ${JSON.stringify(result)}`);
+        } catch (error) {
+          server.log.error('Error while updating the config:', error);
+          throw error;
+        }
+
+        server.cron.getJobByName('PriceUpdate')?.stop();
+        server.cron.getJobByName('PriceUpdate')?.setTime(new CronTime(body.cronTime));
+        server.cron.getJobByName('PriceUpdate')?.start();
+        return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully saved' });
+      } else {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-      await new Promise((resolve, reject) => {
-        server.sqlite.db.run("UPDATE config SET DEPLOYED_ERC20_PAYMASTERS = ?, \
-          PYTH_MAINNET_URL = ?, \
-          PYTH_TESTNET_URL = ?, \
-          PYTH_TESTNET_CHAIN_IDS = ?, \
-          PYTH_MAINNET_CHAIN_IDS = ?, \
-          CRON_TIME = ?, \
-          CUSTOM_CHAINLINK_DEPLOYED = ?, \
-          COINGECKO_IDS = ?, \
-          COINGECKO_API_URL = ? WHERE id = ?", [body.DEPLOYED_ERC20_PAYMASTERS, body.PYTH_MAINNET_URL, body.PYTH_TESTNET_URL, body.PYTH_TESTNET_CHAIN_IDS,
-        body.PYTH_MAINNET_CHAIN_IDS, body.CRON_TIME, body.CUSTOM_CHAINLINK_DEPLOYED, body.COINGECKO_IDS, body.COINGECKO_API_URL, body.id
-        ], (err: any, row: any) => {
-          if (err) reject(err);
-          resolve(row);
-        })
-      });
-      server.cron.getJobByName('PriceUpdate')?.stop();
-      server.cron.getJobByName('PriceUpdate')?.setTime(new CronTime(body.CRON_TIME));
-      server.cron.getJobByName('PriceUpdate')?.start();
-      return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully saved' });
-    } catch (err: any) {
+      }
+    }
+    catch (err: any) {
       request.log.error(err);
       return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
@@ -80,17 +69,16 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!body.apiKey || !body.privateKey)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
 
-      request.log.info(`API Key is: ${body.apiKey}`);
-      request.log.info(`Private Key is: ${body.privateKey}`);  
       if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.apiKey))
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED })
-      request.log.info(`API Key is valid`);
+
       const wallet = new ethers.Wallet(body.privateKey);
       const publicAddress = await wallet.getAddress();
       request.log.info(`Public address is: ${publicAddress}`);
 
       // Use Sequelize to find the API key
-      const result = await server.sequelize.models.APIKey.findOne({ where: { walletAddress: publicAddress } });
+      const result = await server.apiKeyRepository.findOneByWalletAddress(publicAddress);
+
       if (result) {
         request.log.error('Duplicate record found');
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.DUPLICATE_RECORD });
@@ -99,10 +87,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       const privateKey = body.privateKey;
 
       const hmac = encode(privateKey);
-
-      // console.log(`support network on request.body is: ${body.supportedNetworks}`);
-      // console.log(`erc20 paymasters on request.body is: ${body.erc20Paymasters}`);
-      // console.log(`request body is: ${JSON.stringify(body)}`);
 
       // Use Sequelize to insert the new API key
       await server.sequelize.models.APIKey.create({
@@ -137,7 +121,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.apiKey))
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED });
 
-      const apiKeyInstance = await server.sequelize.models.APIKey.findOne({ where: { apiKey: body.apiKey } });
+      const apiKeyInstance = await server.apiKeyRepository.findOneByApiKey(body.apiKey);
       if (!apiKeyInstance)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
 
@@ -158,9 +142,9 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.get('/getKeys', async function (request, reply) {
     try {
-      if(!server.sequelize) throw new Error('Sequelize instance is not available');
-      const apiKeyRepository = new APIKeyRepository(server.sequelize);
-      const apiKeys: APIKey[] = await apiKeyRepository.findAll();
+      if (!server.sequelize) throw new Error('Sequelize instance is not available');
+
+      const apiKeys = await server.apiKeyRepository.findAll();
       apiKeys.forEach((apiKeyEntity: APIKey) => {
         apiKeyEntity.privateKey = decode(apiKeyEntity.privateKey);
       });
@@ -180,7 +164,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.apiKey))
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED });
 
-      const apiKeyInstance = await server.sequelize.models.APIKey.findOne({ where: { apiKey: body.apiKey } });
+      const apiKeyInstance = await server.apiKeyRepository.findOneByApiKey(body.apiKey);
       if (!apiKeyInstance)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
 
@@ -200,17 +184,16 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!body.WALLET_ADDRESS) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       }
-      const result: any = await new Promise((resolve, reject) => {
-        server.sqlite.db.get("SELECT SUPPORTED_NETWORKS from api_keys WHERE WALLET_ADDRESS=?", [ethers.utils.getAddress(body.WALLET_ADDRESS)], (err: any, row: any) => {
-          if (err) reject(err);
-          resolve(row);
-        })
-      })
-      if (!result) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+
+      const apiKeyEntity = await server.apiKeyRepository.findOneByWalletAddress(body.WALLET_ADDRESS);
+      if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+
       let supportedNetworks;
-      if (result.SUPPORTED_NETWORKS == '') supportedNetworks = SupportedNetworks;
+      if (!apiKeyEntity.supportedNetworks || apiKeyEntity.supportedNetworks == '') {
+        supportedNetworks = SupportedNetworks;
+      }
       else {
-        const buffer = Buffer.from(result.SUPPORTED_NETWORKS, 'base64');
+        const buffer = Buffer.from(apiKeyEntity.supportedNetworks as string, 'base64');
         supportedNetworks = JSON.parse(buffer.toString())
       }
       return reply.code(ReturnCode.SUCCESS).send(supportedNetworks);
