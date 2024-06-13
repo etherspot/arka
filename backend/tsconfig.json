@@ -11,7 +11,7 @@
     "baseUrl": "src",
     "skipLibCheck": true,
     "strict": true,
-    "resolveJsonModule": true,
+    "resolveJsonModule": true
   },
   "include": ["src/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules"]
