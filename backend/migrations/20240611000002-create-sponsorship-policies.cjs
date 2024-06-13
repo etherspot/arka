@@ -65,6 +65,11 @@ async function up({ context: queryInterface }) {
             allowNull: true,
             field: 'END_DATE'
         },
+        globalMaxApplicable: {
+            type: Sequelize.BOOLEAN,
+            defaultValue: false,
+            field: 'GLOBAL_MAX_APPLICABLE'
+        },
         globalMaximumUsd: {
             type: Sequelize.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
             allowNull: true,
@@ -79,6 +84,11 @@ async function up({ context: queryInterface }) {
             type: Sequelize.INTEGER,
             allowNull: true,
             field: 'GLOBAL_MAX_OP_COUNT'
+        },
+        perUserMaxApplicable: {
+            type: Sequelize.BOOLEAN,
+            defaultValue: false,
+            field: 'PER_USER_MAX_APPLICABLE'
         },
         perUserMaximumUsd: {
             type: Sequelize.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
@@ -95,6 +105,11 @@ async function up({ context: queryInterface }) {
             allowNull: true,
             field: 'PER_USER_MAX_OP_COUNT'
         },
+        perOpMaxApplicable: {
+            type: Sequelize.BOOLEAN,
+            defaultValue: false,
+            field: 'PER_OP_MAX_APPLICABLE'
+        },
         perOpMaximumUsd: {
             type: Sequelize.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
             allowNull: true,
@@ -105,10 +120,15 @@ async function up({ context: queryInterface }) {
             allowNull: true,
             field: 'PER_OP_MAX_NATIVE'
         },
-        contractRestrictions: {
-            type: Sequelize.TEXT,
+        addressAllowList: {
+            type: Sequelize.ARRAY(Sequelize.STRING),
             allowNull: true,
-            field: 'CONTRACT_RESTRICTIONS'
+            field: 'ADDRESS_ALLOW_LIST'
+        },
+        addressBlockList: {
+            type: Sequelize.ARRAY(Sequelize.STRING),
+            allowNull: true,
+            field: 'ADDRESS_BLOCK_LIST'
         },
         createdAt: {
             type: Sequelize.DATE,

@@ -11,7 +11,6 @@ import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
-import { APIKeyRepository } from "repository/api-key-repository.js";
 import { APIKey } from "models/api-key.js";
 
 const SUPPORTED_ENTRYPOINTS = {
@@ -127,7 +126,7 @@ const routes: FastifyPluginAsync = async (server) => {
           txnMode = secrets['TRANSACTION_LIMIT'] ?? 0;
           indexerEndpoint = secrets['INDEXER_ENDPOINT'] ?? process.env.DEFAULT_INDEXER_ENDPOINT;
         } else {
-          const apiKeyEntity = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          const apiKeyEntity = await server.apiKeyRepository.findOneByApiKey(api_key);
 
           if (!apiKeyEntity) {
             server.log.info("Invalid Api Key provided")
@@ -373,7 +372,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(apiKeyEntity.privateKey);
           supportedNetworks = apiKeyEntity.supportedNetworks;
@@ -431,7 +430,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(apiKeyEntity.apiKey);
           supportedNetworks = apiKeyEntity.supportedNetworks;
@@ -489,7 +488,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(apiKeyEntity.privateKey);
           supportedNetworks = apiKeyEntity.supportedNetworks;
@@ -548,7 +547,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(apiKeyEntity.apiKey);
           supportedNetworks = apiKeyEntity.supportedNetworks;
@@ -601,7 +600,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+          const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(apiKeyEntity.privateKey);
           supportedNetworks = apiKeyEntity.supportedNetworks;

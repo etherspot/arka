@@ -8,7 +8,6 @@ import ErrorMessage from "../constants/ErrorMessage.js";
 import { decode } from "../utils/crypto.js";
 import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
 import { APIKey } from "../models/api-key";
-import { APIKeyRepository } from "repository/api-key-repository";
 import * as EtherspotAbi from "../abi/EtherspotAbi.js";
 
 const metadataRoutes: FastifyPluginAsync = async (server) => {
@@ -36,7 +35,6 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_DATA})
       let customPaymasters = [];
       let multiTokenPaymasters = [];
-      let multiTokenOracles = [];
       let privateKey = '';
       let supportedNetworks;
       let sponsorName = '', sponsorImage = '';
@@ -64,7 +62,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         privateKey = secrets['PRIVATE_KEY'];
         supportedNetworks = secrets['SUPPORTED_NETWORKS'];
       } else {
-        const apiKeyEntity: APIKey | null = await new APIKeyRepository(server.sequelize).findOneByApiKey(api_key);
+        const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) {
           server.log.info("Invalid Api Key provided")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })

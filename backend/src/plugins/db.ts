@@ -9,7 +9,7 @@ import { Umzug, SequelizeStorage } from 'umzug';
 const databasePlugin: FastifyPluginAsync = async (server) => {
 
   const sequelize = new Sequelize(server.config.DATABASE_URL, {
-    schema: 'arka',
+    schema: server.config.DATABASE_SCHEMA_NAME,
   });
 
   const __filename = fileURLToPath(import.meta.url);

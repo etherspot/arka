@@ -12,15 +12,19 @@ export class SponsorshipPolicy extends Model {
     public isPerpetual!: boolean;
     public startTime!: Date | null;
     public endTime!: Date | null;
+    public globalMaximumApplicable: boolean = false;
     public globalMaximumUsd!: number | null;
     public globalMaximumNative!: number | null;
     public globalMaximumOpCount!: number | null;
+    public perUserMaximumApplicable: boolean = false;
     public perUserMaximumUsd!: number | null;
     public perUserMaximumNative!: number | null;
     public perUserMaximumOpCount!: number | null;
+    public perOpMaximumApplicable: boolean = false;
     public perOpMaximumUsd!: number | null;
     public perOpMaximumNative!: number | null;
-    public contractRestrictions!: string | null;
+    public addressAllowList: string[] | null = null;
+    public addressBlockList: string[] | null = null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 
@@ -108,6 +112,11 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             allowNull: true,
             field: 'END_DATE'
         },
+        globalMaximumApplicable: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            field: 'GLOBAL_MAX_APPLICABLE'
+        },
         globalMaximumUsd: {
             type: DataTypes.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
             allowNull: true,
@@ -122,6 +131,11 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             type: DataTypes.INTEGER,
             allowNull: true,
             field: 'GLOBAL_MAX_OP_COUNT'
+        },
+        perUserMaximumApplicable: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            field: 'PER_USER_MAX_APPLICABLE'
         },
         perUserMaximumUsd: {
             type: DataTypes.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
@@ -138,6 +152,11 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             allowNull: true,
             field: 'PER_USER_MAX_OP_COUNT'
         },
+        perOpMaximumApplicable: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            field: 'PER_OP_MAX_APPLICABLE'
+        },
         perOpMaximumUsd: {
             type: DataTypes.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
             allowNull: true,
@@ -148,10 +167,15 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             allowNull: true,
             field: 'PER_OP_MAX_NATIVE'
         },
-        contractRestrictions: {
-            type: DataTypes.TEXT,
+        addressAllowList: {
+            type: DataTypes.ARRAY(DataTypes.STRING),
             allowNull: true,
-            field: 'CONTRACT_RESTRICTIONS'
+            field: 'ADDRESS_ALLOW_LIST'
+        },
+        addressBlockList: {
+            type: DataTypes.ARRAY(DataTypes.STRING),
+            allowNull: true,
+            field: 'ADDRESS_BLOCK_LIST'
         },
         createdAt: {
             type: DataTypes.DATE,

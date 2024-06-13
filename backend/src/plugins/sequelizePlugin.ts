@@ -28,7 +28,7 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
         dialect: 'postgres',
         protocol: 'postgres',
         dialectOptions: {
-            searchPath: 'arka',
+            searchPath: server.config.DATABASE_SCHEMA_NAME,
             // ssl: {
             //     require: false,
             //     rejectUnauthorized: false
