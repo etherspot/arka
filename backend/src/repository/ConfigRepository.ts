@@ -21,7 +21,7 @@ export class ConfigRepository {
   async updateConfig(body: any): Promise<any> {
     try {
       // Check if the record exists
-      const existingRecord = await this.sequelize.models.config.findOne({
+      const existingRecord = await this.sequelize.models.Config.findOne({
         where: {
           id: body.id
         }
@@ -33,7 +33,7 @@ export class ConfigRepository {
       }
 
       // Update the record
-      await this.sequelize.models.config.update(
+      await this.sequelize.models.Config.update(
         {
           deployedErc20Paymasters: body.deployedErc20Paymasters,
           pythMainnetUrl: body.pythMainnetUrl,

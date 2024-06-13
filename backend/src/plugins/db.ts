@@ -16,8 +16,6 @@ const databasePlugin: FastifyPluginAsync = async (server) => {
   const __dirname = dirname(__filename);
   
   const migrationPath = path.join(__dirname, '../../migrations/*.cjs');
-
-  console.log('Migration path:', migrationPath);
   
   const umzug = new Umzug({
     migrations: {glob: migrationPath},
@@ -27,11 +25,11 @@ const databasePlugin: FastifyPluginAsync = async (server) => {
   })
 
   try {
-    console.log('Running migrations...')
+    server.log.info('Running migrations...')
     await umzug.up();
-    console.log('Migrations done.')
+    server.log.info('Migrations done.')
   } catch (err) {
-    console.error('Migration failed:', err)
+    server.log.error('Migration failed:', err)
     process.exitCode = 1
   }
 

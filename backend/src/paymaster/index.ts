@@ -430,7 +430,6 @@ export class Paymaster {
       const encodedData = paymasterContract.interface.encodeFunctionData(isEpv06 ? 'depositFunds': 'deposit', []);
 
       const etherscanFeeData = await getEtherscanFee(chainId);
-      console.log('etherscanFeeData: ', etherscanFeeData);
       let feeData;
       if (etherscanFeeData) {
         feeData = etherscanFeeData;

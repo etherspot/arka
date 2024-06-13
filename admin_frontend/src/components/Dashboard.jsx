@@ -35,7 +35,7 @@ const InfoTextStyle = {
 
 const Dashboard = () => {
   const defaultConfig = {
-    coinGeckoApiUrl: "",
+    coingeckoApiUrl: "",
     coingeckoIds: "",
     cronTime: "",
     customChainlinkDeployed: "",
@@ -84,10 +84,8 @@ const Dashboard = () => {
           }
         );
         const dataJson = await data.json();
-        console.log(`getConfig on admin-frontend dataJson: ${JSON.stringify(dataJson)}`);
         setConfig(dataJson);
         setEdittedConfig(dataJson);
-        console.log(`set config: ${JSON.stringify(dataJson)}`)
         let buffer;
         if (data.coingeckoIds && data.coingeckoIds !== "") {
           buffer = Buffer.from(data.coingeckoIds, "base64");
@@ -204,16 +202,16 @@ const Dashboard = () => {
           onChange={(e) => {
             setEdittedConfig({
               ...edittedConfig,
-              coinGeckoApiUrl: e.target.value,
+              coingeckoApiUrl: e.target.value,
             });
             if (disableSave) setDisableSave(false);
             else if (
               !disableSave &&
-              e.target.value === config.coinGeckoApiUrl
+              e.target.value === config.coingeckoApiUrl
             )
               setDisableSave(true);
           }}
-          value={edittedConfig.coinGeckoApiUrl}
+          value={edittedConfig.coingeckoApiUrl}
           required
           fullWidth
           multiline

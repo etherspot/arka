@@ -69,11 +69,6 @@ const AddERC20PaymasterModal = ({
       setERC20Row(defaultERC20Row);
       Object.keys(supportedNetworks).map((key) => {
         Object.keys(supportedNetworks[key]).map((sym) => {
-          console.log(
-            tokens.find(
-              (element) => element.chainId == key && element.token == sym
-            )
-          );
           if (
             !tokens.find(
               (element) => element.chainId == key && element.token == sym
@@ -112,11 +107,6 @@ const AddERC20PaymasterModal = ({
   useEffect(() => {
     Object.keys(supportedNetworks).map((key) => {
       Object.keys(supportedNetworks[key]).map((sym) => {
-        console.log(
-          tokens.find(
-            (element) => element.chainId == key && element.token == sym
-          )
-        );
         if (
           !tokens.find(
             (element) => element.chainId == key && element.token == sym

@@ -72,7 +72,6 @@ const ApiKeysPage = () => {
     setViewErc20Open(false);
   };
   const handleViewOpen = (networks) => {
-    console.log(`setting received supportedNetworks value to state: ${JSON.stringify(networks)}`);
     setSupportedNetworks(networks);
     setViewModalOpen(true);
   };
@@ -106,7 +105,6 @@ const ApiKeysPage = () => {
         if (element.erc20Paymasters) {
           const buffer = Buffer.from(element.erc20Paymasters, "base64");
           const parsedErc20Paymasters = JSON.parse(buffer.toString());
-          console.log(`parsedErc20Paymasters: ${JSON.stringify(parsedErc20Paymasters)}`);
           element.erc20Paymasters = parsedErc20Paymasters;
         }
         return element;

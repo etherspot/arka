@@ -85,7 +85,6 @@ const routes: FastifyPluginAsync = async (server) => {
         }
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        console.log('entryPoint: ', entryPoint);
         if ((entryPoint != SUPPORTED_ENTRYPOINTS.EPV_06) && (entryPoint != SUPPORTED_ENTRYPOINTS.EPV_07))
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
         let customPaymasters = [];

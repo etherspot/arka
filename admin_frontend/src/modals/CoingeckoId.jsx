@@ -107,7 +107,6 @@ const CoingeckoIdModal = ({
       }
     }
     setIds(coingeckoIds);
-    console.log(coingeckoIds);
   }, [supportedNetworks]);
 
   return (

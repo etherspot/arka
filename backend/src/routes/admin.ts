@@ -7,8 +7,8 @@ import ReturnCode from "../constants/ReturnCode.js";
 import { encode, decode } from "../utils/crypto.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { APIKey } from "../models/APIKey.js";
-import { Config } from "models/Config.js";
-import { ConfigUpdateData } from "types/config-data.js";
+import { ConfigUpdateData } from "../types/config-dto.js";
+import { ApiKeyDto } from "../types/apikey-dto.js";
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/adminLogin', async function (request, reply) {
@@ -16,7 +16,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.WALLET_ADDRESS) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-      console.log(body, server.config.ADMIN_WALLET_ADDRESS)
       if (ethers.utils.getAddress(body.WALLET_ADDRESS) === server.config.ADMIN_WALLET_ADDRESS) return reply.code(ReturnCode.SUCCESS).send({ error: null, message: "Successfully Logged in" });
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
     } catch (err: any) {
@@ -26,7 +25,12 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.get("/getConfig", async function (request, reply) {
     try {
-      const result: Config[] = await server.configRepository.findAll();
+      const result = await server.configRepository.findFirstConfig();
+
+      if (!result) {
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.FAILED_TO_PROCESS });
+      }
+
       return reply.code(ReturnCode.SUCCESS).send(result);
     } catch (err: any) {
       request.log.error(err);
@@ -63,8 +67,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.post('/saveKey', async function (request, reply) {
     try {
-      const body: any = JSON.parse(request.body as string);
-      request.log.info(`Request body is: ${JSON.stringify(body)}`);
+      const body: any = JSON.parse(request.body as string) as ApiKeyDto;
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.apiKey || !body.privateKey)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
@@ -84,15 +87,10 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.DUPLICATE_RECORD });
       }
 
-      const privateKey = body.privateKey;
-
-      const hmac = encode(privateKey);
-
-      // Use Sequelize to insert the new API key
-      await server.sequelize.models.APIKey.create({
+      await server.apiKeyRepository.create({
         apiKey: body.apiKey,
         walletAddress: publicAddress,
-        privateKey: hmac,
+        privateKey: encode(body.privateKey),
         supportedNetworks: body.supportedNetworks,
         erc20Paymasters: body.erc20Paymasters,
         multiTokenPaymasters: body.multiTokenPaymasters ?? null,
@@ -111,10 +109,9 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
     }
   })
 
-
   server.post('/updateKey', async function (request, reply) {
     try {
-      const body: any = JSON.parse(request.body as string);
+      const body = JSON.parse(request.body as string) as ApiKeyDto;
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.apiKey)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
@@ -165,7 +162,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED });
 
       const apiKeyInstance = await server.apiKeyRepository.findOneByApiKey(body.apiKey);
-      console.log(`before delete: ${JSON.stringify(apiKeyInstance)}`);
       if (!apiKeyInstance)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
 

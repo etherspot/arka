@@ -1,5 +1,6 @@
 import { Sequelize } from 'sequelize';
 import { APIKey } from '../models/APIKey';
+import { ApiKeyDto } from '../types/apikey-dto';
 
 export class APIKeyRepository {
   private sequelize: Sequelize;
@@ -8,16 +9,39 @@ export class APIKeyRepository {
     this.sequelize = sequelize;
   }
 
-  async create(apiKey: APIKeyCreationAttributes): Promise<APIKey | null> {
-    const result = await this.sequelize.models.APIKey.create(apiKey);
-    return result ? result.get() as APIKey : null;
+  async create(apiKey: ApiKeyDto): Promise<APIKey | null> {
+    // generate APIKey sequelize model instance from APIKeyDto
+    const result = await this.sequelize.models.APIKey.create({
+      apiKey: apiKey.apiKey,
+      walletAddress: apiKey.walletAddress,
+      privateKey: apiKey.privateKey,
+      supportedNetworks: apiKey.supportedNetworks,
+      erc20Paymasters: apiKey.erc20Paymasters,
+      multiTokenPaymasters: apiKey.multiTokenPaymasters,
+      multiTokenOracles: apiKey.multiTokenOracles,
+      sponsorName: apiKey.sponsorName,
+      logoUrl: apiKey.logoUrl,
+      transactionLimit: apiKey.transactionLimit,
+      noOfTransactionsInAMonth: apiKey.noOfTransactionsInAMonth,
+      indexerEndpoint: apiKey.indexerEndpoint
+    }) as APIKey;
+
+    
+
+    return result;
   }
 
   async delete(apiKey: string): Promise<number> {
-    return await this.sequelize.models.APIKey.destroy({
+    const deletedCount = await this.sequelize.models.APIKey.destroy({
       where
         : { apiKey: apiKey }
     });
+
+    if (deletedCount === 0) {
+      throw new Error('APIKey deletion failed');
+    }
+
+    return deletedCount;
   }
 
   async findAll(): Promise<APIKey[]> {

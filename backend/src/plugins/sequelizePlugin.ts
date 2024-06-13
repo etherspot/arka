@@ -21,7 +21,7 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
             connectionString: server.config.DATABASE_URL
         });
         await client.connect();
-        console.log('Connected to database');
+        server.log.info('Connected to database');
     } catch (err) {
         console.error(err);
     }
@@ -40,18 +40,18 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
 
     await sequelize.authenticate();
        
-    console.log(`Initializing models... with schema name: ${server.config.DATABASE_SCHEMA_NAME}`);
+    server.log.info(`Initializing models... with schema name: ${server.config.DATABASE_SCHEMA_NAME}`);
 
     // Initialize models
     initializeConfigModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     const initializedAPIKeyModel = initializeAPIKeyModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     sequelize.models.APIKey = initializedAPIKeyModel;
-    console.log(`Initialized APIKey model... ${sequelize.models.APIKey}`);
+    server.log.info(`Initialized APIKey model... ${sequelize.models.APIKey}`);
     initializeSponsorshipPolicyModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     initializeSponsorshipPolicyChainModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     initializeSponsorshipPolicyLimitModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
 
-    console.log('Initialized all models...');
+    server.log.info('Initialized all models...');
 
     server.decorate('sequelize', sequelize);
 
@@ -60,13 +60,13 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     const configRepository : ConfigRepository = new ConfigRepository(sequelize);
     server.decorate('configRepository', configRepository);
 
-    console.log('decorated fastify server with models...');
+    server.log.info('decorated fastify server with models...');
 
     server.addHook('onClose', (instance, done) => {
         instance.sequelize.close().then(() => done(), done);
     });
 
-    console.log('added hooks...');
+    server.log.info('added hooks...');
 };
 
 declare module "fastify" {

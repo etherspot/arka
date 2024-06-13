@@ -106,9 +106,7 @@ const DeployedPaymastersModal = ({
         });
       }
     }
-    console.log(addr);
     setAddresses(addr);
-    console.log(supportedNetworks);
   }, [supportedNetworks]);
 
   return (

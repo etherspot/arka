@@ -1,26 +1,23 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 
 export class APIKey extends Model {
-  declare apiKey: string;
-  declare walletAddress: string;
-  declare privateKey: string;
-  declare supportedNetworks: string | null;
-  declare erc20Paymasters: string | null;
-  declare multiTokenPaymasters: string | null;
-  declare multiTokenOracles: string | null;
-  declare sponsorName: string | null;
-  declare logoUrl: string | null;
-  declare transactionLimit: number;
-  declare noOfTransactionsInAMonth: number | null;
-  declare indexerEndpoint: string | null;
-  declare createdAt: Date; // Added this line
-  declare updatedAt: Date; // Added this line
+  public apiKey!: string;
+  public walletAddress!: string;
+  public privateKey!: string;
+  public supportedNetworks?: string | null;
+  public erc20Paymasters?: string | null;
+  public multiTokenPaymasters?: string | null;
+  public multiTokenOracles?: string | null;
+  public sponsorName?: string | null;
+  public logoUrl?: string | null;
+  public transactionLimit!: number;
+  public noOfTransactionsInAMonth?: number | null;
+  public indexerEndpoint?: string | null;
+  public createdAt!: Date;
+  public updatedAt!: Date;
 }
 
 export function initializeAPIKeyModel(sequelize: Sequelize, schema: string) {
-
-  console.log('Initializing APIKey model...')
-
   const initializedAPIKeyModel = APIKey.init({
     apiKey: {
       type: DataTypes.TEXT,
@@ -104,10 +101,6 @@ export function initializeAPIKeyModel(sequelize: Sequelize, schema: string) {
     freezeTableName: true,
     schema: schema,
   });
-
-  console.log(`apiKey inited as: ${initializedAPIKeyModel}`)
-
-  console.log('APIKey model initialized.')
 
   return initializedAPIKeyModel;
 }

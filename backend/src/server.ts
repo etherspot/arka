@@ -66,13 +66,11 @@ const initializeServer = async (): Promise<void> => {
   // Synchronize all models
   await server.sequelize.sync();
 
-  console.log('registered sequelizePlugin...')
+  server.log.info('registered sequelizePlugin...')
 
   const configRepository = new ConfigRepository(server.sequelize);
   const configDatas = await configRepository.findAll();
   const configData: Config | null = configDatas.length > 0 ? configDatas[0] : null;
-  console.log('configData:', configData);
-
 
   await server.register(fastifyCron, {
     jobs: [
