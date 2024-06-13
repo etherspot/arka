@@ -15,8 +15,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
     try {
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
-      if (!body.WALLET_ADDRESS) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-      if (ethers.utils.getAddress(body.WALLET_ADDRESS) === server.config.ADMIN_WALLET_ADDRESS) return reply.code(ReturnCode.SUCCESS).send({ error: null, message: "Successfully Logged in" });
+      if (!body.walletAddress) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      if (ethers.utils.getAddress(body.walletAddress) === server.config.ADMIN_WALLET_ADDRESS) return reply.code(ReturnCode.SUCCESS).send({ error: null, message: "Successfully Logged in" });
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
     } catch (err: any) {
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
@@ -178,11 +178,11 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
     try {
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
-      if (!body.WALLET_ADDRESS) {
+      if (!body.walletAddress) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       }
 
-      const apiKeyEntity = await server.apiKeyRepository.findOneByWalletAddress(body.WALLET_ADDRESS);
+      const apiKeyEntity = await server.apiKeyRepository.findOneByWalletAddress(body.walletAddress);
       if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
 
       let supportedNetworks;

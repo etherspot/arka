@@ -139,7 +139,7 @@ const Dashboard = ({ logInType }) => {
 			const data = await (
 				await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['getSupportedNetworks']}`, {
 					method: "POST",
-					body: JSON.stringify({ WALLET_ADDRESS: address }),
+					body: JSON.stringify({ walletAddress: address }),
 				})
 			).json();
 			const supportedNetworksChainIds = [];
