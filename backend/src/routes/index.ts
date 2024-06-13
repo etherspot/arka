@@ -303,7 +303,7 @@ const routes: FastifyPluginAsync = async (server) => {
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
-          const result = await server.sequelize.models.APIKey.findOne({ where: { apiKey: api_key } });
+          const result = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!result) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           const apiKeyEntity: APIKey = result as APIKey;
           if (apiKeyEntity.erc20Paymasters) {
