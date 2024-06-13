@@ -94,7 +94,7 @@ export function initializeAPIKeyModel(sequelize: Sequelize, schema: string) {
   }, {
     tableName: 'api_keys',
     sequelize, // passing the `sequelize` instance is required
-    //modelName: 'APIKey',
+    modelName: 'APIKey',
     timestamps: true, // enabling timestamps
     createdAt: 'createdAt', // mapping 'createdAt' to 'CREATED_AT'
     updatedAt: 'updatedAt', // mapping 'updatedAt' to 'UPDATED_AT'

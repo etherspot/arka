@@ -5,6 +5,7 @@ export class SponsorshipPolicy extends Model {
     public walletAddress!: string;
     public name!: string;
     public description!: string | null;
+    public enabledChains?: number[];
     public startDate!: Date | null;
     public endDate!: Date | null;
     public isPerpetual!: boolean;
@@ -27,20 +28,25 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             field: 'WALLET_ADDRESS',
             references: {
                 model: 'api_keys', // This is the table name of the model being referenced
-                key: 'wallet_address',  // This is the key column in the APIKey model
+                key: 'WALLET_ADDRESS',  // This is the key column in the APIKey model
             },
             onDelete: 'CASCADE',
             onUpdate: 'CASCADE'
         },
         name: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: false,
             field: 'NAME'
         },
         description: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: true,
             field: 'DESCRIPTION'
+        },
+        enabledChains: {
+            type: DataTypes.ARRAY(DataTypes.INTEGER),
+            allowNull: true,
+            field: 'ENABLED_CHAINS'
         },
         startDate: {
             type: DataTypes.DATE,
@@ -63,7 +69,7 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             field: 'IS_UNIVERSAL'
         },
         contractRestrictions: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: true,
             field: 'CONTRACT_RESTRICTIONS'
         },

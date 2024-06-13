@@ -7,8 +7,8 @@ import ReturnCode from "../constants/ReturnCode.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import { decode } from "../utils/crypto.js";
 import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
-import { APIKey } from "../models/APIKey";
-import { APIKeyRepository } from "repository/APIKeyRepository";
+import { APIKey } from "../models/api-key";
+import { APIKeyRepository } from "repository/api-key-repository";
 import * as EtherspotAbi from "../abi/EtherspotAbi.js";
 
 const metadataRoutes: FastifyPluginAsync = async (server) => {

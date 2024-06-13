@@ -1,6 +1,6 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 
-export class Config extends Model {
+export class ArkaConfig extends Model {
     public id!: number; // Note that the `null assertion` `!` is required in strict mode.
     public deployedErc20Paymasters!: string;
     public pythMainnetUrl!: string;
@@ -15,8 +15,8 @@ export class Config extends Model {
     public readonly updatedAt!: Date;
 }
 
-const initializeConfigModel = (sequelize: Sequelize, schema: string) => {
-    Config.init({
+const initializeArkaConfigModel = (sequelize: Sequelize, schema: string) => {
+    ArkaConfig.init({
         id: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -83,14 +83,14 @@ const initializeConfigModel = (sequelize: Sequelize, schema: string) => {
         },
     }, {
         sequelize,
-        tableName: 'config',
-        modelName: 'Config',
+        tableName: 'arka_config',
+        modelName: 'ArkaConfig',
         timestamps: true,
-        // createdAt: 'createdAt',
-        // updatedAt: 'updatedAt',
+        createdAt: 'createdAt',
+        updatedAt: 'updatedAt',
         freezeTableName: true,
         schema: schema,
     });
 };
 
-export { initializeConfigModel };
+export { initializeArkaConfigModel };

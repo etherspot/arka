@@ -1,7 +1,7 @@
 const { Sequelize } = require('sequelize')
 
 async function up({ context: queryInterface }) {
-    await queryInterface.createTable('config', {
+    await queryInterface.createTable('arka_config', {
         ID: {
             type: Sequelize.INTEGER,
             primaryKey: true,
@@ -60,7 +60,7 @@ async function up({ context: queryInterface }) {
 }
 async function down({ context: queryInterface }) {
     await queryInterface.dropTable({
-        tableName: 'config',
+        tableName: 'arka_config',
         schema: process.env.DATABASE_SCHEMA_NAME
     })
 }

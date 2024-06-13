@@ -29,7 +29,7 @@ const databasePlugin: FastifyPluginAsync = async (server) => {
     await umzug.up();
     server.log.info('Migrations done.')
   } catch (err) {
-    server.log.error('Migration failed:', err)
+    console.error('Migration failed:', err)
     process.exitCode = 1
   }
 

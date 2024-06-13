@@ -10,7 +10,7 @@ async function up({ context: queryInterface }) {
             field: 'ID'
         },
         walletAddress: {
-            type: Sequelize.STRING,
+            type: Sequelize.TEXT,
             allowNull: false,
             field: 'WALLET_ADDRESS',
             references: {
@@ -21,14 +21,19 @@ async function up({ context: queryInterface }) {
             onUpdate: 'CASCADE'
         },
         name: {
-            type: Sequelize.STRING,
+            type: Sequelize.TEXT,
             allowNull: false,
             field: 'NAME'
         },
         description: {
-            type: Sequelize.STRING,
+            type: Sequelize.TEXT,
             allowNull: true,
             field: 'DESCRIPTION'
+        },
+        enabledChains: {
+            type: Sequelize.ARRAY(Sequelize.INTEGER),
+            allowNull: true,
+            field: 'ENABLED_CHAINS'
         },
         startDate: {
             type: Sequelize.DATE,
@@ -51,7 +56,7 @@ async function up({ context: queryInterface }) {
             field: 'IS_UNIVERSAL'
         },
         contractRestrictions: {
-            type: Sequelize.STRING,
+            type: Sequelize.TEXT,
             allowNull: true,
             field: 'CONTRACT_RESTRICTIONS'
         },

@@ -17,8 +17,8 @@ export function initializeSponsorshipPolicyLimitModel(sequelize: Sequelize, sche
             primaryKey: true,
             allowNull: false,
             references: {
-                model: 'SponsorshipPolicy', // name of your model for sponsorship policies
-                key: 'id', // key in SponsorshipPolicy that policyId references
+                model: 'sponsorship_policies', // name of your model for sponsorship policies
+                key: 'ID', // key in SponsorshipPolicy that policyId references
             },
             onDelete: 'CASCADE',
             field: 'POLICY_ID'
@@ -30,12 +30,12 @@ export function initializeSponsorshipPolicyLimitModel(sequelize: Sequelize, sche
             field: 'LIMIT_TYPE'
         },
         maxUsd: {
-            type: DataTypes.FLOAT,
+            type: DataTypes.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
             allowNull: true,
             field: 'MAX_USD'
         },
         maxEth: {
-            type: DataTypes.FLOAT,
+            type: DataTypes.DECIMAL(22, 18),  // max 22 digits, 18 of which can be after the decimal point
             allowNull: true,
             field: 'MAX_ETH'
         },

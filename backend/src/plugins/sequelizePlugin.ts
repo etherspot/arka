@@ -2,13 +2,12 @@ import fp from "fastify-plugin";
 import { FastifyPluginAsync } from "fastify";
 import { Sequelize, QueryTypes } from 'sequelize';
 import dotenv from 'dotenv';
-import { APIKey, initializeAPIKeyModel } from '../models/APIKey';  // Assuming path correctness
-import { initializeSponsorshipPolicyModel } from '../models/SponsorshipPolicy';
-import { initializeSponsorshipPolicyChainModel } from '../models/SponsorshipPolicyChain';
-import { initializeSponsorshipPolicyLimitModel } from "../models/SponsorshipPolicyLimit";
-import { initializeConfigModel } from "../models/Config";
-import { APIKeyRepository } from "repository/APIKeyRepository";
-import { ConfigRepository } from "repository/ConfigRepository";
+import { APIKey, initializeAPIKeyModel } from '../models/api-key';  // Assuming path correctness
+import { initializeSponsorshipPolicyModel } from '../models/sponsorship-policy';
+import { initializeSponsorshipPolicyLimitModel } from "../models/sponsorship-policy-limit";
+import { initializeArkaConfigModel } from "../models/arka-config";
+import { APIKeyRepository } from "repository/api-key-repository";
+import { ArkaConfigRepository } from "repository/arka-config-repository";
 const pg = await import('pg');
 const Client = pg.default.Client;
 
@@ -43,12 +42,11 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     server.log.info(`Initializing models... with schema name: ${server.config.DATABASE_SCHEMA_NAME}`);
 
     // Initialize models
-    initializeConfigModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
+    initializeArkaConfigModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     const initializedAPIKeyModel = initializeAPIKeyModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     sequelize.models.APIKey = initializedAPIKeyModel;
     server.log.info(`Initialized APIKey model... ${sequelize.models.APIKey}`);
     initializeSponsorshipPolicyModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
-    initializeSponsorshipPolicyChainModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     initializeSponsorshipPolicyLimitModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
 
     server.log.info('Initialized all models...');
@@ -57,8 +55,8 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
 
     const apiKeyRepository : APIKeyRepository = new APIKeyRepository(sequelize);
     server.decorate('apiKeyRepository', apiKeyRepository);
-    const configRepository : ConfigRepository = new ConfigRepository(sequelize);
-    server.decorate('configRepository', configRepository);
+    const arkaConfigRepository : ArkaConfigRepository = new ArkaConfigRepository(sequelize);
+    server.decorate('arkaConfigRepository', arkaConfigRepository);
 
     server.log.info('decorated fastify server with models...');
 
@@ -73,7 +71,7 @@ declare module "fastify" {
     interface FastifyInstance {
         sequelize: Sequelize;
         apiKeyRepository: APIKeyRepository;
-        configRepository: ConfigRepository;
+        arkaConfigRepository: ArkaConfigRepository;
     }
 }
 

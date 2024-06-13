@@ -1,27 +1,27 @@
 import { Sequelize } from 'sequelize';
-import { Config } from '../models/Config';
+import { ArkaConfig } from '../models/arka-config';
 
-export class ConfigRepository {
+export class ArkaConfigRepository {
   private sequelize: Sequelize;
 
   constructor(sequelize: Sequelize) {
     this.sequelize = sequelize;
   }
 
-  async findAll(): Promise<Config[]> {
-    const result = await this.sequelize.models.Config.findAll();
-    return result.map(config => config.get() as Config);
+  async findAll(): Promise<ArkaConfig[]> {
+    const result = await this.sequelize.models.ArkaConfig.findAll();
+    return result.map(config => config.get() as ArkaConfig);
   }
 
-  async findFirstConfig(): Promise<Config | null> {
-    const result = await this.sequelize.models.Config.findOne();
-    return result ? result.get() as Config : null;
+  async findFirstConfig(): Promise<ArkaConfig | null> {
+    const result = await this.sequelize.models.ArkaConfig.findOne();
+    return result ? result.get() as ArkaConfig : null;
   }
 
   async updateConfig(body: any): Promise<any> {
     try {
       // Check if the record exists
-      const existingRecord = await this.sequelize.models.Config.findOne({
+      const existingRecord = await this.sequelize.models.ArkaConfig.findOne({
         where: {
           id: body.id
         }
@@ -33,7 +33,7 @@ export class ConfigRepository {
       }
 
       // Update the record
-      await this.sequelize.models.Config.update(
+      await this.sequelize.models.ArkaConfig.update(
         {
           deployedErc20Paymasters: body.deployedErc20Paymasters,
           pythMainnetUrl: body.pythMainnetUrl,
@@ -53,7 +53,7 @@ export class ConfigRepository {
       );
 
       // Get the updated record
-      const updatedRecord = await this.sequelize.models.config.findOne({
+      const updatedRecord = await this.sequelize.models.ArkaConfig.findOne({
         where: {
           id: body.id
         }

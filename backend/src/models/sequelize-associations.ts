@@ -1,13 +1,12 @@
-import { APIKey } from './APIKey';
-import { SponsorshipPolicy } from './SponsorshipPolicy';
-import { SponsorshipPolicyChain } from './SponsorshipPolicyChain';
-import { SponsorshipPolicyLimit } from './SponsorshipPolicyLimit';
+import { APIKey } from './api-key';
+import { SponsorshipPolicy } from './sponsorship-policy';
+import { SponsorshipPolicyLimit } from './sponsorship-policy-limit';
 
 export function setupAssociations() {
 
     /**
      * APIKey to SponsorshipPolicy
-     * A single APIKey (the parent) can have many SponsorshipPolicies (the children). 
+     * A single APIKey (the parent) can have many SponsorshipPolicy (the children). 
      * The link between them is made using the 'walletAddress' field of the APIKey and the 'walletAddress' field of the SponsorshipPolicy.
      */
     APIKey.hasMany(SponsorshipPolicy, {
@@ -28,29 +27,6 @@ export function setupAssociations() {
     });
 
     /**
-     * SponsorshipPolicy to SponsorshipPolicyChain
-     * A single SponsorshipPolicy (the parent) can have many SponsorshipPolicyChains (the children). 
-     * The link between them is made using the 'id' field of the SponsorshipPolicy and the 'policyId' field of the SponsorshipPolicyChain
-     */
-    SponsorshipPolicy.hasMany(SponsorshipPolicyChain, {
-        foreignKey: 'policyId',
-        sourceKey: 'id',
-        as: 'policyChains'
-    });
-
-
-    /**
-     * SponsorshipPolicyChain to SponsorshipPolicy
-     * A single SponsorshipPolicyChain (the child) belongs to one SponsorshipPolicy (the parent).
-     * The link between them is made using the 'policyId' field of the SponsorshipPolicyChain and the 'id' field of the SponsorshipPolicy.
-     */
-    SponsorshipPolicyChain.belongsTo(SponsorshipPolicy, {
-        foreignKey: 'policyId',
-        targetKey: 'id',
-        as: 'policy'
-    });
-
-    /**
      * SponsorshipPolicy to SponsorshipPolicyLimit
      * A single SponsorshipPolicy (the parent) can have many SponsorshipPolicyLimits (the children). 
      * The link between them is made using the 'id' field of the SponsorshipPolicy and the 'policyId' field of the SponsorshipPolicyLimit.
@@ -58,7 +34,7 @@ export function setupAssociations() {
     SponsorshipPolicy.hasMany(SponsorshipPolicyLimit, {
         foreignKey: 'policyId',
         sourceKey: 'id',
-        as: 'policyLimits'
+        as: 'sponsorshipPolicyLimits'
     });
 
     /**
@@ -69,6 +45,6 @@ export function setupAssociations() {
     SponsorshipPolicyLimit.belongsTo(SponsorshipPolicy, {
         foreignKey: 'policyId',
         targetKey: 'id',
-        as: 'policy'
+        as: 'sponsorshipPolicy'
     });
 }

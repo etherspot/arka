@@ -21,12 +21,12 @@ async function up({ context: queryInterface }) {
       field: 'LIMIT_TYPE'
     },
     maxUsd: {
-      type: Sequelize.FLOAT,
+      type: Sequelize.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
       allowNull: true,
       field: 'MAX_USD'
     },
     maxEth: {
-      type: Sequelize.FLOAT,
+      type: Sequelize.DECIMAL(22, 18),  // max 22 digits, 18 of which can be after the decimal point
       allowNull: true,
       field: 'MAX_ETH'
     },

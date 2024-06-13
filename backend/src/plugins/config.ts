@@ -34,7 +34,7 @@ const ajv = new Ajv({
   allowUnionTypes: true,
 });
 
-export type Config = Static<typeof ConfigSchema>;
+export type ArkaConfig = Static<typeof ConfigSchema>;
 
 const configPlugin: FastifyPluginAsync = async (server) => {
   const validate = ajv.compile(ConfigSchema);
@@ -64,7 +64,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
 
 declare module "fastify" {
   interface FastifyInstance {
-    config: Config;
+    config: ArkaConfig;
   }
 }
 

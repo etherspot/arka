@@ -6,8 +6,8 @@ import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { encode, decode } from "../utils/crypto.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
-import { APIKey } from "../models/APIKey.js";
-import { ConfigUpdateData } from "../types/config-dto.js";
+import { APIKey } from "../models/api-key.js";
+import { ArkaConfigUpdateData } from "../types/arka-config-dto.js";
 import { ApiKeyDto } from "../types/apikey-dto.js";
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
@@ -25,7 +25,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.get("/getConfig", async function (request, reply) {
     try {
-      const result = await server.configRepository.findFirstConfig();
+      const result = await server.arkaConfigRepository.findFirstConfig();
 
       if (!result) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.FAILED_TO_PROCESS });
@@ -40,11 +40,11 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.post("/saveConfig", async function (request, reply) {
     try {
-      const body: ConfigUpdateData = JSON.parse(request.body as string);
+      const body: ArkaConfigUpdateData = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (Object.values(body).every(value => value)) {
         try {
-          const result = await server.configRepository.updateConfig(body);
+          const result = await server.arkaConfigRepository.updateConfig(body);
           server.log.info(`config entity after database update: ${JSON.stringify(result)}`);
         } catch (error) {
           server.log.error('Error while updating the config:', error);

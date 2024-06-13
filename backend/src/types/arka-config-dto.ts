@@ -1,5 +1,5 @@
 
-export interface ConfigUpdateData {
+export interface ArkaConfigUpdateData {
     deployedErc20Paymasters: string;
     pythMainnetUrl: string;
     pythTestnetUrl: string;

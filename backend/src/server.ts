@@ -17,10 +17,10 @@ import PimlicoAbi from './abi/PimlicoAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
 import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
-import { APIKey } from 'models/APIKey.js';
-import { APIKeyRepository } from './repository/APIKeyRepository.js';
-import { Config } from 'models/Config.js';
-import { ConfigRepository } from 'repository/ConfigRepository.js';
+import { APIKey } from 'models/api-key.js';
+import { APIKeyRepository } from './repository/api-key-repository.js';
+import { ArkaConfig } from 'models/arka-config.js';
+import { ArkaConfigRepository } from 'repository/arka-config-repository.js';
 
 let server: FastifyInstance;
 
@@ -68,9 +68,9 @@ const initializeServer = async (): Promise<void> => {
 
   server.log.info('registered sequelizePlugin...')
 
-  const configRepository = new ConfigRepository(server.sequelize);
-  const configDatas = await configRepository.findAll();
-  const configData: Config | null = configDatas.length > 0 ? configDatas[0] : null;
+  const arkaConfigRepository = new ArkaConfigRepository(server.sequelize);
+  const configDatas = await arkaConfigRepository.findAll();
+  const configData: ArkaConfig | null = configDatas.length > 0 ? configDatas[0] : null;
 
   await server.register(fastifyCron, {
     jobs: [
