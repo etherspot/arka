@@ -30,10 +30,30 @@ async function up({ context: queryInterface }) {
             allowNull: true,
             field: 'DESCRIPTION'
         },
+        isPublic: {
+            type: Sequelize.BOOLEAN,
+            defaultValue: false,
+            field: 'IS_PUBLIC'
+        },
+        isEnabled: {
+            type: Sequelize.BOOLEAN,
+            defaultValue: false,
+            field: 'IS_ENABLED'
+        },
+        isUniversal: {
+            type: Sequelize.BOOLEAN,
+            defaultValue: false,
+            field: 'IS_UNIVERSAL'
+        },
         enabledChains: {
             type: Sequelize.ARRAY(Sequelize.INTEGER),
             allowNull: true,
             field: 'ENABLED_CHAINS'
+        },
+        isPerpetual: {
+            type: Sequelize.BOOLEAN,
+            defaultValue: false,
+            field: 'IS_PERPETUAL'
         },
         startDate: {
             type: Sequelize.DATE,
@@ -45,15 +65,45 @@ async function up({ context: queryInterface }) {
             allowNull: true,
             field: 'END_DATE'
         },
-        isPerpetual: {
-            type: Sequelize.BOOLEAN,
-            defaultValue: false,
-            field: 'IS_PERPETUAL'
+        globalMaximumUsd: {
+            type: Sequelize.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
+            allowNull: true,
+            field: 'GLOBAL_MAX_USD'
         },
-        isUniversal: {
-            type: Sequelize.BOOLEAN,
-            defaultValue: false,
-            field: 'IS_UNIVERSAL'
+        globalMaximumNative: {
+            type: Sequelize.DECIMAL(22, 18),  // max 22 digits, 18 of which can be after the decimal point
+            allowNull: true,
+            field: 'GLOBAL_MAX_NATIVE'
+        },
+        globalMaximumOpCount: {
+            type: Sequelize.INTEGER,
+            allowNull: true,
+            field: 'GLOBAL_MAX_OP_COUNT'
+        },
+        perUserMaximumUsd: {
+            type: Sequelize.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
+            allowNull: true,
+            field: 'PER_USER_MAX_USD'
+        },
+        perUserMaximumNative: {
+            type: Sequelize.DECIMAL(22, 18),  // max 22 digits, 18 of which can be after the decimal point
+            allowNull: true,
+            field: 'PER_USER_MAX_NATIVE'
+        },
+        perUserMaximumOpCount: {
+            type: Sequelize.INTEGER,
+            allowNull: true,
+            field: 'PER_USER_MAX_OP_COUNT'
+        },
+        perOpMaximumUsd: {
+            type: Sequelize.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
+            allowNull: true,
+            field: 'PER_OP_MAX_USD'
+        },
+        perOpMaximumNative: {
+            type: Sequelize.DECIMAL(22, 18),  // max 22 digits, 18 of which can be after the decimal point
+            allowNull: true,
+            field: 'PER_OP_MAX_NATIVE'
         },
         contractRestrictions: {
             type: Sequelize.TEXT,

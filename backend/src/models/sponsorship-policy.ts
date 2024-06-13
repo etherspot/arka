@@ -5,14 +5,44 @@ export class SponsorshipPolicy extends Model {
     public walletAddress!: string;
     public name!: string;
     public description!: string | null;
-    public enabledChains?: number[];
-    public startDate!: Date | null;
-    public endDate!: Date | null;
-    public isPerpetual!: boolean;
+    public isPublic: boolean = false;
+    public isEnabled: boolean = false;
     public isUniversal!: boolean;
+    public enabledChains?: number[];
+    public isPerpetual!: boolean;
+    public startTime!: Date | null;
+    public endTime!: Date | null;
+    public globalMaximumUsd!: number | null;
+    public globalMaximumNative!: number | null;
+    public globalMaximumOpCount!: number | null;
+    public perUserMaximumUsd!: number | null;
+    public perUserMaximumNative!: number | null;
+    public perUserMaximumOpCount!: number | null;
+    public perOpMaximumUsd!: number | null;
+    public perOpMaximumNative!: number | null;
     public contractRestrictions!: string | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
+
+    public get isExpired(): boolean {
+        const now = new Date();
+        if (this.isPerpetual) {
+            return false;
+        }
+        return Boolean(this.endTime && this.endTime < now);
+    }
+
+    public get isCurrent(): boolean {
+        const now = new Date();
+        if (this.isPerpetual) {
+            return true;
+        }
+        return Boolean(this.startTime && this.startTime <= now && (!this.endTime || this.endTime >= now));
+    }
+
+    public get isApplicable(): boolean {
+        return this.isEnabled && !this.isExpired && this.isCurrent;
+    }
 }
 
 export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: string) {
@@ -43,10 +73,30 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             allowNull: true,
             field: 'DESCRIPTION'
         },
+        isPublic: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            field: 'IS_PUBLIC'
+        },
+        isEnabled: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            field: 'IS_ENABLED'
+        },
+        isUniversal: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            field: 'IS_UNIVERSAL'
+        },
         enabledChains: {
             type: DataTypes.ARRAY(DataTypes.INTEGER),
             allowNull: true,
             field: 'ENABLED_CHAINS'
+        },
+        isPerpetual: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            field: 'IS_PERPETUAL'
         },
         startDate: {
             type: DataTypes.DATE,
@@ -58,15 +108,45 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             allowNull: true,
             field: 'END_DATE'
         },
-        isPerpetual: {
-            type: DataTypes.BOOLEAN,
-            defaultValue: false,
-            field: 'IS_PERPETUAL'
+        globalMaximumUsd: {
+            type: DataTypes.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
+            allowNull: true,
+            field: 'GLOBAL_MAX_USD'
         },
-        isUniversal: {
-            type: DataTypes.BOOLEAN,
-            defaultValue: false,
-            field: 'IS_UNIVERSAL'
+        globalMaximumNative: {
+            type: DataTypes.DECIMAL(22, 18),  // max 22 digits, 18 of which can be after the decimal point
+            allowNull: true,
+            field: 'GLOBAL_MAX_NATIVE'
+        },
+        globalMaximumOpCount: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'GLOBAL_MAX_OP_COUNT'
+        },
+        perUserMaximumUsd: {
+            type: DataTypes.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
+            allowNull: true,
+            field: 'PER_USER_MAX_USD'
+        },
+        perUserMaximumNative: {
+            type: DataTypes.DECIMAL(22, 18),  // max 22 digits, 18 of which can be after the decimal point
+            allowNull: true,
+            field: 'PER_USER_MAX_NATIVE'
+        },
+        perUserMaximumOpCount: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'PER_USER_MAX_OP_COUNT'
+        },
+        perOpMaximumUsd: {
+            type: DataTypes.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
+            allowNull: true,
+            field: 'PER_OP_MAX_USD'
+        },
+        perOpMaximumNative: {
+            type: DataTypes.DECIMAL(22, 18),  // max 22 digits, 18 of which can be after the decimal point
+            allowNull: true,
+            field: 'PER_OP_MAX_NATIVE'
         },
         contractRestrictions: {
             type: DataTypes.TEXT,
