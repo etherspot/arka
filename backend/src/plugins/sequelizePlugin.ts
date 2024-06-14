@@ -2,11 +2,11 @@ import fp from "fastify-plugin";
 import { FastifyPluginAsync } from "fastify";
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
-import { initializeAPIKeyModel } from '../models/api-key';  // Assuming path correctness
-import { initializeSponsorshipPolicyModel } from '../models/sponsorship-policy';
-import { initializeArkaConfigModel } from "../models/arka-config";
-import { APIKeyRepository } from "../repository/api-key-repository";
-import { ArkaConfigRepository } from "../repository/arka-config-repository";
+import { initializeAPIKeyModel } from '../models/api-key.js';
+import { initializeSponsorshipPolicyModel } from '../models/sponsorship-policy.js';
+import { initializeArkaConfigModel } from "../models/arka-config.js";
+import { APIKeyRepository } from "../repository/api-key-repository.js";
+import { ArkaConfigRepository } from "../repository/arka-config-repository.js";
 const pg = await import('pg');
 const Client = pg.default.Client;
 

@@ -17,10 +17,10 @@ import PimlicoAbi from './abi/PimlicoAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
 import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
-import { APIKey } from 'models/api-key.js';
+import { APIKey } from './models/api-key.js';
 import { APIKeyRepository } from './repository/api-key-repository.js';
-import { ArkaConfig } from 'models/arka-config.js';
-import { ArkaConfigRepository } from 'repository/arka-config-repository.js';
+import { ArkaConfig } from './models/arka-config.js';
+import { ArkaConfigRepository } from './repository/arka-config-repository.js';
 
 let server: FastifyInstance;
 

@@ -2,7 +2,6 @@ import { FastifyBaseLogger, FastifyRequest } from "fastify";
 import { BigNumber, ethers } from "ethers";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
-import { APIKey } from "models/api-key";
 
 export function printRequest(methodName: string, request: FastifyRequest, log: FastifyBaseLogger) {
   log.info(methodName, "called: ");

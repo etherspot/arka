@@ -11,7 +11,7 @@ import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
-import { APIKey } from "models/api-key.js";
+import { APIKey } from "../models/api-key.js";
 
 const SUPPORTED_ENTRYPOINTS = {
   'EPV_06' : "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
