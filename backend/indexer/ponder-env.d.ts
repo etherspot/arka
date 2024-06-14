@@ -11,17 +11,17 @@ declare module "@/generated" {
     PonderApp,
   } from "@ponder/core";
 
-  type Config = typeof import("./ponder.config.ts").default;
+  type ArkaConfig = typeof import("./ponder.config.ts").default;
   type Schema = typeof import("./ponder.schema.ts").default;
 
-  export const ponder: PonderApp<Config, Schema>;
-  export type EventNames = PonderEventNames<Config>;
+  export const ponder: PonderApp<ArkaConfig, Schema>;
+  export type EventNames = PonderEventNames<ArkaConfig>;
   export type Event<name extends EventNames = EventNames> = PonderEvent<
-    Config,
+    ArkaConfig,
     name
   >;
   export type Context<name extends EventNames = EventNames> = PonderContext<
-    Config,
+    ArkaConfig,
     Schema,
     name
   >;

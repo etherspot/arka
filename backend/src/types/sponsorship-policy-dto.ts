@@ -6,7 +6,7 @@ export interface SponsorshipPolicyDto {
     description: string;           // Description of the sponsorship policy
     isPublic: boolean;             // Flag to indicate if the policy is public
     isEnabled: boolean;            // Flag to indicate if the policy is enabled
-    isUniversal: boolean;          // Flag to indicate if the policy is universal
+    isApplicableToAllNetworks: boolean;          // Flag to indicate if the policy is universal
     enabledChains?: number[];      // Array of enabled chain IDs
     isPerpetual: boolean;          // Flag to indicate if the policy is perpetual
     startDate?: string;            // Optional start date for the policy

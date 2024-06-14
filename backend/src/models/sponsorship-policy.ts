@@ -7,7 +7,7 @@ export class SponsorshipPolicy extends Model {
     public description!: string | null;
     public isPublic: boolean = false;
     public isEnabled: boolean = false;
-    public isUniversal!: boolean;
+    public isApplicableToAllNetworks!: boolean;
     public enabledChains?: number[];
     public isPerpetual!: boolean;
     public startTime!: Date | null;
@@ -53,6 +53,7 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
     SponsorshipPolicy.init({
         id: {
             type: DataTypes.INTEGER,
+            autoIncrement: true,
             primaryKey: true,
             field: 'ID'
         },
@@ -87,10 +88,10 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             defaultValue: false,
             field: 'IS_ENABLED'
         },
-        isUniversal: {
+        isApplicableToAllNetworks: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,
-            field: 'IS_UNIVERSAL'
+            field: 'IS_APPLICABLE_TO_ALL_NETWORKS'
         },
         enabledChains: {
             type: DataTypes.ARRAY(DataTypes.INTEGER),

@@ -40,10 +40,10 @@ async function up({ context: queryInterface }) {
             defaultValue: false,
             field: 'IS_ENABLED'
         },
-        isUniversal: {
+        isApplicableToAllNetworks: {
             type: Sequelize.BOOLEAN,
             defaultValue: false,
-            field: 'IS_UNIVERSAL'
+            field: 'IS_APPLICABLE_TO_ALL_NETWORKS'
         },
         enabledChains: {
             type: Sequelize.ARRAY(Sequelize.INTEGER),
