@@ -186,18 +186,37 @@ Parameters:
 
 1. Ensure the postgres docker instance is up and running
 
-2. Here we need to create a network and tag backend & postgres on same network
+```sh
+cd backend/local-setup
+```
+
+2. Start `postgres` database instance
+
+```sh
+docker-compose up -d
+```
+
+3. Here we need to create a network and tag backend & postgres on same network
 
 ```sh
 docker network create arka-network    
 ```
 
 ```sh
-docker run --network arka-network --name local-setup-db-1 -d postgres
+docker network connect arka-network local-setup-db-1
 ```
 
 ```sh
-docker run --network arka-network --name arka-backend -d arka-backend
+docker network connect arka-network arka-backend-1
+```
+
+4. restart the docker backend instance
+
+- change to root directory i.e `arka` project directory
+- restart the backend 
+
+```sh
+docker-compose up -d
 ```
 
 
