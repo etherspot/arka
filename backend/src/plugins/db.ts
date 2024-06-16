@@ -8,6 +8,8 @@ import { Umzug, SequelizeStorage } from 'umzug';
 
 const databasePlugin: FastifyPluginAsync = async (server) => {
 
+  server.log.info(`Connecting to database... with URL:  ${server.config.DATABASE_URL} and schemaName: ${server.config.DATABASE_SCHEMA_NAME}`);
+
   const sequelize = new Sequelize(server.config.DATABASE_URL, {
     schema: server.config.DATABASE_SCHEMA_NAME,
   });
@@ -32,8 +34,6 @@ const databasePlugin: FastifyPluginAsync = async (server) => {
     console.error('Migration failed:', err)
     process.exitCode = 1
   }
-
-  //server.decorate('sequelize', sequelize);
 };
 
 declare module "fastify" {

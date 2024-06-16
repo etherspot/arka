@@ -7,6 +7,7 @@ import { initializeSponsorshipPolicyModel } from '../models/sponsorship-policy.j
 import { initializeArkaConfigModel } from "../models/arka-config.js";
 import { APIKeyRepository } from "../repository/api-key-repository.js";
 import { ArkaConfigRepository } from "../repository/arka-config-repository.js";
+import { SponsorshipPolicyRepository } from "../repository/sponsorship-policy-repository.js";
 const pg = await import('pg');
 const Client = pg.default.Client;
 
@@ -43,9 +44,10 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     // Initialize models
     initializeArkaConfigModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     const initializedAPIKeyModel = initializeAPIKeyModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
-    sequelize.models.APIKey = initializedAPIKeyModel;
+    //sequelize.models.APIKey = initializedAPIKeyModel;
     server.log.info(`Initialized APIKey model... ${sequelize.models.APIKey}`);
     initializeSponsorshipPolicyModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
+    server.log.info('Initialized SponsorshipPolicy model...');
 
     server.log.info('Initialized all models...');
 
@@ -55,6 +57,8 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     server.decorate('apiKeyRepository', apiKeyRepository);
     const arkaConfigRepository : ArkaConfigRepository = new ArkaConfigRepository(sequelize);
     server.decorate('arkaConfigRepository', arkaConfigRepository);
+    const sponsorshipPolicyRepository = new SponsorshipPolicyRepository(sequelize);
+    server.decorate('sponsorshipPolicyRepository', sponsorshipPolicyRepository);
 
     server.log.info('decorated fastify server with models...');
 
@@ -70,6 +74,7 @@ declare module "fastify" {
         sequelize: Sequelize;
         apiKeyRepository: APIKeyRepository;
         arkaConfigRepository: ArkaConfigRepository;
+        sponsorshipPolicyRepository: SponsorshipPolicyRepository;
     }
 }
 

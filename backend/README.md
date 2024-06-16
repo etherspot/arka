@@ -182,3 +182,23 @@ Parameters:
 - `/deposit` - This url accepts one parameter and returns the submitted transaction hash if successful. This url is used to deposit some funds to the entryPointAddress from the sponsor wallet
   1. amount - The amount to be deposited in ETH
   
+## Local Docker Networks
+
+1. Ensure the postgres docker instance is up and running
+
+2. Here we need to create a network and tag backend & postgres on same network
+
+```sh
+docker network create arka-network    
+```
+
+```sh
+docker run --network arka-network --name local-setup-db-1 -d postgres
+```
+
+```sh
+docker run --network arka-network --name arka-backend -d arka-backend
+```
+
+
+

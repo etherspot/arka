@@ -9,20 +9,20 @@ export class SponsorshipPolicy extends Model {
     public isEnabled: boolean = false;
     public isApplicableToAllNetworks!: boolean;
     public enabledChains?: number[];
-    public isPerpetual!: boolean;
-    public startTime!: Date | null;
-    public endTime!: Date | null;
+    public isPerpetual: boolean = false;
+    public startTime: Date | null = null;
+    public endTime: Date | null = null;
     public globalMaximumApplicable: boolean = false;
-    public globalMaximumUsd!: number | null;
-    public globalMaximumNative!: number | null;
-    public globalMaximumOpCount!: number | null;
+    public globalMaximumUsd: number | null = null;
+    public globalMaximumNative: number | null = null;
+    public globalMaximumOpCount: number | null = null;
     public perUserMaximumApplicable: boolean = false;
-    public perUserMaximumUsd!: number | null;
-    public perUserMaximumNative!: number | null;
-    public perUserMaximumOpCount!: number | null;
+    public perUserMaximumUsd: number | null = null;
+    public perUserMaximumNative: number | null = null;
+    public perUserMaximumOpCount: number | null = null;
     public perOpMaximumApplicable: boolean = false;
-    public perOpMaximumUsd!: number | null;
-    public perOpMaximumNative!: number | null;
+    public perOpMaximumUsd: number | null = null;
+    public perOpMaximumNative: number | null = null;
     public addressAllowList: string[] | null = null;
     public addressBlockList: string[] | null = null;
     public readonly createdAt!: Date;
@@ -103,15 +103,15 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             defaultValue: false,
             field: 'IS_PERPETUAL'
         },
-        startDate: {
+        startTime: {
             type: DataTypes.DATE,
             allowNull: true,
-            field: 'START_DATE'
+            field: 'START_TIME'
         },
-        endDate: {
+        endTime: {
             type: DataTypes.DATE,
             allowNull: true,
-            field: 'END_DATE'
+            field: 'END_TIME'
         },
         globalMaximumApplicable: {
             type: DataTypes.BOOLEAN,

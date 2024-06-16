@@ -21,6 +21,7 @@ import { APIKey } from './models/api-key.js';
 import { APIKeyRepository } from './repository/api-key-repository.js';
 import { ArkaConfig } from './models/arka-config.js';
 import { ArkaConfigRepository } from './repository/arka-config-repository.js';
+import sponsorshipPolicyRoutes from './routes/sponsorship-policy-route.js';
 
 let server: FastifyInstance;
 
@@ -56,6 +57,8 @@ const initializeServer = async (): Promise<void> => {
   await server.register(adminRoutes);
 
   await server.register(metadataRoutes);
+
+  await server.register(sponsorshipPolicyRoutes);
 
   // Database
   await server.register(database);

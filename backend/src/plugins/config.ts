@@ -38,6 +38,7 @@ export type ArkaConfig = Static<typeof ConfigSchema>;
 
 const configPlugin: FastifyPluginAsync = async (server) => {
   const validate = ajv.compile(ConfigSchema);
+  server.log.info("Validating .env file");
   const valid = validate(process.env);
   if (!valid) {
     throw new Error(
@@ -45,6 +46,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
       JSON.stringify(validate.errors, null, 2)
     );
   }
+
+  server.log.info("Configuring .env file");
 
   const config = {
     LOG_LEVEL: process.env.LOG_LEVEL ?? '',
@@ -58,6 +61,9 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     DATABASE_SSL_ENABLED: process.env.DATABASE_SSL_ENABLED === 'true',
     DATABASE_SCHEMA_NAME: process.env.DATABASE_SCHEMA_NAME ?? 'arka',
   }
+
+  server.log.info("Configured .env file");
+  server.log.info(`config: ${JSON.stringify(config, null, 2)}`);
 
   server.decorate("config", config);
 };

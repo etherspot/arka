@@ -58,12 +58,12 @@ async function up({ context: queryInterface }) {
         startDate: {
             type: Sequelize.DATE,
             allowNull: true,
-            field: 'START_DATE'
+            field: 'START_TIME'
         },
         endDate: {
             type: Sequelize.DATE,
             allowNull: true,
-            field: 'END_DATE'
+            field: 'END_TIME'
         },
         globalMaxApplicable: {
             type: Sequelize.BOOLEAN,
