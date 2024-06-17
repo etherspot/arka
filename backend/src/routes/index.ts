@@ -12,6 +12,7 @@ import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
+import { SponsorshipPolicy } from "models/sponsorship-policy.js";
 
 const SUPPORTED_ENTRYPOINTS = {
   'EPV_06' : "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -78,7 +79,6 @@ const routes: FastifyPluginAsync = async (server) => {
             };
             default: {
               return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_METHOD });
-              break;
             }
           }
         }
@@ -192,6 +192,28 @@ const routes: FastifyPluginAsync = async (server) => {
             const date = new Date();
             const provider = new providers.JsonRpcProvider(networkConfig.bundler);
             const signer = new Wallet(privateKey, provider)
+
+            // get chainid from provider
+            const chainId = await provider.getNetwork();
+
+            // get wallet_address from api_key
+            const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
+
+             if(!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+
+            // get sponsorshipPolicy for the user
+            const sponsorshipPolicy : SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddress(apiKeyData?.walletAddress);
+
+            if(!sponsorshipPolicy || !sponsorshipPolicy.isApplicable) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+
+            // get supported networks from sponsorshipPolicy
+            const supportedNetworks : number[] | undefined | null = sponsorshipPolicy.enabledChains;
+
+            if(!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+
+            // is chainId exists in supportedNetworks
+            if (!supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+            
             if (txnMode) {
               const signerAddress = await signer.getAddress();
               const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
