@@ -55,7 +55,6 @@ export class SponsorshipPolicyRepository {
     }
 
     async findOneByWalletAddress(walletAddress: string): Promise<SponsorshipPolicy | null> {
-        console.log(`findOneByWalletAddress: ${walletAddress}`)
         const result = await this.sequelize.models.SponsorshipPolicy.findOne({ where: { walletAddress: walletAddress } });
         return result ? result.get() as SponsorshipPolicy : null;
     }
@@ -97,8 +96,13 @@ export class SponsorshipPolicyRepository {
     }
 
     async findOneById(id: number): Promise<SponsorshipPolicy | null> {
-        const result = await this.sequelize.models.SponsorshipPolicy.findOne({ where: { id: id } });
-        return result ? result.get() as SponsorshipPolicy : null;
+        const sponsorshipPolicy = await this.sequelize.models.SponsorshipPolicy.findOne({ where: { id: id } }) as SponsorshipPolicy;
+        if (!sponsorshipPolicy) {
+            return null;
+        }
+        
+        const dataValues = sponsorshipPolicy.get();
+        return dataValues as SponsorshipPolicy;
     }
 
     async createSponsorshipPolicy(sponsorshipPolicy: SponsorshipPolicyDto): Promise<SponsorshipPolicy> {
@@ -255,8 +259,43 @@ export class SponsorshipPolicyRepository {
             existingSponsorshipPolicy.addressBlockList = null;
         }
 
-        const result = await existingSponsorshipPolicy.save();
-        return result.get() as SponsorshipPolicy;
+        // const result = await existingSponsorshipPolicy.save();
+        // return result.get() as SponsorshipPolicy;
+
+        // apply same logic to update the record
+        const result = await this.sequelize.models.SponsorshipPolicy.update({
+            name: existingSponsorshipPolicy.name,
+            description: existingSponsorshipPolicy.description,
+            isApplicableToAllNetworks: existingSponsorshipPolicy.isApplicableToAllNetworks,
+            enabledChains: existingSponsorshipPolicy.enabledChains,
+            supportedEPVersions: existingSponsorshipPolicy.supportedEPVersions,
+            isPerpetual: existingSponsorshipPolicy.isPerpetual,
+            startTime: existingSponsorshipPolicy.startTime,
+            endTime: existingSponsorshipPolicy.endTime,
+            globalMaximumApplicable: existingSponsorshipPolicy.globalMaximumApplicable,
+            globalMaximumUsd: existingSponsorshipPolicy.globalMaximumUsd,
+            globalMaximumNative: existingSponsorshipPolicy.globalMaximumNative,
+            globalMaximumOpCount: existingSponsorshipPolicy.globalMaximumOpCount,
+            perUserMaximumApplicable: existingSponsorshipPolicy.perUserMaximumApplicable,
+            perUserMaximumUsd: existingSponsorshipPolicy.perUserMaximumUsd,
+            perUserMaximumNative: existingSponsorshipPolicy.perUserMaximumNative,
+            perUserMaximumOpCount: existingSponsorshipPolicy.perUserMaximumOpCount,
+            perOpMaximumApplicable: existingSponsorshipPolicy.perOpMaximumApplicable,
+            perOpMaximumUsd: existingSponsorshipPolicy.perOpMaximumUsd,
+            perOpMaximumNative: existingSponsorshipPolicy.perOpMaximumNative,
+            addressAllowList: existingSponsorshipPolicy.addressAllowList,
+            addressBlockList: existingSponsorshipPolicy.addressBlockList
+        }, {
+            where: { id: sponsorshipPolicy.id }
+        });
+
+        if (result[0] === 0) {
+            throw new Error(`SponsorshipPolicy update failed for id: ${sponsorshipPolicy.id}`);
+        }
+
+        // return the updated record - fetch fresh from database
+        const updatedSponsorshipPolicy = await this.findOneById(sponsorshipPolicy.id as number);
+        return updatedSponsorshipPolicy as SponsorshipPolicy;
     }
 
     validateSponsorshipPolicy(sponsorshipPolicy: SponsorshipPolicyDto) {
@@ -418,8 +457,7 @@ export class SponsorshipPolicyRepository {
             throw new Error('Cannot disable a policy which is already disabled');
         }
 
-        existingSponsorshipPolicy.isEnabled = false;
-        await existingSponsorshipPolicy.save();
+        SponsorshipPolicy.update({ isEnabled: false }, { where: { id: id } });
     }
 
     async enableSponsorshipPolicy(id: number): Promise<void> {
@@ -433,8 +471,7 @@ export class SponsorshipPolicyRepository {
             throw new Error('Cannot enable a policy which is already enabled');
         }
 
-        existingSponsorshipPolicy.isEnabled = true;
-        await existingSponsorshipPolicy.save();
+        SponsorshipPolicy.update({ isEnabled: true }, { where: { id: id } });
     }
 
     async deleteSponsorshipPolicy(id: number): Promise<number> {
