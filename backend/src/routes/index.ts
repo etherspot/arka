@@ -13,10 +13,11 @@ import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
 import { SponsorshipPolicy } from "models/sponsorship-policy.js";
+import { DEFAULT_EP_VERSION, EPVersions } from "types/sponsorship-policy-dto.js";
 
 const SUPPORTED_ENTRYPOINTS = {
-  'EPV_06' : "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
-  'EPV_07' : "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+  'EPV_06': "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+  'EPV_07': "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
 }
 
 const routes: FastifyPluginAsync = async (server) => {
@@ -60,9 +61,11 @@ const routes: FastifyPluginAsync = async (server) => {
         let mode = context?.mode ? String(context.mode) : "sponsor";
         let chainId = query['chainId'] ?? body.params[3];
         const api_key = query['apiKey'] ?? body.params[4];
+        let epVersion: EPVersions = DEFAULT_EP_VERSION;
+
         let sponsorDetails = false, estimate = true;
         if (body.method) {
-          switch(body.method) {
+          switch (body.method) {
             case 'pm_getPaymasterData': {
               estimate = false;
               sponsorDetails = true;
@@ -86,6 +89,10 @@ const routes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if ((entryPoint != SUPPORTED_ENTRYPOINTS.EPV_06) && (entryPoint != SUPPORTED_ENTRYPOINTS.EPV_07))
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
+
+        if (entryPoint == SUPPORTED_ENTRYPOINTS.EPV_06) epVersion = EPVersions.EPV_06;
+        else epVersion = EPVersions.EPV_07;
+
         let customPaymasters = [];
         let multiTokenPaymasters = [];
         let multiTokenOracles = [];
@@ -112,7 +119,7 @@ const routes: FastifyPluginAsync = async (server) => {
           }
           if (secrets['MULTI_TOKEN_PAYMASTERS']) {
             const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
-            multiTokenPaymasters = JSON.parse(buffer.toString()); 
+            multiTokenPaymasters = JSON.parse(buffer.toString());
           }
           if (secrets['MULTI_TOKEN_ORACLES']) {
             const buffer = Buffer.from(secrets['MULTI_TOKEN_ORACLES'], 'base64');
@@ -137,10 +144,10 @@ const routes: FastifyPluginAsync = async (server) => {
             const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
             customPaymasters = JSON.parse(buffer.toString());
           }
-          
+
           if (apiKeyEntity.multiTokenPaymasters) {
             const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
-            multiTokenPaymasters = JSON.parse(buffer.toString()); 
+            multiTokenPaymasters = JSON.parse(buffer.toString());
           }
           if (apiKeyEntity.multiTokenOracles) {
             const buffer = Buffer.from(apiKeyEntity.multiTokenOracles, 'base64');
@@ -196,27 +203,25 @@ const routes: FastifyPluginAsync = async (server) => {
             // get chainid from provider
             const chainId = await provider.getNetwork();
 
-            console.log(`api_key in root endpoint : ${api_key}`);
-
             // get wallet_address from api_key
             const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
 
-             if(!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+            if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
 
-             console.log(`apiKeyData has walletAddres in root endpoint : ${apiKeyData.walletAddress}`);
+            console.log(`apiKeyData has walletAddres in root endpoint : ${apiKeyData.walletAddress}`);
 
-            // get sponsorshipPolicy for the user
-            const sponsorshipPolicy : SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddress(apiKeyData?.walletAddress);
-            if(!sponsorshipPolicy) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
-            if(!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME });
+            // get sponsorshipPolicy for the user from walletAddress and entrypoint version
+            const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndHasSupportedEPVersion(apiKeyData?.walletAddress, epVersion);
+            if (!sponsorshipPolicy) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+            if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME });
 
             // get supported networks from sponsorshipPolicy
-            const supportedNetworks : number[] | undefined | null = sponsorshipPolicy.enabledChains;
-            if(!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+            const supportedNetworks: number[] | undefined | null = sponsorshipPolicy.enabledChains;
+            if (!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
 
             // is chainId exists in supportedNetworks
             if (!supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-            
+
             if (txnMode) {
               const signerAddress = await signer.getAddress();
               const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
@@ -242,7 +247,7 @@ const routes: FastifyPluginAsync = async (server) => {
             break;
           }
           case 'erc20': {
-            if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06) 
+            if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06)
               throw new Error('Currently only 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 entryPoint address is supported')
             let paymasterAddress: string;
             if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
@@ -251,7 +256,7 @@ const routes: FastifyPluginAsync = async (server) => {
             break;
           }
           case 'multitoken': {
-            if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06) 
+            if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06)
               throw new Error('Currently only 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 entryPoint address is supported')
             const date = new Date();
             const provider = new providers.JsonRpcProvider(networkConfig.bundler);
@@ -270,13 +275,13 @@ const routes: FastifyPluginAsync = async (server) => {
             }
             str += hex;
             str1 += hex1;
-            if (!networkConfig.MultiTokenPaymasterOracleUsed || 
-              !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink")) 
+            if (!networkConfig.MultiTokenPaymasterOracleUsed ||
+              !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink"))
               throw new Error("Oracle is not Defined/Invalid");
             result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], networkConfig.bundler, signer, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
             break;
           }
-          default : {
+          default: {
             return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_MODE });
           }
         }
@@ -334,9 +339,9 @@ const routes: FastifyPluginAsync = async (server) => {
             const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
             customPaymasters = JSON.parse(buffer.toString());
           }
-         
+
           privateKey = decode(apiKeyEntity.privateKey);
-         
+
           supportedNetworks = apiKeyEntity.supportedNetworks;
         }
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -436,50 +441,50 @@ const routes: FastifyPluginAsync = async (server) => {
     try {
       printRequest("/removeWhitelist", request, server.log);
       const body: any = request.body;
-        const query: any = request.query;
-        const address = body.params[0];
-        const chainId = query['chainId'] ?? body.params[1];
-        const api_key = query['apiKey'] ?? body.params[2];
-        if (!api_key)
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        let privateKey = '';
-        let supportedNetworks;
-        if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          privateKey = secrets['PRIVATE_KEY'];
-          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
-        } else {
-          const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
-          if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          privateKey = decode(apiKeyEntity.apiKey);
-          supportedNetworks = apiKeyEntity.supportedNetworks;
-        }
-        if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        if (
-          !Array.isArray(address) ||
-          address.length > 10 ||
-          !chainId ||
-          isNaN(chainId)
-        ) {
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-        }
-        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        }
-        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
-        if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        const validAddresses = address.every(ethers.utils.isAddress);
-        if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
-        const result = await paymaster.removeWhitelistAddress(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
-        if (body.jsonrpc)
-          return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
-        return reply.code(ReturnCode.SUCCESS).send(result);
+      const query: any = request.query;
+      const address = body.params[0];
+      const chainId = query['chainId'] ?? body.params[1];
+      const api_key = query['apiKey'] ?? body.params[2];
+      if (!api_key)
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+      let privateKey = '';
+      let supportedNetworks;
+      if (!unsafeMode) {
+        const AWSresponse = await client.send(
+          new GetSecretValueCommand({
+            SecretId: prefixSecretId + api_key,
+          })
+        );
+        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        privateKey = secrets['PRIVATE_KEY'];
+        supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+      } else {
+        const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
+        if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        privateKey = decode(apiKeyEntity.apiKey);
+        supportedNetworks = apiKeyEntity.supportedNetworks;
+      }
+      if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+      if (
+        !Array.isArray(address) ||
+        address.length > 10 ||
+        !chainId ||
+        isNaN(chainId)
+      ) {
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      }
+      if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+      }
+      const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
+      if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+      const validAddresses = address.every(ethers.utils.isAddress);
+      if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
+      const result = await paymaster.removeWhitelistAddress(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
+      if (body.jsonrpc)
+        return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
+      return reply.code(ReturnCode.SUCCESS).send(result);
     } catch (err: any) {
       request.log.error(err);
       if (err.name == "ResourceNotFoundException")

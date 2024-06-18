@@ -38,6 +38,8 @@ export enum EPVersions {
     // Add more versions here as needed
 }
 
+export const DEFAULT_EP_VERSION : EPVersions = EPVersions.EPV_06;
+
 // a function which takes string value and return EPVersions enum value
 export function getEPVersion(value: string): EPVersions {
     switch (value) {
