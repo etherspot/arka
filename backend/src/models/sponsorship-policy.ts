@@ -9,6 +9,7 @@ export class SponsorshipPolicy extends Model {
     public isEnabled: boolean = false;
     public isApplicableToAllNetworks!: boolean;
     public enabledChains?: number[];
+    public supportedEPVersions: string[] | null = null;
     public isPerpetual: boolean = false;
     public startTime: Date | null = null;
     public endTime: Date | null = null;
@@ -29,11 +30,12 @@ export class SponsorshipPolicy extends Model {
     public readonly updatedAt!: Date;
 
     public get isExpired(): boolean {
-        const now = new Date();
         if (this.isPerpetual) {
             return false;
         }
-        return Boolean(this.endTime && this.endTime < now);
+        const currentTime = new Date();
+
+        return Boolean(this.endTime && this.endTime.getTime() <= currentTime.getTime());
     }
 
     public get isCurrent(): boolean {
@@ -41,7 +43,22 @@ export class SponsorshipPolicy extends Model {
         if (this.isPerpetual) {
             return true;
         }
-        return Boolean(this.startTime && this.startTime <= now && (!this.endTime || this.endTime >= now));
+        
+        // If there is no start time, the policy is not current
+        if (!this.startTime) {
+            return false;
+        }
+
+        if (this.startTime && this.endTime) {
+            const currentTime = new Date();
+            const startTime = new Date(this.startTime + 'Z');
+            const endTime = new Date(this.endTime + 'Z');
+            if (startTime.getTime() > currentTime.getTime() || endTime.getTime() <= currentTime.getTime() || endTime.getTime() <= startTime.getTime()){
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public get isApplicable(): boolean {
@@ -97,6 +114,11 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             type: DataTypes.ARRAY(DataTypes.INTEGER),
             allowNull: true,
             field: 'ENABLED_CHAINS'
+        },
+        supportedEPVersions: {
+            type: DataTypes.ARRAY(DataTypes.STRING),
+            allowNull: false,
+            field: 'SUPPORTED_EP_VERSIONS',
         },
         isPerpetual: {
             type: DataTypes.BOOLEAN,

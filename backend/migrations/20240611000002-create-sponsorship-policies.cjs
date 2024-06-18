@@ -50,6 +50,11 @@ async function up({ context: queryInterface }) {
             allowNull: true,
             field: 'ENABLED_CHAINS'
         },
+        supportedEPVersions: {
+            type: Sequelize.ARRAY(Sequelize.TEXT),
+            allowNull: true,
+            field: 'SUPPORTED_EP_VERSIONS'
+        },
         isPerpetual: {
             type: Sequelize.BOOLEAN,
             defaultValue: false,

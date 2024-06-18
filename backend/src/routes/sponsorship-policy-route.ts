@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
+import { FastifyPluginAsync } from "fastify";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
-import { SponsorshipPolicyDto } from "../types/sponsorship-policy-dto.js";
+import { SponsorshipPolicyDto, getEPVersion } from "../types/sponsorship-policy-dto.js";
 
 interface RouteParams {
-  id: string;
+  id?: string;
+  walletAddress?: string;
+  epVersion?: string;
 }
 
 const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
@@ -16,6 +18,47 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
 
       if (!result) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+      }
+
+      return reply.code(ReturnCode.SUCCESS).send(result);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+    }
+  })
+
+  server.get<{ Params: RouteParams }>("/policy/:id", async (request, reply) => {
+    try {
+      const id = Number(request.params.id);
+      if (isNaN(id)) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_SPONSORSHIP_POLICY_ID });
+      }
+
+      const result = await server.sponsorshipPolicyRepository.findOneById(id);
+      if (!result) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+      }
+
+      return reply.code(ReturnCode.SUCCESS).send(result);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+    }
+  })
+
+  // find one By WalletAddress And EPVersion
+  server.get<{ Params: RouteParams }>("/policy/epversion/:walletAddress/:epVersion", async (request, reply) => {
+    try {
+      const walletAddress = request.params.walletAddress;
+      const epVersion = request.params.epVersion;
+
+      if (!walletAddress || !epVersion) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      const result = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndHasSupportedEPVersion(walletAddress, getEPVersion(epVersion));
+      if (!result) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
       }
 
       return reply.code(ReturnCode.SUCCESS).send(result);
@@ -46,6 +89,10 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
           error: ErrorMessage.API_KEY_DOES_NOT_EXIST_FOR_THE_WALLET_ADDRESS
         });
       }
+
+      // TODO this needs to be replaced where user should enable after creation
+      // TODO default policy should be disabled
+      sponsorshipPolicyDto.isEnabled = true;
 
       const result = await server.sponsorshipPolicyRepository.createSponsorshipPolicy(sponsorshipPolicyDto);
       if (!result) {
@@ -103,8 +150,47 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
     }
   });
 
+  // enable policy
+  server.put<{ Params: RouteParams }>("/enablePolicy/:id", async (request, reply) => {
+    try {
+      const id = Number(request.params.id);
+      if (isNaN(id)) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_SPONSORSHIP_POLICY_ID });
+      }
 
+      const existingSponsorshipPolicy = await server.sponsorshipPolicyRepository.findOneById(id);
+      if (!existingSponsorshipPolicy) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+      }
 
+      const updatedPolicy = await server.sponsorshipPolicyRepository.enableSponsorshipPolicy(id);
+      return reply.code(ReturnCode.SUCCESS).send(updatedPolicy);
+    } catch (err) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.FAILED_TO_ENABLE_SPONSORSHIP_POLICY });
+    }
+  });
+
+  // disable policy
+  server.put<{ Params: RouteParams }>("/disablePolicy/:id", async (request, reply) => {
+    try {
+      const id = Number(request.params.id);
+      if (isNaN(id)) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_SPONSORSHIP_POLICY_ID });
+      }
+
+      const existingSponsorshipPolicy = await server.sponsorshipPolicyRepository.findOneById(id);
+      if (!existingSponsorshipPolicy) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+      }
+
+      const updatedPolicy = await server.sponsorshipPolicyRepository.disableSponsorshipPolicy(id);
+      return reply.code(ReturnCode.SUCCESS).send(updatedPolicy);
+    } catch (err) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.FAILED_TO_DISABLE_SPONSORSHIP_POLICY });
+    }
+  });
 };
 
 export default sponsorshipPolicyRoutes;

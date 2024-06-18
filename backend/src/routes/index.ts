@@ -196,19 +196,22 @@ const routes: FastifyPluginAsync = async (server) => {
             // get chainid from provider
             const chainId = await provider.getNetwork();
 
+            console.log(`api_key in root endpoint : ${api_key}`);
+
             // get wallet_address from api_key
             const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
 
              if(!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
 
+             console.log(`apiKeyData has walletAddres in root endpoint : ${apiKeyData.walletAddress}`);
+
             // get sponsorshipPolicy for the user
             const sponsorshipPolicy : SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddress(apiKeyData?.walletAddress);
-
-            if(!sponsorshipPolicy || !sponsorshipPolicy.isApplicable) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+            if(!sponsorshipPolicy) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+            if(!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME });
 
             // get supported networks from sponsorshipPolicy
             const supportedNetworks : number[] | undefined | null = sponsorshipPolicy.enabledChains;
-
             if(!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
 
             // is chainId exists in supportedNetworks

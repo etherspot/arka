@@ -8,6 +8,7 @@ export interface SponsorshipPolicyDto {
     isEnabled: boolean;            // Flag to indicate if the policy is enabled
     isApplicableToAllNetworks: boolean;          // Flag to indicate if the policy is universal
     enabledChains?: number[];      // Array of enabled chain IDs
+    supportedEPVersions: string[]; // Array of supported entry point versions (EPV_06, EPV_07)
     isPerpetual: boolean;          // Flag to indicate if the policy is perpetual
     startTime?: Date | null;            // Optional start date for the policy
     endTime?: Date | null;              // Optional end date for the policy
@@ -29,4 +30,34 @@ export interface SponsorshipPolicyDto {
     isApplicable: boolean; // Flag to indicate if the policy is applicable
     createdAt: Date; // Date the policy was created
     updatedAt: Date; // Date the policy was last updated
+}
+
+export enum EPVersions {
+    EPV_06 = 'EPV_06',
+    EPV_07 = 'EPV_07',
+    // Add more versions here as needed
+}
+
+// a function which takes string value and return EPVersions enum value
+export function getEPVersion(value: string): EPVersions {
+    switch (value) {
+        case 'EPV_06':
+            return EPVersions.EPV_06;
+        case 'EPV_07':
+            return EPVersions.EPV_07;
+        default:
+            throw new Error('Unsupported EP version');
+    }
+}
+
+// a function which takes EPVersions enum value and return string value
+export function getEPVersionString(value: EPVersions): string {
+    switch (value) {
+        case EPVersions.EPV_06:
+            return 'EPV_06';
+        case EPVersions.EPV_07:
+            return 'EPV_07';
+        default:
+            throw new Error('Unsupported EP version');
+    }
 }

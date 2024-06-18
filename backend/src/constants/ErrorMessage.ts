@@ -11,6 +11,7 @@ export default {
     FAILED_TO_UPDATE_SPONSORSHIP_POLICY: 'Failed to update sponsorship policy',
     SPONSORSHIP_POLICY_NOT_FOUND: 'Sponsorship policy not found',
     SPONSORSHIP_POLICY_ALREADY_EXISTS: 'Sponsorship policy already exists',
+    NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME: 'No active sponsorship policy for the current time',
     SPONSORSHIP_POLICY_IS_DISABLED: 'Sponsorship policy is disabled',
     FAILED_TO_DELETE_SPONSORSHIP_POLICY: 'Failed to delete sponsorship policy',
     FAILED_TO_ENABLE_SPONSORSHIP_POLICY: 'Failed to enable sponsorship policy',

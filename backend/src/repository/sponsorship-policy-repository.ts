@@ -1,6 +1,6 @@
 import { Sequelize, Op } from 'sequelize';
 import { SponsorshipPolicy } from '../models/sponsorship-policy';
-import { SponsorshipPolicyDto } from '../types/sponsorship-policy-dto';
+import { EPVersions, SponsorshipPolicyDto, getEPVersionString } from '../types/sponsorship-policy-dto';
 import { ethers } from 'ethers';
 
 export class SponsorshipPolicyRepository {
@@ -55,7 +55,39 @@ export class SponsorshipPolicyRepository {
     }
 
     async findOneByWalletAddress(walletAddress: string): Promise<SponsorshipPolicy | null> {
+        console.log(`findOneByWalletAddress: ${walletAddress}`)
         const result = await this.sequelize.models.SponsorshipPolicy.findOne({ where: { walletAddress: walletAddress } });
+        return result ? result.get() as SponsorshipPolicy : null;
+    }
+
+    async findOneByWalletAddressAndHasSupportedEPVersion(walletAddress: string, epVersion: EPVersions): Promise<SponsorshipPolicy | null> {
+        const result = await this.sequelize.models.SponsorshipPolicy.findOne({
+            where: {
+                walletAddress: walletAddress,
+                isEnabled: true,
+                supportedEPVersions: {
+                    [Op.contains]: Sequelize.literal(`ARRAY['${getEPVersionString(epVersion)}']::text[]`)
+                },
+                [Op.or]: [
+                    { isPerpetual: true },
+                    {
+                        startTime: {
+                            [Op.or]: [
+                                { [Op.lte]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
+                                { [Op.is]: null }
+                            ]
+                        },
+                        endTime: {
+                            [Op.or]: [
+                                { [Op.gt]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
+                                { [Op.is]: null }
+                            ]
+                        }
+                    }
+                ]
+            },
+            order: [['createdAt', 'DESC']]
+        });
         return result ? result.get() as SponsorshipPolicy : null;
     }
 
@@ -80,6 +112,7 @@ export class SponsorshipPolicyRepository {
             isEnabled: sponsorshipPolicy.isEnabled,
             isApplicableToAllNetworks: sponsorshipPolicy.isApplicableToAllNetworks,
             enabledChains: sponsorshipPolicy.enabledChains,
+            supportedEPVersions: sponsorshipPolicy.supportedEPVersions,
             isPerpetual: sponsorshipPolicy.isPerpetual,
             startTime: sponsorshipPolicy.startTime,
             endTime: sponsorshipPolicy.endTime,
@@ -116,6 +149,8 @@ export class SponsorshipPolicyRepository {
         existingSponsorshipPolicy.description = sponsorshipPolicy.description;
         existingSponsorshipPolicy.isApplicableToAllNetworks = sponsorshipPolicy.isApplicableToAllNetworks;
         existingSponsorshipPolicy.isPerpetual = sponsorshipPolicy.isPerpetual;
+        existingSponsorshipPolicy.supportedEPVersions = sponsorshipPolicy.supportedEPVersions;
+
         // if marked as IsPerpetual, then set startTime and endTime to null
         if (sponsorshipPolicy.isPerpetual) {
             existingSponsorshipPolicy.startTime = null;
@@ -258,6 +293,12 @@ export class SponsorshipPolicyRepository {
                     errors.push(`Invalid end time. Provided end time is ${endTime.toISOString()} in GMT and start time is ${startTime.toISOString()} in GMT. The end time must be greater than the start time.`);
                 }
             }
+        }
+
+        if (!sponsorshipPolicy.supportedEPVersions ||
+            !sponsorshipPolicy.supportedEPVersions.every(version => Object.values(EPVersions).includes(version as EPVersions))) {
+            const enteredVersions = sponsorshipPolicy.supportedEPVersions ? sponsorshipPolicy.supportedEPVersions.join(', ') : 'none';
+            errors.push(`Supported entry point versions are required and must be valid. You entered: ${enteredVersions}. Valid values are: ${Object.values(EPVersions).join(', ')}`);
         }
 
         if (sponsorshipPolicy.globalMaximumApplicable) {
