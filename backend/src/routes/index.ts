@@ -7,13 +7,13 @@ import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-sec
 import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
-import ErrorMessage from "../constants/ErrorMessage.js";
+import ErrorMessage, { generateErrorMessage } from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
 import { SponsorshipPolicy } from "models/sponsorship-policy.js";
-import { DEFAULT_EP_VERSION, EPVersions } from "types/sponsorship-policy-dto.js";
+import { DEFAULT_EP_VERSION, EPVersions, getEPVersion } from "types/sponsorship-policy-dto.js";
 
 const SUPPORTED_ENTRYPOINTS = {
   'EPV_06': "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -133,10 +133,17 @@ const routes: FastifyPluginAsync = async (server) => {
           txnMode = secrets['TRANSACTION_LIMIT'] ?? 0;
           indexerEndpoint = secrets['INDEXER_ENDPOINT'] ?? process.env.DEFAULT_INDEXER_ENDPOINT;
         } else {
+
+          //validate api_key
+          if (!api_key) {
+            server.log.error("Invalid Api Key provided")
+            return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          }
+
           const apiKeyEntity = await server.apiKeyRepository.findOneByApiKey(api_key);
 
           if (!apiKeyEntity) {
-            server.log.info("Invalid Api Key provided")
+            server.log.error("Invalid Api Key provided")
             return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           }
 
@@ -169,7 +176,7 @@ const routes: FastifyPluginAsync = async (server) => {
           !mode ||
           isNaN(chainId)
         ) {
-          server.log.info("Incomplete body data provided")
+          server.log.error("Incomplete body data provided")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
 
@@ -205,15 +212,19 @@ const routes: FastifyPluginAsync = async (server) => {
 
             // get wallet_address from api_key
             const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
-
             if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
 
-            console.log(`apiKeyData has walletAddres in root endpoint : ${apiKeyData.walletAddress}`);
-
             // get sponsorshipPolicy for the user from walletAddress and entrypoint version
-            const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndHasSupportedEPVersion(apiKeyData?.walletAddress, epVersion);
-            if (!sponsorshipPolicy) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
-            if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME });
+            const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndHasSupportedEPVersionAndChain(apiKeyData?.walletAddress, getEPVersion(epVersion), chainId.chainId);
+            if (!sponsorshipPolicy) {
+              const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
+              return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
+            }
+
+            if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) {
+              const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
+              return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
+            } 
 
             // get supported networks from sponsorshipPolicy
             const supportedNetworks: number[] | undefined | null = sponsorshipPolicy.enabledChains;
@@ -462,7 +473,7 @@ const routes: FastifyPluginAsync = async (server) => {
       } else {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        privateKey = decode(apiKeyEntity.apiKey);
+        privateKey = decode(apiKeyEntity.privateKey);
         supportedNetworks = apiKeyEntity.supportedNetworks;
       }
       if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -579,7 +590,7 @@ const routes: FastifyPluginAsync = async (server) => {
         } else {
           const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          privateKey = decode(apiKeyEntity.apiKey);
+          privateKey = decode(apiKeyEntity.privateKey);
           supportedNetworks = apiKeyEntity.supportedNetworks;
         }
         if (

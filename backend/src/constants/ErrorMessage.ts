@@ -10,8 +10,9 @@ export default {
     FAILED_TO_CREATE_SPONSORSHIP_POLICY: 'Failed to create sponsorship policy',
     FAILED_TO_UPDATE_SPONSORSHIP_POLICY: 'Failed to update sponsorship policy',
     SPONSORSHIP_POLICY_NOT_FOUND: 'Sponsorship policy not found',
+    ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND: "Sponsorship policy not found for wallet address {walletAddress} with EP version {epVersion} and ChainId: ${chainId}",
     SPONSORSHIP_POLICY_ALREADY_EXISTS: 'Sponsorship policy already exists',
-    NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME: 'No active sponsorship policy for the current time',
+    NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME: 'No active sponsorship policy for wallet address {walletAddress} with EP version {epVersion} and ChainId: ${chainId}',
     SPONSORSHIP_POLICY_IS_DISABLED: 'Sponsorship policy is disabled',
     FAILED_TO_DELETE_SPONSORSHIP_POLICY: 'Failed to delete sponsorship policy',
     FAILED_TO_ENABLE_SPONSORSHIP_POLICY: 'Failed to enable sponsorship policy',
@@ -28,4 +29,16 @@ export default {
     API_KEY_VALIDATION_FAILED: 'Api Key is not in the right format as described in readme file',
     UNSUPPORTED_METHOD: 'Unsupported method name received',
     UNSUPPORTED_ENTRYPOINT: 'Unsupported EntryPoint Address',
+}
+
+export function generateErrorMessage(template: string, values: { [key: string]: string | number }): string {
+    let message = template;
+    for (const key in values) {
+        if (!key || !values[key]) {
+            message = message.replace(`{${key}}`, 'N/A');
+        } else {
+            message = message.replace(`{${key}}`, values[key].toString());
+        }
+    }
+    return message;
 }

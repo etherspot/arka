@@ -59,6 +59,41 @@ export class SponsorshipPolicyRepository {
         return result ? result.get() as SponsorshipPolicy : null;
     }
 
+    async findOneByWalletAddressAndHasSupportedEPVersionAndChain(walletAddress: string, epVersion: EPVersions, chain: number): Promise<SponsorshipPolicy | null> {
+        const result = await this.sequelize.models.SponsorshipPolicy.findOne({
+            where: {
+                walletAddress: walletAddress,
+                isEnabled: true,
+                supportedEPVersions: {
+                    [Op.contains]: Sequelize.literal(`ARRAY['${getEPVersionString(epVersion)}']::text[]`)
+                },
+                enabledChains: {
+                    [Op.contains]: [chain]
+                },
+                [Op.or]: [
+                    { isPerpetual: true },
+                    {
+                        startTime: {
+                            [Op.or]: [
+                                { [Op.lte]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
+                                { [Op.is]: null }
+                            ]
+                        },
+                        endTime: {
+                            [Op.or]: [
+                                { [Op.gt]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
+                                { [Op.is]: null }
+                            ]
+                        }
+                    }
+                ]
+            },
+            order: [['createdAt', 'DESC']]
+        });
+        return result ? result.get() as SponsorshipPolicy : null;
+    }
+
+
     async findOneByWalletAddressAndHasSupportedEPVersion(walletAddress: string, epVersion: EPVersions): Promise<SponsorshipPolicy | null> {
         const result = await this.sequelize.models.SponsorshipPolicy.findOne({
             where: {
@@ -100,7 +135,7 @@ export class SponsorshipPolicyRepository {
         if (!sponsorshipPolicy) {
             return null;
         }
-        
+
         const dataValues = sponsorshipPolicy.get();
         return dataValues as SponsorshipPolicy;
     }

@@ -8,12 +8,14 @@ export function setupAssociations() {
      * A single APIKey (the parent) can have many SponsorshipPolicy (the children). 
      * The link between them is made using the 'walletAddress' field of the APIKey and the 'walletAddress' field of the SponsorshipPolicy.
      */
-    APIKey.hasMany(SponsorshipPolicy, {
-        foreignKey: 'walletAddress',
-        sourceKey: 'walletAddress',
-        as: 'sponsorshipPolicies'
-    });
+    // APIKey.hasMany(SponsorshipPolicy, {
+    //     foreignKey: 'walletAddress',
+    //     sourceKey: 'walletAddress',
+    //     as: 'sponsorshipPolicies'
+    // });
 
+    APIKey.hasMany(SponsorshipPolicy, { foreignKey: 'walletAddress', sourceKey: 'walletAddress' });
+    SponsorshipPolicy.belongsTo(APIKey, { foreignKey: 'walletAddress', targetKey: 'walletAddress' });
     /**
      * SponsorshipPolicy to APIKey
      * A single SponsorshipPolicy (the child) belongs to one APIKey (the parent). 
