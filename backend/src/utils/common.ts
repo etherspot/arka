@@ -18,6 +18,18 @@ export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint: s
     return SupportedNetworks.find((chain) => chain.chainId == key && chain.entryPoint == entryPoint);
 }
 
+export function decodeSupportedNetworks(supportedNetworksForDecode: string) {
+  const buffer = Buffer.from(supportedNetworksForDecode, "base64");
+  return JSON.parse(buffer.toString());
+}
+
+export function getChainIdsFromSupportedNetworks(supportedNetworksForDecode: string) {
+  const decodedSupportedNetworks = decodeSupportedNetworks(supportedNetworksForDecode);
+  if(!decodedSupportedNetworks)
+    return [];
+  return decodedSupportedNetworks.map((chain: any) => chain.chainId);
+}
+
 export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger): Promise<getEtherscanFeeResponse | null> {
   try {
     const etherscanUrlsBase64 = process.env.ETHERSCAN_GAS_ORACLES;

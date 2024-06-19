@@ -77,7 +77,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
       const wallet = new ethers.Wallet(body.privateKey);
       const publicAddress = await wallet.getAddress();
-      request.log.info(`Public address is: ${publicAddress}`);
 
       // Use Sequelize to find the API key
       const result = await server.apiKeyRepository.findOneByWalletAddress(publicAddress);

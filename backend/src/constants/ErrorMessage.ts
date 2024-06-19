@@ -9,6 +9,7 @@ export default {
     API_KEY_DOES_NOT_EXIST_FOR_THE_WALLET_ADDRESS: 'Api Key does not exist for the wallet address',
     FAILED_TO_CREATE_SPONSORSHIP_POLICY: 'Failed to create sponsorship policy',
     FAILED_TO_UPDATE_SPONSORSHIP_POLICY: 'Failed to update sponsorship policy',
+    SPONSORSHIP_POLICY_CHAINS_NOT_IN_SUBSET_OF_APIKEY_SUPPORTED_CHAINS: 'Sponsorship policy chains: {sponsorshipPolicyChains} are not in subset of ApiKey supported networks {apiKeyChains}',
     SPONSORSHIP_POLICY_NOT_FOUND: 'Sponsorship policy not found',
     ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND: "Sponsorship policy not found for wallet address {walletAddress} with EP version {epVersion} and ChainId: ${chainId}",
     SPONSORSHIP_POLICY_ALREADY_EXISTS: 'Sponsorship policy already exists',
