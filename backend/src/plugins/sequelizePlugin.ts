@@ -25,20 +25,23 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
         console.error(err);
     }
 
-    const sequelize = new Sequelize(server.config.DATABASE_URL, {
+    const sequelizeOptions: any = {
         dialect: 'postgres',
         protocol: 'postgres',
         dialectOptions: {
             searchPath: server.config.DATABASE_SCHEMA_NAME,
-            // ssl: {
-            //     require: false,
-            //     rejectUnauthorized: false
-            // }
         },
-    });
+    };
 
+    if (server.config.DATABASE_SSL_ENABLED) {
+        sequelizeOptions.ssl = {
+            require: true,
+            rejectUnauthorized: true
+        };
+    }
+    const sequelize = new Sequelize(server.config.DATABASE_URL, sequelizeOptions);
     await sequelize.authenticate();
-       
+
     server.log.info(`Initializing models... with schema name: ${server.config.DATABASE_SCHEMA_NAME}`);
 
     // Initialize models
@@ -53,9 +56,9 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
 
     server.decorate('sequelize', sequelize);
 
-    const apiKeyRepository : APIKeyRepository = new APIKeyRepository(sequelize);
+    const apiKeyRepository: APIKeyRepository = new APIKeyRepository(sequelize);
     server.decorate('apiKeyRepository', apiKeyRepository);
-    const arkaConfigRepository : ArkaConfigRepository = new ArkaConfigRepository(sequelize);
+    const arkaConfigRepository: ArkaConfigRepository = new ArkaConfigRepository(sequelize);
     server.decorate('arkaConfigRepository', arkaConfigRepository);
     const sponsorshipPolicyRepository = new SponsorshipPolicyRepository(sequelize);
     server.decorate('sponsorshipPolicyRepository', sponsorshipPolicyRepository);
