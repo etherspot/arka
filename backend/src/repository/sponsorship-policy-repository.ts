@@ -1,6 +1,6 @@
 import { Sequelize, Op } from 'sequelize';
-import { SponsorshipPolicy } from '../models/sponsorship-policy';
-import { EPVersions, SponsorshipPolicyDto, getEPVersionString } from '../types/sponsorship-policy-dto';
+import { SponsorshipPolicy } from '../models/sponsorship-policy.js';
+import { EPVersions, SponsorshipPolicyDto, getEPVersionString } from '../types/sponsorship-policy-dto.js';
 import { ethers } from 'ethers';
 
 export class SponsorshipPolicyRepository {

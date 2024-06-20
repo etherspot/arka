@@ -3,8 +3,8 @@ import { FastifyPluginAsync } from "fastify";
 import ErrorMessage, { generateErrorMessage } from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { SponsorshipPolicyDto, getEPVersion } from "../types/sponsorship-policy-dto.js";
-import { SponsorshipPolicy } from "models/sponsorship-policy.js";
-import { getChainIdsFromSupportedNetworks } from "utils/common.js";
+import { SponsorshipPolicy } from "../models/sponsorship-policy.js";
+import { getChainIdsFromSupportedNetworks } from "../utils/common.js";
 
 interface RouteParams {
   id?: string;
@@ -53,7 +53,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   })
 
   // find one by apiKey and EPVersion
-  server.get<{ Params: RouteParams }>("/policy/apikey/:apiKey/epversion/:epVersion/latest", async (request, reply) => {
+  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/ep-version/:epVersion/latest", async (request, reply) => {
     try {
       const apiKey = request.params.apiKey;
       const epVersion = request.params.epVersion;
@@ -79,7 +79,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   })
 
   // find one By WalletAddress And EPVersion
-  server.get<{ Params: RouteParams }>("/policy/walletaddress/:walletAddress/epversion/:epVersion/latest", async (request, reply) => {
+  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress/ep-version/:epVersion/latest", async (request, reply) => {
     try {
       const walletAddress = request.params.walletAddress;
       const epVersion = request.params.epVersion;
@@ -101,7 +101,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   })
 
   // find all by apiKey And EPVersion
-  server.get<{ Params: RouteParams }>("/policy/apikey/:apiKey/epversion/:epVersion", async (request, reply) => {
+  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/ep-version/:epVersion", async (request, reply) => {
     try {
       const apiKey = request
         .params.apiKey;
@@ -135,7 +135,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   })
 
   // find all by walletAddress And EPVersion
-  server.get<{ Params: RouteParams }>("/policy/walletaddress/:walletAddress/epversion/:epVersion", async (request, reply) => {
+  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress/ep-version/:epVersion", async (request, reply) => {
     try {
       const walletAddress = request.params.walletAddress;
       const epVersion = request.params.epVersion;
@@ -157,7 +157,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   })
 
   // Get the latest policy for a given apiKey, epVersion, and chainId
-  server.get<{ Params: RouteParams }>("/policy/apikey/:apiKey/epversion/:epVersion/chainid/:chainId/latest", async (request, reply) => {
+  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/ep-version/:epVersion/chain-id/:chainId/latest", async (request, reply) => {
     try {
       const apiKey = request.params.apiKey;
       const epVersion = request.params.epVersion;
@@ -191,7 +191,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   })
 
   // Get the latest policy for a given walletAddress, epVersion, and chainId
-  server.get<{ Params: RouteParams }>("/policy/walletAddress/:walletAddress/epversion/:epVersion/chainid/:chainId/latest", async (request, reply) => {
+  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress/ep-version/:epVersion/chain-id/:chainId/latest", async (request, reply) => {
     try {
       const walletAddress = request.params.walletAddress;
       const epVersion = request.params.epVersion;
@@ -221,7 +221,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   })
 
   // Get all policies for a given apiKey, epVersion, and chainId
-  server.get<{ Params: RouteParams }>("/policy/apikey/:apiKey/epversion/:epVersion/chainid/:chainId", async (request, reply) => {
+  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/ep-version/:epVersion/chain-id/:chainId", async (request, reply) => {
     try {
       const apiKey = request.params.apiKey;
       const epVersion = request.params.epVersion;
@@ -249,7 +249,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   })
 
   // Get all policies for a given walletAddress, epVersion, and chainId
-  server.get<{ Params: RouteParams }>("/policy/walletAddress/:walletAddress/epversion/:epVersion/chainid/:chainId", async (request, reply) => {
+  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress/ep-version/:epVersion/chain-id/:chainId", async (request, reply) => {
     try {
       const walletAddress = request.params.walletAddress;
       const epVersion = request.params.epVersion;
@@ -333,7 +333,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
     }
   })
 
-  server.delete<{ Params: RouteParams }>("/deletePolicy/:id", async (request, reply) => {
+  server.delete<{ Params: RouteParams }>("/delete-policy/:id", async (request, reply) => {
     try {
       const id = Number(request.params.id);
       if (isNaN(id)) {
@@ -348,7 +348,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
     }
   });
 
-  server.put<{ Body: SponsorshipPolicyDto }>("/updatePolicy", async (request, reply) => {
+  server.put<{ Body: SponsorshipPolicyDto }>("/update-policy", async (request, reply) => {
     try {
       const sponsorshipPolicyDto: SponsorshipPolicyDto = JSON.parse(JSON.stringify(request.body)) as SponsorshipPolicyDto;
       const id = sponsorshipPolicyDto.id;
@@ -376,7 +376,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   });
 
   // enable policy
-  server.put<{ Params: RouteParams }>("/enablePolicy/:id", async (request, reply) => {
+  server.put<{ Params: RouteParams }>("/enable-policy/:id", async (request, reply) => {
     try {
       const id = Number(request.params.id);
       if (isNaN(id)) {
@@ -397,7 +397,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   });
 
   // disable policy
-  server.put<{ Params: RouteParams }>("/disablePolicy/:id", async (request, reply) => {
+  server.put<{ Params: RouteParams }>("/disable-policy/:id", async (request, reply) => {
     try {
       const id = Number(request.params.id);
       if (isNaN(id)) {

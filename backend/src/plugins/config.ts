@@ -23,6 +23,7 @@ const ConfigSchema = Type.Strict(
     DATABASE_URL: Type.String() || undefined,
     DATABASE_SSL_ENABLED: Type.Boolean() || undefined,
     DATABASE_SCHEMA_NAME: Type.String() || undefined,
+    HMAC_SECRET: Type.String({ minLength: 1 }),
   })
 );
 
@@ -60,10 +61,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     DATABASE_URL: process.env.DATABASE_URL ?? '',
     DATABASE_SSL_ENABLED: process.env.DATABASE_SSL_ENABLED === 'true',
     DATABASE_SCHEMA_NAME: process.env.DATABASE_SCHEMA_NAME ?? 'arka',
+    HMAC_SECRET: process.env.HMAC_SECRET ?? '',
   }
-
-  server.log.info("Configured .env file");
-  server.log.info(`config: ${JSON.stringify(config, null, 2)}`);
 
   server.decorate("config", config);
 };

@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize';
-import { ArkaConfig } from '../models/arka-config';
+import { ArkaConfig } from '../models/arka-config.js';
 
 export class ArkaConfigRepository {
   private sequelize: Sequelize;

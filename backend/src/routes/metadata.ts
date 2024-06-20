@@ -77,7 +77,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         }
         sponsorName = apiKeyEntity.sponsorName ? apiKeyEntity.sponsorName : "";
         sponsorImage = apiKeyEntity.logoUrl ? apiKeyEntity.logoUrl : "";
-        privateKey = decode(apiKeyEntity.privateKey);
+        privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
         supportedNetworks = apiKeyEntity.supportedNetworks;
       }
       if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {

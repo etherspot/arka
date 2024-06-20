@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize';
-import { APIKey } from '../models/api-key';
-import { ApiKeyDto } from '../types/apikey-dto';
+import { APIKey } from '../models/api-key.js';
+import { ApiKeyDto } from '../types/apikey-dto.js';
 
 export class APIKeyRepository {
   private sequelize: Sequelize;
