@@ -271,8 +271,8 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
     }
   })
 
-  // Mutability of the policy
-  server.post("/addPolicy", async function (request, reply) {
+  // create a new policy
+  server.post("/add-policy", async function (request, reply) {
     try {
       // parse the request body as JSON
       const sponsorshipPolicyDto: SponsorshipPolicyDto = JSON.parse(JSON.stringify(request.body)) as SponsorshipPolicyDto;
@@ -333,6 +333,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
     }
   })
 
+  // delete a policy
   server.delete<{ Params: RouteParams }>("/delete-policy/:id", async (request, reply) => {
     try {
       const id = Number(request.params.id);
@@ -348,6 +349,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
     }
   });
 
+  // update a policy
   server.put<{ Body: SponsorshipPolicyDto }>("/update-policy", async (request, reply) => {
     try {
       const sponsorshipPolicyDto: SponsorshipPolicyDto = JSON.parse(JSON.stringify(request.body)) as SponsorshipPolicyDto;
