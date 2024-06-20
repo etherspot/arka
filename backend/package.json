@@ -13,6 +13,7 @@
     "build": "esbuild `find src \\( -name '*.ts' \\)` --platform=node --outdir=build --resolve-extensions=.js && cp -r ./migrations ./build/",
     "build:docker:prod": "docker build . -t my-fastify-app --build-arg APP_ENV=production",
     "start": "node build",
+    "migrate": "node scripts/migration.cjs",
     "dev": "tsx watch src | pino-pretty --colorize",
     "pretest": "npm run build",
     "test": "jest"

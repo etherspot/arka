@@ -6,7 +6,6 @@ import fastifyCron from 'fastify-cron';
 import { providers, ethers } from 'ethers';
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import fetch from 'node-fetch';
-import database from './plugins/db.js';
 import sequelizePlugin from './plugins/sequelizePlugin.js';
 import config from './plugins/config.js';
 import routes from './routes/index.js';
@@ -59,9 +58,6 @@ const initializeServer = async (): Promise<void> => {
   await server.register(metadataRoutes);
 
   await server.register(sponsorshipPolicyRoutes);
-
-  // Database
-  await server.register(database);
 
   // Register the sequelizePlugin
   await server.register(sequelizePlugin);
