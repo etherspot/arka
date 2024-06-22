@@ -13,7 +13,7 @@ async function up({ context: queryInterface }) {
             unique: true,
         },
         "PRIVATE_KEY": {
-            type: Sequelize.STRING,
+            type: Sequelize.TEXT,
             allowNull: false,
         },
         "SUPPORTED_NETWORKS": {
