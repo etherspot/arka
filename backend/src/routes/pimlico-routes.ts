@@ -2,7 +2,6 @@
 import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
-import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
@@ -12,7 +11,6 @@ import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
 
 const pimlicoRoutes: FastifyPluginAsync = async (server) => {
-    const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP);
 
     const prefixSecretId = 'arka_';
 
@@ -101,7 +99,7 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                     if (!(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken])) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid network/token" })
                     result = { message: PAYMASTER_ADDRESS[chainId][gasToken] }
                 }
-                server.log.info(result, 'Response sent: ');
+                server.log.info(result, 'PimlicoAddress Response sent: ');
                 if (body.jsonrpc)
                     return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, message: result.message, error: null })
                 return reply.code(ReturnCode.SUCCESS).send(result);
