@@ -75,63 +75,10 @@ export class SponsorshipPolicyRepository {
     // the query must return the policy that matches the criteria
     // if the policy is perpetual, then it should always be returned
     async findOneByWalletAddress(walletAddress: string): Promise<SponsorshipPolicy | null> {
-        const result = await this.sequelize.models.SponsorshipPolicy.findOne({ where: { walletAddress: walletAddress } });
-        return result ? result.get() as SponsorshipPolicy : null;
-    }
-
-    // findAllByWalletAddressAndHasSupportedEPVersionAndChain
-    // user will pass wallet address, EP version and chain ID
-    // the query must return all the policies that match the criteria
-    // if the policy is perpetual, then it should always be returned
-    async findAllByWalletAddressAndHasSupportedEPVersionAndChain(walletAddress: string, epVersion: EPVersions, chain: number): Promise<SponsorshipPolicy[]> {
-        const result = await this.sequelize.models.SponsorshipPolicy.findAll({
-            where: {
-                walletAddress: walletAddress,
-                isEnabled: true,
-                supportedEPVersions: {
-                    [Op.contains]: Sequelize.literal(`ARRAY['${getEPVersionString(epVersion)}']::text[]`)
-                },
-                enabledChains: {
-                    [Op.contains]: [chain]
-                },
-                [Op.or]: [
-                    { isPerpetual: true },
-                    {
-                        startTime: {
-                            [Op.or]: [
-                                { [Op.lte]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
-                                { [Op.is]: null }
-                            ]
-                        },
-                        endTime: {
-                            [Op.or]: [
-                                { [Op.gt]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
-                                { [Op.is]: null }
-                            ]
-                        }
-                    }
-                ]
-            },
-            order: [['createdAt', 'DESC']]
-        });
-        return result ? result.map(item => item.get() as SponsorshipPolicy) : [];
-    }
-
-    // findOneByWalletAddressAndHasSupportedEPVersionAndChain
-    // user will pass wallet address, EP version and chain ID
-    // the query must return the policy that matches the criteria
-    // if the policy is perpetual, then it should always be returned
-    async findOneByWalletAddressAndHasSupportedEPVersionAndChain(walletAddress: string, epVersion: EPVersions, chain: number): Promise<SponsorshipPolicy | null> {
         const result = await this.sequelize.models.SponsorshipPolicy.findOne({
             where: {
                 walletAddress: walletAddress,
                 isEnabled: true,
-                supportedEPVersions: {
-                    [Op.contains]: Sequelize.literal(`ARRAY['${getEPVersionString(epVersion)}']::text[]`)
-                },
-                enabledChains: {
-                    [Op.contains]: [chain]
-                },
                 [Op.or]: [
                     { isPerpetual: true },
                     {
@@ -190,18 +137,87 @@ export class SponsorshipPolicyRepository {
         return result ? result.map(item => item.get() as SponsorshipPolicy) : [];
     }
 
-
-    // findOneByWalletAddressAndHasSupportedEPVersion
+    // findOneByWalletAddressAndSupportedEPVersion
     // user will pass wallet address and EP version
     // the query must return the policy that matches the criteria
     // if the policy is perpetual, then it should always be returned
-    async findOneByWalletAddressAndHasSupportedEPVersion(walletAddress: string, epVersion: EPVersions): Promise<SponsorshipPolicy | null> {
+    async findOneByWalletAddressAndSupportedEPVersion(walletAddress: string, epVersion: EPVersions): Promise<SponsorshipPolicy | null> {
         const result = await this.sequelize.models.SponsorshipPolicy.findOne({
             where: {
                 walletAddress: walletAddress,
                 isEnabled: true,
                 supportedEPVersions: {
                     [Op.contains]: Sequelize.literal(`ARRAY['${getEPVersionString(epVersion)}']::text[]`)
+                },
+                [Op.or]: [
+                    { isPerpetual: true },
+                    {
+                        startTime: {
+                            [Op.or]: [
+                                { [Op.lte]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
+                                { [Op.is]: null }
+                            ]
+                        },
+                        endTime: {
+                            [Op.or]: [
+                                { [Op.gt]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
+                                { [Op.is]: null }
+                            ]
+                        }
+                    }
+                ]
+            },
+            order: [['createdAt', 'DESC']]
+        });
+        return result ? result.get() as SponsorshipPolicy : null;
+    }
+
+    // findAllByWalletAddressAndChain
+    // user will pass wallet address and Supported ChainId
+    // the query must return all the policies that match the criteria
+    // if the policy is perpetual, then it should always be returned
+    async findAllByWalletAddressAndChain(walletAddress: string, chainId: number): Promise<SponsorshipPolicy[]> {
+        const result = await this.sequelize.models.SponsorshipPolicy.findAll({
+            where: {
+                walletAddress: walletAddress,
+                isEnabled: true,
+                enabledChains: {
+                    [Op.contains]: [chainId]
+                },
+                [Op.or]: [
+                    { isPerpetual: true },
+                    {
+                        startTime: {
+                            [Op.or]: [
+                                { [Op.lte]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
+                                { [Op.is]: null }
+                            ]
+                        },
+                        endTime: {
+                            [Op.or]: [
+                                { [Op.gt]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
+                                { [Op.is]: null }
+                            ]
+                        }
+                    }
+                ]
+            },
+            order: [['createdAt', 'DESC']]
+        });
+        return result ? result.map(item => item.get() as SponsorshipPolicy) : [];
+    }
+
+    // findOneByWalletAddressAndChain
+    // user will pass wallet address and ChainId
+    // the query must return the policy that matches the criteria
+    // if the policy is perpetual, then it should always be returned
+    async findOneByWalletAddressAndChain(walletAddress: string, chain: number): Promise<SponsorshipPolicy | null> {
+        const result = await this.sequelize.models.SponsorshipPolicy.findOne({
+            where: {
+                walletAddress: walletAddress,
+                isEnabled: true,
+                enabledChains: {
+                    [Op.contains]: [chain]
                 },
                 [Op.or]: [
                     { isPerpetual: true },
@@ -263,6 +279,45 @@ export class SponsorshipPolicyRepository {
         });
         return result ? result.map(item => item.get() as SponsorshipPolicy) : [];
     }
+
+    // findOneByWalletAddressAndSupportedEPVersionAndChain
+    // user will pass wallet address, EP version and chain ID
+    // the query must return the policy that matches the criteria
+    // if the policy is perpetual, then it should always be returned
+    async findOneByWalletAddressAndSupportedEPVersionAndChain(walletAddress: string, epVersion: EPVersions, chain: number): Promise<SponsorshipPolicy | null> {
+        const result = await this.sequelize.models.SponsorshipPolicy.findOne({
+            where: {
+                walletAddress: walletAddress,
+                isEnabled: true,
+                supportedEPVersions: {
+                    [Op.contains]: Sequelize.literal(`ARRAY['${getEPVersionString(epVersion)}']::text[]`)
+                },
+                enabledChains: {
+                    [Op.contains]: [chain]
+                },
+                [Op.or]: [
+                    { isPerpetual: true },
+                    {
+                        startTime: {
+                            [Op.or]: [
+                                { [Op.lte]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
+                                { [Op.is]: null }
+                            ]
+                        },
+                        endTime: {
+                            [Op.or]: [
+                                { [Op.gt]: Sequelize.literal(`CURRENT_TIMESTAMP AT TIME ZONE 'UTC'`) },
+                                { [Op.is]: null }
+                            ]
+                        }
+                    }
+                ]
+            },
+            order: [['createdAt', 'DESC']]
+        });
+        return result ? result.get() as SponsorshipPolicy : null;
+    }
+
 
     // findOneByPolicyName
     // user will pass policy name

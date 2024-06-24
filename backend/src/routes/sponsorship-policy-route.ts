@@ -52,13 +52,14 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
     }
   })
 
-  // find one by apiKey and EPVersion
-  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/ep-version/:epVersion/latest", async (request, reply) => {
+  // find all by apiKey
+  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey", async (request, reply) => {
     try {
-      const apiKey = request.params.apiKey;
-      const epVersion = request.params.epVersion;
+      const apiKey = request
+        .params.apiKey;
+      console.log(apiKey);
 
-      if (!apiKey || !epVersion) {
+      if (!apiKey) {
         return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
       }
 
@@ -66,30 +67,36 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
       const apiKeyData = await server.apiKeyRepository.findOneByApiKey(apiKey);
       if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
 
-      // get sponsorshipPolicy for the user from walletAddress and entrypoint version
-      const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndHasSupportedEPVersion(apiKeyData?.walletAddress, getEPVersion(epVersion));
-      if (!sponsorshipPolicy) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
-      if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME });
+      // get all sponsorshipPolicies for the user from walletAddress and entrypoint version
+      const walletAddress = apiKeyData.walletAddress;
 
-      return reply.code(ReturnCode.SUCCESS).send(sponsorshipPolicy);
+      if (!walletAddress) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      const result = await server.sponsorshipPolicyRepository.findAllByWalletAddress(walletAddress);
+      if (!result.length) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+      }
+
+      return reply.code(ReturnCode.SUCCESS).send(result);
     } catch (err: any) {
       request.log.error(err);
       return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
     }
   })
 
-  // find one By WalletAddress And EPVersion
-  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress/ep-version/:epVersion/latest", async (request, reply) => {
+  // find all by walletAddress
+  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress", async (request, reply) => {
     try {
       const walletAddress = request.params.walletAddress;
-      const epVersion = request.params.epVersion;
 
-      if (!walletAddress || !epVersion) {
+      if (!walletAddress) {
         return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
       }
 
-      const result = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndHasSupportedEPVersion(walletAddress, getEPVersion(epVersion));
-      if (!result) {
+      const result = await server.sponsorshipPolicyRepository.findAllByWalletAddress(walletAddress);
+      if (!result.length) {
         return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
       }
 
@@ -156,14 +163,14 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
     }
   })
 
-  // Get the latest policy for a given apiKey, epVersion, and chainId
-  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/ep-version/:epVersion/chain-id/:chainId/latest", async (request, reply) => {
+  // find all by apiKey And chainId
+  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/chain-id/:chainId", async (request, reply) => {
     try {
-      const apiKey = request.params.apiKey;
-      const epVersion = request.params.epVersion;
-      const chainId = Number(request.params.chainId);
+      const apiKey = request
+        .params.apiKey;
+      const chainId = request.params.chainId;
 
-      if (!apiKey || !epVersion) {
+      if (!apiKey || !chainId) {
         return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
       }
 
@@ -171,49 +178,19 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
       const apiKeyData = await server.apiKeyRepository.findOneByApiKey(apiKey);
       if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
 
-      // get sponsorshipPolicy for the user from walletAddress and entrypoint version
-      const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndHasSupportedEPVersionAndChain(apiKeyData?.walletAddress, getEPVersion(epVersion), chainId);
-      if (!sponsorshipPolicy) {
-        const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId });
-        return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
-      }
+      // get all sponsorshipPolicies for the user from walletAddress and entrypoint version
+      const walletAddress = apiKeyData.walletAddress;
 
-      if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) {
-        const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId });
-        return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
-      }
-
-      return reply.code(ReturnCode.SUCCESS).send(sponsorshipPolicy);
-    } catch (err: any) {
-      request.log.error(err);
-      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
-    }
-  })
-
-  // Get the latest policy for a given walletAddress, epVersion, and chainId
-  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress/ep-version/:epVersion/chain-id/:chainId/latest", async (request, reply) => {
-    try {
-      const walletAddress = request.params.walletAddress;
-      const epVersion = request.params.epVersion;
-      const chainId = Number(request.params.chainId);
-
-      if (!walletAddress || !epVersion || chainId === undefined || isNaN(chainId)) {
+      if (!walletAddress || !chainId) {
         return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
       }
 
-      // get sponsorshipPolicy for the user from walletAddress and entrypoint version
-      const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndHasSupportedEPVersionAndChain(walletAddress, getEPVersion(epVersion), chainId);
-      if (!sponsorshipPolicy) {
-        const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: walletAddress, epVersion: epVersion, chainId: chainId });
-        return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
+      const result = await server.sponsorshipPolicyRepository.findAllByWalletAddressAndChain(walletAddress, chainId);
+      if (!result.length) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
       }
 
-      if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) {
-        const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: walletAddress, epVersion: epVersion, chainId: chainId });
-        return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
-      }
-
-      return reply.code(ReturnCode.SUCCESS).send(sponsorshipPolicy);
+      return reply.code(ReturnCode.SUCCESS).send(result);
     } catch (err: any) {
       request.log.error(err);
       return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
@@ -265,6 +242,228 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
       }
 
       return reply.code(ReturnCode.SUCCESS).send(result);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+    }
+  })
+
+  // find latest by apiKey
+  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/latest", async (request, reply) => {
+    try {
+      const apiKey = request
+        .params.apiKey;
+
+      if (!apiKey) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      // get wallet_address from api_key
+      const apiKeyData = await server.apiKeyRepository.findOneByApiKey(apiKey);
+      if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+
+      // get all sponsorshipPolicies for the user from walletAddress and entrypoint version
+      const walletAddress = apiKeyData.walletAddress;
+
+      if (!walletAddress) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      const result = await server.sponsorshipPolicyRepository.findOneByWalletAddress(walletAddress);
+      if (!result) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+      }
+
+      return reply.code(ReturnCode.SUCCESS).send(result);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+    }
+  })
+
+  // find latest by walletAddress
+  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress/latest", async (request, reply) => {
+    try {
+      const walletAddress = request.params.walletAddress;
+
+      if (!walletAddress) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      const result = await server.sponsorshipPolicyRepository.findOneByWalletAddress(walletAddress);
+      if (!result) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+      }
+
+      return reply.code(ReturnCode.SUCCESS).send(result);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+    }
+  })
+
+  // find latest by apiKey And chainId
+  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/chain-id/:chainId/latest", async (request, reply) => {
+    try {
+      const apiKey = request
+        .params.apiKey;
+      const chainId = request.params.chainId;
+
+      if (!apiKey || !chainId) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      // get wallet_address from api_key
+      const apiKeyData = await server.apiKeyRepository.findOneByApiKey(apiKey);
+      if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+
+      // get all sponsorshipPolicies for the user from walletAddress and entrypoint version
+      const walletAddress = apiKeyData.walletAddress;
+
+      if (!walletAddress || !chainId) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      const result = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndChain(walletAddress, chainId);
+      if (!result) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+      }
+
+      return reply.code(ReturnCode.SUCCESS).send(result);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+    }
+  })
+
+  // find latest by walletAddress And chainId
+  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress/chain-id/:chainId/latest", async (request, reply) => {
+    try {
+      const walletAddress = request.params.walletAddress;
+      const chainId = request.params.chainId;
+
+      if (!walletAddress || !chainId) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      const result = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndChain(walletAddress, chainId);
+      if (!result) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+      }
+
+      return reply.code(ReturnCode.SUCCESS).send(result);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+    }
+  })
+
+  // find latest by apiKey and EPVersion
+  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/ep-version/:epVersion/latest", async (request, reply) => {
+    try {
+      const apiKey = request.params.apiKey;
+      const epVersion = request.params.epVersion;
+
+      if (!apiKey || !epVersion) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      // get wallet_address from api_key
+      const apiKeyData = await server.apiKeyRepository.findOneByApiKey(apiKey);
+      if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+
+      // get sponsorshipPolicy for the user from walletAddress and entrypoint version
+      const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(apiKeyData?.walletAddress, getEPVersion(epVersion));
+      if (!sponsorshipPolicy) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+      if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME });
+
+      return reply.code(ReturnCode.SUCCESS).send(sponsorshipPolicy);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+    }
+  })
+
+  // find latest By WalletAddress And EPVersion
+  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress/ep-version/:epVersion/latest", async (request, reply) => {
+    try {
+      const walletAddress = request.params.walletAddress;
+      const epVersion = request.params.epVersion;
+
+      if (!walletAddress || !epVersion) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      const result = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(walletAddress, getEPVersion(epVersion));
+      if (!result) {
+        return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
+      }
+
+      return reply.code(ReturnCode.SUCCESS).send(result);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+    }
+  })
+
+  // find latest policy for a given apiKey, epVersion, and chainId
+  server.get<{ Params: RouteParams }>("/policy/api-key/:apiKey/ep-version/:epVersion/chain-id/:chainId/latest", async (request, reply) => {
+    try {
+      const apiKey = request.params.apiKey;
+      const epVersion = request.params.epVersion;
+      const chainId = Number(request.params.chainId);
+
+      if (!apiKey || !epVersion) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      // get wallet_address from api_key
+      const apiKeyData = await server.apiKeyRepository.findOneByApiKey(apiKey);
+      if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+
+      // get sponsorshipPolicy for the user from walletAddress and entrypoint version
+      const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(apiKeyData?.walletAddress, getEPVersion(epVersion), chainId);
+      if (!sponsorshipPolicy) {
+        const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId });
+        return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
+      }
+
+      if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) {
+        const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId });
+        return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
+      }
+
+      return reply.code(ReturnCode.SUCCESS).send(sponsorshipPolicy);
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });
+    }
+  })
+
+  // find latest policy for a given walletAddress, epVersion, and chainId
+  server.get<{ Params: RouteParams }>("/policy/wallet-address/:walletAddress/ep-version/:epVersion/chain-id/:chainId/latest", async (request, reply) => {
+    try {
+      const walletAddress = request.params.walletAddress;
+      const epVersion = request.params.epVersion;
+      const chainId = Number(request.params.chainId);
+
+      if (!walletAddress || !epVersion || chainId === undefined || isNaN(chainId)) {
+        return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      // get sponsorshipPolicy for the user from walletAddress and entrypoint version
+      const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(walletAddress, getEPVersion(epVersion), chainId);
+      if (!sponsorshipPolicy) {
+        const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: walletAddress, epVersion: epVersion, chainId: chainId });
+        return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
+      }
+
+      if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) {
+        const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: walletAddress, epVersion: epVersion, chainId: chainId });
+        return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
+      }
+
+      return reply.code(ReturnCode.SUCCESS).send(sponsorshipPolicy);
     } catch (err: any) {
       request.log.error(err);
       return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_QUERY_SPONSORSHIP_POLICY });

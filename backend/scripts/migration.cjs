@@ -10,6 +10,7 @@ async function runMigrations() {
         const DATABASE_URL = process.env.DATABASE_URL;
         const DATABASE_SCHEMA_NAME = process.env.DATABASE_SCHEMA_NAME;
         const DATABASE_SSL_ENABLED = (process.env.DATABASE_SSL_ENABLED || '').toLowerCase() === 'true';
+        const DATABASE_SSL_REJECT_UNAUTHORIZED = (process.env.DATABASE_SSL_REJECT_UNAUTHORIZED || '').toLowerCase() === 'true';
 
         console.info(`Connecting to database... with URL:  ${DATABASE_URL} and schemaName: ${DATABASE_SCHEMA_NAME}`);
 
@@ -20,8 +21,8 @@ async function runMigrations() {
         if (DATABASE_SSL_ENABLED) {
             sequelizeOptions.dialectOptions = {
                 ssl: {
-                    require: true,
-                    rejectUnauthorized: false
+                    require: DATABASE_SSL_ENABLED,
+                    rejectUnauthorized: DATABASE_SSL_REJECT_UNAUTHORIZED
                 }
             };
         }
