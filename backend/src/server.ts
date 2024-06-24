@@ -8,9 +8,6 @@ import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-sec
 import fetch from 'node-fetch';
 import sequelizePlugin from './plugins/sequelizePlugin.js';
 import config from './plugins/config.js';
-import routes from './routes/index.js';
-import adminRoutes from './routes/admin.js';
-import metadataRoutes from './routes/metadata.js';
 import EtherspotChainlinkOracleAbi from './abi/EtherspotChainlinkOracleAbi.js';
 import PimlicoAbi from './abi/PimlicoAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
@@ -20,7 +17,13 @@ import { APIKey } from './models/api-key.js';
 import { APIKeyRepository } from './repository/api-key-repository.js';
 import { ArkaConfig } from './models/arka-config.js';
 import { ArkaConfigRepository } from './repository/arka-config-repository.js';
-import sponsorshipPolicyRoutes from './routes/sponsorship-policy-route.js';
+import adminRoutes from './routes/admin-routes.js';
+import depositRoutes from './routes/deposit-route.js';
+import metadataRoutes from './routes/metadata-routes.js';
+import paymasterRoutes from './routes/paymaster-routes.js';
+import pimlicoRoutes from './routes/pimlico-routes.js';
+import whitelistRoutes from './routes/whitelist-routes.js';
+import sponsorshipPolicyRoutes from './routes/sponsorship-policy-routes.js';
 
 let server: FastifyInstance;
 
@@ -51,11 +54,17 @@ const initializeServer = async (): Promise<void> => {
     logLevel: "warn"
   });
 
-  await server.register(routes);
+  await server.register(paymasterRoutes);
 
   await server.register(adminRoutes);
 
   await server.register(metadataRoutes);
+
+  await server.register(depositRoutes);
+
+  await server.register(pimlicoRoutes);
+
+  await server.register(whitelistRoutes);
 
   await server.register(sponsorshipPolicyRoutes);
 
