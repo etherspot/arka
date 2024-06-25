@@ -4,6 +4,7 @@ const { Umzug, SequelizeStorage } = require('umzug');
 const dotenv = require('dotenv');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+// node backend/scripts/migration.cjs
 async function runMigrations() {
     let sequelize;
     try {

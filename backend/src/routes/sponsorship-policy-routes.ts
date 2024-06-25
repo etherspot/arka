@@ -422,7 +422,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
       if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
 
       // get sponsorshipPolicy for the user from walletAddress and entrypoint version
-      const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(apiKeyData?.walletAddress, getEPVersion(epVersion), chainId);
+      const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersionAndChain(apiKeyData?.walletAddress, getEPVersion(epVersion), chainId);
       if (!sponsorshipPolicy) {
         const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId });
         return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
@@ -452,7 +452,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
       }
 
       // get sponsorshipPolicy for the user from walletAddress and entrypoint version
-      const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(walletAddress, getEPVersion(epVersion), chainId);
+      const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(walletAddress, getEPVersion(epVersion));
       if (!sponsorshipPolicy) {
         const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: walletAddress, epVersion: epVersion, chainId: chainId });
         return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });

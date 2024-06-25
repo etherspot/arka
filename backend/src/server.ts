@@ -98,7 +98,8 @@ const initializeServer = async (): Promise<void> => {
               const buffer = Buffer.from(paymastersAdrbase64, 'base64');
               const DEPLOYED_ERC20_PAYMASTERS = JSON.parse(buffer.toString());
               Object.keys(DEPLOYED_ERC20_PAYMASTERS).forEach(async (chain) => {
-                const networkConfig = getNetworkConfig(chain, '');
+                //EP-v6 entrypoint address
+                const networkConfig = getNetworkConfig(chain, '', "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
                 if (networkConfig) {
                   const deployedPaymasters: string[] = DEPLOYED_ERC20_PAYMASTERS[chain];
                   const provider = new providers.JsonRpcProvider(networkConfig.bundler);
@@ -223,7 +224,7 @@ const initializeServer = async (): Promise<void> => {
             }
             customPaymasters = { ...customPaymasters, ...multiTokenPaymasters };
             for (const chainId in customPaymasters) {
-              const networkConfig = getNetworkConfig(chainId, '');
+              const networkConfig = getNetworkConfig(chainId, '', "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
               if (networkConfig) {
                 for (const symbol in customPaymasters[chainId]) {
                   checkDeposit(customPaymasters[chainId][symbol], networkConfig.bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)

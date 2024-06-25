@@ -93,9 +93,114 @@ To run your own instance of this, please [follow these steps.](https://github.co
 
 You can see a [list of available endpoints here](https://github.com/etherspot/arka/tree/master/backend#available-endpoints--).
 
+
+### Local - Setup 
+
+#### environment for backend
+
+1. Start Docker postgres database
+
+```sh
+cd local-setup
+```
+
+```sh
+docker-compose up -d
+```
+
+- Verify if the postgres docker instance is up and running
+
+```sh
+docker ps -a
+```
+
+```sh
+docker logs --follow local-setup-db-1
+```
+
+- It must show up logs similar to this
+
+```
+PostgreSQL init process complete; ready for start up.
+2024-06-24 19:31:56.739 UTC [1] LOG:  starting PostgreSQL 16.1 (Debian 16.1-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit
+2024-06-24 19:31:56.740 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2024-06-24 19:31:56.740 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2024-06-24 19:31:56.741 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2024-06-24 19:31:56.744 UTC [66] LOG:  database system was shut down at 2024-06-24 19:31:56 UTC
+2024-06-24 19:31:56.748 UTC [1] LOG:  database system is ready to accept connections
+```
+
+2. create .env
+
+```sh
+cp .env.example .env
+```
+
+3. populate these environment variables
+
+```sh
+LOG_LEVEL=
+API_HOST=
+API_PORT=
+UNSAFE_MODE=true
+SUPPORTED_NETWORKS=
+CRON_PRIVATE_KEY=
+DEFAULT_INDEXER_ENDPOINT=
+FEE_MARKUP=0
+MULTI_TOKEN_MARKUP=
+ADMIN_WALLET_ADDRESS=
+ETHERSCAN_GAS_ORACLES=""
+DEFAULT_API_KEY=""
+WEBHOOK_URL=
+HMAC_SECRET=
+DATABASE_URL=
+DATABASE_USER=
+DATABASE_PASSWORD=
+DATABASE_NAME=
+DATABASE_SCHEMA_NAME=arka
+DATABASE_SSL_ENABLED=false
+DATABASE_SSL_REJECT_UNAUTHORIZED=false
+```
+
+4. start docker instance for backend, admin_frontend, frontend
+
+```sh
+docker-compose up --build -d
+```
+
+5. Here we need to create a network and tag backend & postgres on same network
+
+```sh
+docker network create arka-network    
+```
+
+6. add postgres instance to docker network
+
+```sh
+docker network connect arka-network local-setup-db-1
+```
+
+7. add arka backend docker instance to docker-network
+
+```sh
+docker network connect arka-network arka-backend-1
+```
+
+8. restart backend docker instance
+
+```sh
+docker-compose up -d
+```
+
+9. verify backend logs
+
+```sh
+docker logs arka-backend-1
+```
+
 ## 🖥 Arka Admin Frontend
 
-This contains ability to change configuration that are available in sql.
+This contains ability to change system configuration, apiKeys and apiKey-config that are available in database.
 
 ## 🖥 Arka Frontend
 
