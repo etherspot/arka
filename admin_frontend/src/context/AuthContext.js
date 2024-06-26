@@ -18,7 +18,7 @@ export const AuthContextProvider = ({ children }) => {
     try {
       const data = await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['adminLogin']}`, {
         method: "POST",
-        body: JSON.stringify({ WALLET_ADDRESS: accounts[0] }),
+        body: JSON.stringify({ walletAddress: accounts[0] }),
       });
       const dataJson = await data.json();
       if (!dataJson.error) {
@@ -47,7 +47,7 @@ export const AuthContextProvider = ({ children }) => {
       const address = await initializeProvider();
       const data = await fetch(`${process.env.REACT_APP_SERVER_URL}${ENDPOINTS['adminLogin']}`, {
         method: "POST",
-        body: JSON.stringify({ WALLET_ADDRESS: address }),
+        body: JSON.stringify({ walletAddress: address }),
       });
       const dataJson = await data.json();
       if (!dataJson.error) {

@@ -26,3 +26,5 @@ pnpm-lock.yaml
 # Ponder
 /indexer/.ponder
 /indexer/generated
+
+yarn.lock

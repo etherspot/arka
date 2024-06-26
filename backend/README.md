@@ -182,3 +182,8 @@ Parameters:
 - `/deposit` - This url accepts one parameter and returns the submitted transaction hash if successful. This url is used to deposit some funds to the entryPointAddress from the sponsor wallet
   1. amount - The amount to be deposited in ETH
   
+## Local Docker Networks
+
+1. Follow steps for local network setup in main readme.MD file in project root-directory
+[project-readme-steps](../README.md)
+

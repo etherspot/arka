@@ -1,6 +1,6 @@
 {
   "name": "arka",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "ARKA - (Albanian for Cashier's case) is the first open source Paymaster as a service software",
   "type": "module",
   "directories": {
@@ -10,9 +10,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check:types": "tsc --noEmit",
-    "build": "esbuild `find src \\( -name '*.ts' \\)` --platform=node --outdir=build --resolve-extensions=.js && cp -r ./src/migrations ./build/",
+    "build": "esbuild `find src \\( -name '*.ts' \\)` --platform=node --outdir=build --resolve-extensions=.js && cp -r ./migrations ./build/",
     "build:docker:prod": "docker build . -t my-fastify-app --build-arg APP_ENV=production",
     "start": "node build",
+    "migrate": "node scripts/migration.cjs",
     "dev": "tsx watch src | pino-pretty --colorize",
     "pretest": "npm run build",
     "test": "jest"
@@ -32,6 +33,7 @@
     "@fastify/cors": "8.4.1",
     "@ponder/core": "0.2.7",
     "@sinclair/typebox": "0.31.28",
+    "@types/sequelize": "^4.28.20",
     "ajv": "8.11.2",
     "crypto": "^1.0.1",
     "dotenv": "16.0.3",
@@ -44,8 +46,15 @@
     "getmac": "6.6.0",
     "graphql-request": "6.1.0",
     "node-fetch": "3.3.2",
+    "node-pg-migrate": "^7.4.0",
+    "pg": "^8.12.0",
+    "postgrator": "^7.2.0",
+    "sequelize": "^6.37.3",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7-rc.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5",
+    "umzug": "^3.8.1",
     "viem": "2.7.6"
   },
   "devDependencies": {
@@ -53,6 +62,8 @@
     "@babel/preset-env": "7.23.2",
     "@types/jest": "29.5.3",
     "@types/node": "18.11.15",
+    "@types/node-pg-migrate": "^2.3.1",
+    "@types/pg": "^8.11.6",
     "@typescript-eslint/eslint-plugin": "5.45.0",
     "@typescript-eslint/parser": "5.45.0",
     "babel-jest": "29.6.2",
@@ -65,7 +76,6 @@
     "prettier": "2.8.0",
     "ts-jest": "29.1.1",
     "tsx": "3.12.1",
-    "typescript": "5.0.4",
     "vitest": "0.25.8"
   }
 }

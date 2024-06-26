@@ -1,6 +1,5 @@
 import { FastifyBaseLogger, FastifyRequest } from "fastify";
 import { BigNumber, ethers } from "ethers";
-import { Database } from "sqlite3";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
 
@@ -19,19 +18,16 @@ export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint: s
     return SupportedNetworks.find((chain) => chain.chainId == key && chain.entryPoint == entryPoint);
 }
 
-export async function getSQLdata(apiKey: string, db: Database, log: FastifyBaseLogger) {
-  try {
-    const result: any[] = await new Promise((resolve, reject) => {
-      db.get("SELECT * FROM api_keys WHERE API_KEY = ?", [apiKey], (err: any, rows: any[]) => {
-        if (err) reject(err);
-        resolve(rows);
-      })
-    })
-    return result;
-  } catch (err) {
-    log.error(err);
-    return null;
-  }
+export function decodeSupportedNetworks(supportedNetworksForDecode: string) {
+  const buffer = Buffer.from(supportedNetworksForDecode, "base64");
+  return JSON.parse(buffer.toString());
+}
+
+export function getChainIdsFromSupportedNetworks(supportedNetworksForDecode: string) {
+  const decodedSupportedNetworks = decodeSupportedNetworks(supportedNetworksForDecode);
+  if(!decodedSupportedNetworks)
+    return [];
+  return decodedSupportedNetworks.map((chain: any) => chain.chainId);
 }
 
 export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger): Promise<getEtherscanFeeResponse | null> {
@@ -40,17 +36,14 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
     if (etherscanUrlsBase64) {
       const buffer = Buffer.from(etherscanUrlsBase64, 'base64');
       const etherscanUrls = JSON.parse(buffer.toString());
-      console.log('etherscanUrl: ', etherscanUrls[chainId]);
-
       if (etherscanUrls[chainId]) {
         const data = await fetch(etherscanUrls[chainId]);
         const response: EtherscanResponse = await data.json();
-        console.log('Etherscan Response: ', response);
         if (response.result && typeof response.result === "object" && response.status === "1") {
-          console.log('setting maxFeePerGas and maxPriorityFeePerGas as received')
+          if(log) log.info('setting maxFeePerGas and maxPriorityFeePerGas as received')
           const maxFeePerGas = ethers.utils.parseUnits(response.result.suggestBaseFee, 'gwei')
           const fastGasPrice = ethers.utils.parseUnits(response.result.FastGasPrice, 'gwei')
-          return {
+          return { 
             maxPriorityFeePerGas: fastGasPrice.sub(maxFeePerGas),
             maxFeePerGas,
             gasPrice: maxFeePerGas,
@@ -58,7 +51,7 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
         }
         if (response.result && typeof response.result === "string" && response.jsonrpc) {
           const gasPrice = BigNumber.from(response.result)
-          console.log('setting gas price as received')
+          if(log) log.info('setting gas price as received')
           return {
             maxFeePerGas: gasPrice,
             maxPriorityFeePerGas: gasPrice,

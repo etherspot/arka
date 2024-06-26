@@ -20,6 +20,10 @@ const ConfigSchema = Type.Strict(
     ADMIN_WALLET_ADDRESS: Type.String() || undefined,
     FEE_MARKUP: Type.String() || undefined,
     MULTI_TOKEN_MARKUP: Type.String() || undefined,
+    DATABASE_URL: Type.String() || undefined,
+    DATABASE_SSL_ENABLED: Type.Boolean() || undefined,
+    DATABASE_SCHEMA_NAME: Type.String() || undefined,
+    HMAC_SECRET: Type.String({ minLength: 1 }),
   })
 );
 
@@ -31,17 +35,20 @@ const ajv = new Ajv({
   allowUnionTypes: true,
 });
 
-export type Config = Static<typeof ConfigSchema>;
+export type ArkaConfig = Static<typeof ConfigSchema>;
 
 const configPlugin: FastifyPluginAsync = async (server) => {
   const validate = ajv.compile(ConfigSchema);
+  server.log.info("Validating .env file");
   const valid = validate(process.env);
   if (!valid) {
     throw new Error(
       ".env file validation failed - " +
-        JSON.stringify(validate.errors, null, 2)
+      JSON.stringify(validate.errors, null, 2)
     );
   }
+
+  server.log.info("Configuring .env file");
 
   const config = {
     LOG_LEVEL: process.env.LOG_LEVEL ?? '',
@@ -50,7 +57,11 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     SUPPORTED_NETWORKS: process.env.SUPPORTED_NETWORKS ?? '',
     ADMIN_WALLET_ADDRESS: process.env.ADMIN_WALLET_ADDRESS ?? '0x80a1874E1046B1cc5deFdf4D3153838B72fF94Ac',
     FEE_MARKUP: process.env.FEE_MARKUP ?? '10',
-    MULTI_TOKEN_MARKUP: process.env.MULTI_TOKEN_MARKUP ?? '1150000'
+    MULTI_TOKEN_MARKUP: process.env.MULTI_TOKEN_MARKUP ?? '1150000',
+    DATABASE_URL: process.env.DATABASE_URL ?? '',
+    DATABASE_SSL_ENABLED: process.env.DATABASE_SSL_ENABLED === 'true',
+    DATABASE_SCHEMA_NAME: process.env.DATABASE_SCHEMA_NAME ?? 'arka',
+    HMAC_SECRET: process.env.HMAC_SECRET ?? '',
   }
 
   server.decorate("config", config);
@@ -58,7 +69,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
 
 declare module "fastify" {
   interface FastifyInstance {
-    config: Config;
+    config: ArkaConfig;
   }
 }
 

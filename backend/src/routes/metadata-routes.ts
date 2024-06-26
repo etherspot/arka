@@ -2,11 +2,12 @@ import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-sec
 import { FastifyPluginAsync } from "fastify";
 import { Contract, Wallet, providers } from "ethers";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
-import { getNetworkConfig, printRequest, getSQLdata } from "../utils/common.js";
+import { getNetworkConfig, printRequest } from "../utils/common.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import { decode } from "../utils/crypto.js";
 import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
+import { APIKey } from "../models/api-key.js";
 import * as EtherspotAbi from "../abi/EtherspotAbi.js";
 
 const metadataRoutes: FastifyPluginAsync = async (server) => {
@@ -34,7 +35,6 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_DATA})
       let customPaymasters = [];
       let multiTokenPaymasters = [];
-      let multiTokenOracles = [];
       let privateKey = '';
       let supportedNetworks;
       let sponsorName = '', sponsorImage = '';
@@ -62,23 +62,23 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         privateKey = secrets['PRIVATE_KEY'];
         supportedNetworks = secrets['SUPPORTED_NETWORKS'];
       } else {
-        const record: any = await getSQLdata(api_key, server.sqlite.db, server.log);
-        if (!record) {
+        const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
+        if (!apiKeyEntity) {
           server.log.info("Invalid Api Key provided")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         }
-        if (record['ERC20_PAYMASTERS']) {
-          const buffer = Buffer.from(record['ERC20_PAYMASTERS'], 'base64');
+        if (apiKeyEntity.erc20Paymasters) {
+          const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
           customPaymasters = JSON.parse(buffer.toString());
         }
-        if (record['MULTI_TOKEN_PAYMASTERS']) {
-          const buffer = Buffer.from(record['MULTI_TOKEN_PAYMASTERS'], 'base64');
+        if (apiKeyEntity.multiTokenPaymasters) {
+          const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
           multiTokenPaymasters = JSON.parse(buffer.toString()); 
         }
-        sponsorName = record['SPONSOR_NAME'];
-        sponsorImage = record['LOGO_URL'];
-        privateKey = decode(record['PRIVATE_KEY']);
-        supportedNetworks = record['SUPPORTED_NETWORKS'];
+        sponsorName = apiKeyEntity.sponsorName ? apiKeyEntity.sponsorName : "";
+        sponsorImage = apiKeyEntity.logoUrl ? apiKeyEntity.logoUrl : "";
+        privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
+        supportedNetworks = apiKeyEntity.supportedNetworks;
       }
       if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
