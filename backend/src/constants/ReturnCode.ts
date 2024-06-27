@@ -3,4 +3,5 @@ export default {
     FAILURE: 400,
     BAD_REQUEST: 400,
     NOT_FOUND: 404,
+    NOT_AUTHORIZED: 401,
 }

@@ -13,6 +13,9 @@ import { ApiKeyDto } from "../types/apikey-dto.js";
 const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/adminLogin', async function (request, reply) {
     try {
+      if(!server.config.UNSAFE_MODE) {
+        return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.NOT_AUTHORIZED });
+      }
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.walletAddress) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
@@ -25,6 +28,9 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.get("/getConfig", async function (request, reply) {
     try {
+      if(!server.config.UNSAFE_MODE) {
+        return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.NOT_AUTHORIZED });
+      }
       const result = await server.arkaConfigRepository.findFirstConfig();
 
       if (!result) {
@@ -40,6 +46,9 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.post("/saveConfig", async function (request, reply) {
     try {
+      if(!server.config.UNSAFE_MODE) {
+        return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.NOT_AUTHORIZED });
+      }
       const body: ArkaConfigUpdateData = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (Object.values(body).every(value => value)) {
@@ -67,6 +76,9 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.post('/saveKey', async function (request, reply) {
     try {
+      if(!server.config.UNSAFE_MODE) {
+        return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.NOT_AUTHORIZED });
+      }
       const body: any = JSON.parse(request.body as string) as ApiKeyDto;
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.apiKey || !body.privateKey)
@@ -110,6 +122,9 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.post('/updateKey', async function (request, reply) {
     try {
+      if(!server.config.UNSAFE_MODE) {
+        return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.NOT_AUTHORIZED });
+      }
       const body = JSON.parse(request.body as string) as ApiKeyDto;
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.apiKey)
@@ -138,6 +153,9 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.get('/getKeys', async function (request, reply) {
     try {
+      if(!server.config.UNSAFE_MODE) {
+        return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.NOT_AUTHORIZED });
+      }
       if (!server.sequelize) throw new Error('Sequelize instance is not available');
 
       const apiKeys = await server.apiKeyRepository.findAll();
@@ -153,6 +171,9 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.post('/deleteKey', async function (request, reply) {
     try {
+      if(!server.config.UNSAFE_MODE) {
+        return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.NOT_AUTHORIZED });
+      }
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.apiKey)

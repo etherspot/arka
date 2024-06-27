@@ -26,6 +26,7 @@ export default {
     RPC_ERROR: 'rpcError while checking whitelist. Please try again later',
     QUOTA_EXCEEDED: 'Quota exceeded for this month',
     INVALID_USER: 'Unauthorised User',
+    NOT_AUTHORIZED: 'Not authorized to perform this action',
     RECORD_NOT_FOUND: 'Api Key provided not found',
     API_KEY_VALIDATION_FAILED: 'Api Key is not in the right format as described in readme file',
     UNSUPPORTED_METHOD: 'Unsupported method name received',
