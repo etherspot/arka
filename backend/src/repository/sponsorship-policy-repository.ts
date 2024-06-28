@@ -2,6 +2,7 @@ import { Sequelize, Op } from 'sequelize';
 import { SponsorshipPolicy } from '../models/sponsorship-policy.js';
 import { EPVersions, SponsorshipPolicyDto, getEPVersionString } from '../types/sponsorship-policy-dto.js';
 import { ethers } from 'ethers';
+import { server } from 'server.js';
 
 export class SponsorshipPolicyRepository {
     private sequelize: Sequelize;
@@ -394,8 +395,12 @@ export class SponsorshipPolicyRepository {
         existingSponsorshipPolicy.name = sponsorshipPolicy.name;
         existingSponsorshipPolicy.description = sponsorshipPolicy.description;
         existingSponsorshipPolicy.isApplicableToAllNetworks = sponsorshipPolicy.isApplicableToAllNetworks;
+        if (sponsorshipPolicy.isApplicableToAllNetworks && sponsorshipPolicy.enabledChains) {
+            existingSponsorshipPolicy.enabledChains = undefined;
+        } else {
+            existingSponsorshipPolicy.enabledChains = sponsorshipPolicy.enabledChains;
+        }
         existingSponsorshipPolicy.isPerpetual = sponsorshipPolicy.isPerpetual;
-        existingSponsorshipPolicy.supportedEPVersions = sponsorshipPolicy.supportedEPVersions;
 
         // if marked as IsPerpetual, then set startTime and endTime to null
         if (sponsorshipPolicy.isPerpetual) {
@@ -415,6 +420,8 @@ export class SponsorshipPolicyRepository {
                 existingSponsorshipPolicy.endTime = sponsorshipPolicy.endTime;
             }
         }
+
+        existingSponsorshipPolicy.supportedEPVersions = sponsorshipPolicy.supportedEPVersions;
 
         existingSponsorshipPolicy.globalMaximumApplicable = sponsorshipPolicy.globalMaximumApplicable;
 
@@ -501,16 +508,13 @@ export class SponsorshipPolicyRepository {
             existingSponsorshipPolicy.addressBlockList = null;
         }
 
-        // const result = await existingSponsorshipPolicy.save();
-        // return result.get() as SponsorshipPolicy;
-
         // apply same logic to update the record
         const result = await this.sequelize.models.SponsorshipPolicy.update({
             name: existingSponsorshipPolicy.name,
             description: existingSponsorshipPolicy.description,
             isApplicableToAllNetworks: existingSponsorshipPolicy.isApplicableToAllNetworks,
-            enabledChains: existingSponsorshipPolicy.enabledChains,
-            supportedEPVersions: existingSponsorshipPolicy.supportedEPVersions,
+            enabledChains: existingSponsorshipPolicy.enabledChains && existingSponsorshipPolicy.enabledChains.length >= 0 ? existingSponsorshipPolicy.enabledChains : null,
+            supportedEPVersions: existingSponsorshipPolicy.supportedEPVersions && existingSponsorshipPolicy.supportedEPVersions.length >= 0 ? existingSponsorshipPolicy.supportedEPVersions : null,
             isPerpetual: existingSponsorshipPolicy.isPerpetual,
             startTime: existingSponsorshipPolicy.startTime,
             endTime: existingSponsorshipPolicy.endTime,

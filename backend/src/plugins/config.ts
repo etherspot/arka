@@ -24,6 +24,7 @@ const ConfigSchema = Type.Strict(
     DATABASE_SSL_ENABLED: Type.Boolean() || undefined,
     DATABASE_SCHEMA_NAME: Type.String() || undefined,
     HMAC_SECRET: Type.String({ minLength: 1 }),
+    UNSAFE_MODE: Type.Boolean() || undefined,
   })
 );
 
@@ -62,6 +63,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     DATABASE_SSL_ENABLED: process.env.DATABASE_SSL_ENABLED === 'true',
     DATABASE_SCHEMA_NAME: process.env.DATABASE_SCHEMA_NAME ?? 'arka',
     HMAC_SECRET: process.env.HMAC_SECRET ?? '',
+    UNSAFE_MODE: process.env.UNSAFE_MODE === 'true',
   }
 
   server.decorate("config", config);
