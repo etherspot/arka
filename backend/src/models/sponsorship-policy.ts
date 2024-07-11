@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-inferrable-types */
 import { Sequelize, DataTypes, Model } from 'sequelize';
 
 export class SponsorshipPolicy extends Model {

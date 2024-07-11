@@ -326,7 +326,9 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
 
       validateRequestHeader(request, reply, server, apiKey.walletAddress);
 
-      const result = await server.sponsorshipPolicyRepository.deleteSponsorshipPolicy(id);
+      await server.whitelistRepository.deleteAllBySponsorshipPolicies(id);
+
+      await server.sponsorshipPolicyRepository.deleteSponsorshipPolicy(id);
       return reply.code(200).send({ message: `Successfully deleted policy with id ${id}` });
     } catch (err) {
       request.log.error(err);

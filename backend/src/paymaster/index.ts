@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { providers, Wallet, ethers, Contract, BigNumber, BigNumberish, utils } from 'ethers';
+import { providers, Wallet, ethers, Contract, BigNumber, BigNumberish } from 'ethers';
 import { arrayify, BytesLike, defaultAbiCoder, hexConcat, hexZeroPad } from 'ethers/lib/utils.js';
 import { FastifyBaseLogger } from 'fastify';
 import EtherspotAbiV06 from '../abi/EtherspotAbi.js';
@@ -14,7 +14,7 @@ import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
 
 export class Paymaster {
   feeMarkUp: BigNumber;
-  multiTokenMarkUp: Number;
+  multiTokenMarkUp: number;
 
   constructor(feeMarkUp: string, multiTokenMarkUp: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
@@ -71,7 +71,7 @@ export class Paymaster {
       }
       const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
       const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
-      let packedUserOp = {
+      const packedUserOp = {
         sender: userOp.sender,
         nonce: userOp.nonce,
         initCode: userOp.initCode,
@@ -83,7 +83,7 @@ export class Paymaster {
         signature: userOp.signature
       }
 
-      let paymasterData = await this.getPaymasterData(packedUserOp, validUntil, validAfter, paymasterContract, signer);
+      const paymasterData = await this.getPaymasterData(packedUserOp, validUntil, validAfter, paymasterContract, signer);
       let returnValue;
       if (estimate) {
         returnValue = {

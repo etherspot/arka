@@ -32,27 +32,27 @@ export function initializeAPIKeyModel(sequelize: Sequelize, schema: string) {
       field: 'WALLET_ADDRESS'
     },
     privateKey: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
       field: 'PRIVATE_KEY'
     },
     supportedNetworks: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
       field: 'SUPPORTED_NETWORKS'
     },
     erc20Paymasters: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
       field: 'ERC20_PAYMASTERS'
     },
     multiTokenPaymasters: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
       field: 'MULTI_TOKEN_PAYMASTERS'
     },
     multiTokenOracles: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
       field: 'MULTI_TOKEN_ORACLES'
     },
