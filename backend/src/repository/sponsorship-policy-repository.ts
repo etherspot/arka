@@ -2,7 +2,6 @@ import { Sequelize, Op } from 'sequelize';
 import { SponsorshipPolicy } from '../models/sponsorship-policy.js';
 import { EPVersions, SponsorshipPolicyDto, getEPVersionString } from '../types/sponsorship-policy-dto.js';
 import { ethers } from 'ethers';
-import { server } from 'server.js';
 
 export class SponsorshipPolicyRepository {
     private sequelize: Sequelize;
@@ -545,7 +544,7 @@ export class SponsorshipPolicyRepository {
     }
 
     validateSponsorshipPolicy(sponsorshipPolicy: SponsorshipPolicyDto) {
-        let errors: string[] = [];
+        const errors: string[] = [];
 
         if (!sponsorshipPolicy.name || !sponsorshipPolicy.description) {
             errors.push('Name and description are required fields');
