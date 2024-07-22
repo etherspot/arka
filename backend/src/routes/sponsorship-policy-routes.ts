@@ -4,7 +4,7 @@ import ErrorMessage, { generateErrorMessage } from "../constants/ErrorMessage.js
 import ReturnCode from "../constants/ReturnCode.js";
 import { SponsorshipPolicyDto, getEPVersion } from "../types/sponsorship-policy-dto.js";
 import { SponsorshipPolicy } from "../models/sponsorship-policy.js";
-import { getChainIdsFromSupportedNetworks } from "../utils/common.js";
+import { getChainIdsFromDefaultSupportedNetworks, getChainIdsFromSupportedNetworks } from "../utils/common.js";
 
 interface RouteParams {
   id?: string;
@@ -262,21 +262,25 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
 
       // apiKey has supportedNetworks and validate if the enabledChains array in SponsorshipPolicyDto is a subset of supportedNetworks
       const supportedNetworks = apiKey.supportedNetworks;
-      if (!supportedNetworks) {
+
+      // get supportedNetworks from defaultConfig
+      const supportedChains: number[] = supportedNetworks ? getChainIdsFromSupportedNetworks(supportedNetworks as string) : getChainIdsFromDefaultSupportedNetworks();
+      
+      if (!supportedChains || supportedChains.length === 0) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
       }
-      const apiKeySupportedChains: number[] = getChainIdsFromSupportedNetworks(supportedNetworks as string);
+
       const sponsorshipPolicySupportedChains = sponsorshipPolicyDto.enabledChains;
 
-      if (sponsorshipPolicySupportedChains && sponsorshipPolicySupportedChains.length > 0) {
+      if (!sponsorshipPolicyDto.isApplicableToAllNetworks && sponsorshipPolicySupportedChains && sponsorshipPolicySupportedChains.length > 0) {
 
-        if (!sponsorshipPolicySupportedChains.every((chainId: number) => sponsorshipPolicySupportedChains.includes(chainId))) {
+        if (!sponsorshipPolicySupportedChains.every((chainId: number) => supportedChains.includes(chainId))) {
 
           //generate a comma separate string of sponsorshipPolicySupportedChains
           const sponsorshipPolicySupportedChainsCSV: string = sponsorshipPolicySupportedChains.join(',');
 
           //generate a comma separated string of apiKeySupportedChains
-          const apiKeySupportedChainsCSV: string = apiKeySupportedChains.join(',');
+          const apiKeySupportedChainsCSV: string = supportedChains.join(',');
           const errorMessage: string = generateErrorMessage(ErrorMessage.SPONSORSHIP_POLICY_CHAINS_NOT_IN_SUBSET_OF_APIKEY_SUPPORTED_CHAINS, { sponsorshipPolicyChains: sponsorshipPolicySupportedChainsCSV, apiKeyChains: apiKeySupportedChainsCSV });
 
           return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
