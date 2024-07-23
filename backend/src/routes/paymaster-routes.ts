@@ -128,8 +128,8 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           const apiKeyEntity = await server.apiKeyRepository.findOneByApiKey(api_key);
 
           if (!apiKeyEntity) {
-            server.log.error("Invalid Api Key provided")
-            return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+            server.log.error("APIKey not configured in database")
+            return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_NOT_CONFIGURED_IN_DATABASE })
           }
 
           if (apiKeyEntity.erc20Paymasters) {
@@ -197,7 +197,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
 
             // get wallet_address from api_key
             const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
-            if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+            if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_NOT_CONFIGURED_IN_DATABASE });
 
             // get sponsorshipPolicy for the user from walletAddress and entrypoint version
             const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(apiKeyData?.walletAddress, getEPVersion(epVersion));
@@ -214,9 +214,6 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             // get supported networks from sponsorshipPolicy
             const supportedNetworks: number[] | undefined | null = sponsorshipPolicy.enabledChains;
             if (!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-
-            // is chainId exists in supportedNetworks
-            if (!supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
 
             if (txnMode) {
               const signerAddress = await signer.getAddress();
