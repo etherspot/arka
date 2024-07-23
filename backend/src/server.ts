@@ -3,7 +3,6 @@ import fastify, { FastifyInstance } from 'fastify';
 import fastifyHealthcheck from 'fastify-healthcheck';
 import cors from '@fastify/cors';
 import fastifyCron from 'fastify-cron';
-import { providers, ethers } from 'ethers';
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import fetch from 'node-fetch';
 import sequelizePlugin from './plugins/sequelizePlugin.js';
@@ -11,7 +10,7 @@ import config from './plugins/config.js';
 import EtherspotChainlinkOracleAbi from './abi/EtherspotChainlinkOracleAbi.js';
 import PimlicoAbi from './abi/PimlicoAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
-import { getNetworkConfig } from './utils/common.js';
+import { getNetworkConfig, getViemChain } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
 import { APIKey } from './models/api-key.js';
 import { APIKeyRepository } from './repository/api-key-repository.js';
@@ -24,6 +23,8 @@ import paymasterRoutes from './routes/paymaster-routes.js';
 import pimlicoRoutes from './routes/pimlico-routes.js';
 import whitelistRoutes from './routes/whitelist-routes.js';
 import sponsorshipPolicyRoutes from './routes/sponsorship-policy-routes.js';
+import { createPublicClient, createWalletClient, encodeFunctionData, getContract, Hex, http, parseUnits } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 
 let server: FastifyInstance;
 
@@ -100,33 +101,54 @@ const initializeServer = async (): Promise<void> => {
               Object.keys(DEPLOYED_ERC20_PAYMASTERS).forEach(async (chain) => {
                 //EP-v6 entrypoint address
                 const networkConfig = getNetworkConfig(chain, '', "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
+                const chainDef = getViemChain(+chain);
                 if (networkConfig) {
-                  const deployedPaymasters: string[] = DEPLOYED_ERC20_PAYMASTERS[chain];
-                  const provider = new providers.JsonRpcProvider(networkConfig.bundler);
-                  const signer = new ethers.Wallet(process.env.CRON_PRIVATE_KEY ?? '', provider);
+                  const deployedPaymasters: Hex[] = DEPLOYED_ERC20_PAYMASTERS[chain];
+                  const client = createPublicClient({
+                    transport: http(networkConfig.bundler),
+                    chain: chainDef
+                  })
+                  const account = privateKeyToAccount(process.env.CRON_PRIVATE_KEY as Hex ?? '0x')
+                  const signer = createWalletClient({
+                    transport: http(networkConfig.bundler),
+                    account,
+                    chain: chainDef
+                  })
                   deployedPaymasters.forEach(async (deployedPaymaster) => {
-                    const paymasterContract = new ethers.Contract(deployedPaymaster, PimlicoAbi, signer)
+                    const paymasterContract = getContract({
+                      abi: PimlicoAbi,
+                      address: deployedPaymaster,
+                      client
+                    })
                     const pythMainnetChains = configData?.pythMainnetChainIds?.split(',') ?? [];
                     const pythTestnetChains = configData?.pythTestnetChainIds?.split(',') ?? [];
                     if (pythMainnetChains?.includes(chain) || pythTestnetChains?.includes(chain)) {
                       try {
-                        const oracleAddress = await paymasterContract.tokenOracle();
-                        const oracleContract = new ethers.Contract(oracleAddress, PythOracleAbi, provider)
-                        const priceId = await oracleContract.priceLocator();
+                        const oracleAddress = await paymasterContract.read.tokenOracle();
+                        const oracleContract = getContract({
+                          abi: PythOracleAbi,
+                          address: oracleAddress,
+                          client
+                        });
+                        const priceId = await oracleContract.read.priceLocator();
                         const TESTNET_API_URL = configData?.pythTestnetUrl;
                         const MAINNET_API_URL = configData?.pythMainnetUrl;
                         const requestURL = `${chain === '5000' ? MAINNET_API_URL : TESTNET_API_URL}${priceId}`;
                         const response = await fetch(requestURL);
                         const vaa: any = await response.json();
-                        const priceData = '0x' + Buffer.from(vaa[0], 'base64').toString('hex');
-                        const updateFee = await oracleContract.getUpdateFee([priceData]);
-                        const data = oracleContract.interface.encodeFunctionData('updatePrice', [[priceData]])
+                        const priceData: Hex = `0x${Buffer.from(vaa[0], 'base64').toString('hex')}`;
+                        const updateFee = await oracleContract.read.getUpdateFee([[priceData]]);
+                        const data = encodeFunctionData({
+                          abi: PythOracleAbi,
+                          functionName: 'updatePrice',
+                          args: [[priceData]]
+                        });
                         const tx = await signer.sendTransaction({
                           to: oracleAddress,
                           data: data,
                           value: updateFee
                         });
-                        await tx.wait();
+                        await client.waitForTransactionReceipt({hash: tx});
                       } catch (err) {
                         server.log.error(err);
                       }
@@ -143,16 +165,19 @@ const initializeServer = async (): Promise<void> => {
                         if (customChainlinkDeployments.includes(deployedPaymaster)) {
                           const coingeckoId = coingeckoIds[chain][customChainlinkDeployments.indexOf(deployedPaymaster)]
                           const response: any = await (await fetch(`${configData.coingeckoApiUrl}${coingeckoId}`)).json();
-                          const price = ethers.utils.parseUnits(response[coingeckoId].usd.toString(), 8);
+                          const price = parseUnits(response[coingeckoId].usd.toString(), 8);
                           if (price) {
-                            const oracleAddress = await paymasterContract.tokenOracle();
-                            const oracleContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider)
-                            const data = oracleContract.interface.encodeFunctionData('fulfillPriceData', [price])
+                            const oracleAddress = await paymasterContract.read.tokenOracle();
+                            const data = encodeFunctionData({
+                              abi: EtherspotChainlinkOracleAbi,
+                              functionName: 'fulfillPriceData',
+                              args: [price]
+                            })
                             const tx = await signer.sendTransaction({
                               to: oracleAddress,
                               data: data,
                             });
-                            await tx.wait();
+                            await client.waitForTransactionReceipt({hash: tx});
                           }
                         }
                       } catch (err) {
@@ -160,7 +185,7 @@ const initializeServer = async (): Promise<void> => {
                       }
                     }
                     try {
-                      await paymasterContract.updatePrice();
+                      await paymasterContract.write.updatePrice({account});
                       server.log.info('Price Updated for ' + chain);
                     } catch (err) {
                       server.log.error('Err on updating Price on paymaster' + err);

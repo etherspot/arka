@@ -1,6 +1,5 @@
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { FastifyPluginAsync } from "fastify";
-import { Contract, Wallet, providers } from "ethers";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { getNetworkConfig, printRequest } from "../utils/common.js";
 import ReturnCode from "../constants/ReturnCode.js";
@@ -9,6 +8,8 @@ import { decode } from "../utils/crypto.js";
 import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
 import { APIKey } from "../models/api-key.js";
 import * as EtherspotAbi from "../abi/EtherspotAbi.js";
+import { createPublicClient, getAddress, getContract, Hex, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 const metadataRoutes: FastifyPluginAsync = async (server) => {
 
@@ -35,7 +36,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_DATA})
       let customPaymasters = [];
       let multiTokenPaymasters = [];
-      let privateKey = '';
+      let privateKey: Hex = '0x';
       let supportedNetworks;
       let sponsorName = '', sponsorImage = '';
       if (!unsafeMode) {
@@ -85,14 +86,20 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       }
       const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
       if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-      const provider = new providers.JsonRpcProvider(networkConfig.bundler);
-      const signer = new Wallet(privateKey, provider)
-      const sponsorWalletBalance = await signer.getBalance();
-      const sponsorAddress = await signer.getAddress();
+      const provider = createPublicClient({
+        transport: http(networkConfig.bundler)
+      });
+      const signer = privateKeyToAccount(privateKey);
+      const sponsorWalletBalance = await provider.getBalance({address: signer.address});
+      const sponsorAddress = getAddress(signer.address);
 
       //get native balance of the sponsor in the EtherSpotPaymaster-contract
-      const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
-      const sponsorBalance = await paymasterContract.getSponsorBalance(sponsorAddress);
+      const paymasterContract = getContract({
+        abi: EtherspotAbi.default,
+        address: networkConfig.contracts.etherspotPaymasterAddress,
+        client: provider
+      })
+      const sponsorBalance = await paymasterContract.read.getSponsorBalance([sponsorAddress]);
 
       const chainsSupported: {chainId: number, entryPoint: string}[] = [];
       if (supportedNetworks) {

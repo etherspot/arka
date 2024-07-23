@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyPluginAsync } from "fastify";
-import { ethers } from "ethers";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
-import { printRequest, getNetworkConfig } from "../utils/common.js";
+import { printRequest, getNetworkConfig, getViemChain } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
+import { Chain, Hex, isAddress } from "viem";
 
 const SUPPORTED_ENTRYPOINTS = {
     'EPV_06': "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -39,7 +39,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
                 const api_key = query['apiKey'] ?? body.params[2];
                 if (!api_key)
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-                let privateKey = '';
+                let privateKey: Hex;
                 let supportedNetworks;
                 if (!unsafeMode) {
                     const AWSresponse = await client.send(
@@ -66,14 +66,15 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
                 ) {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
                 }
+                const chain: Chain = getViemChain(Number(chainId));
                 if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
                 }
                 const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
                 if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-                const validAddresses = address.every(ethers.utils.isAddress);
+                const validAddresses = address.every(isAddress);
                 if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
-                const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
+                const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, chain, server.log);
                 server.log.info(result, 'Response sent: ');
                 if (body.jsonrpc)
                     return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
@@ -97,7 +98,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
             const api_key = query['apiKey'] ?? body.params[2];
             if (!api_key)
                 return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-            let privateKey = '';
+            let privateKey: Hex = '0x';
             let supportedNetworks;
             if (!unsafeMode) {
                 const AWSresponse = await client.send(
@@ -124,14 +125,15 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
             ) {
                 return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
             }
+            const chain = getViemChain(Number(chainId));
             if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
                 return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
             }
             const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
             if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-            const validAddresses = address.every(ethers.utils.isAddress);
+            const validAddresses = address.every(isAddress);
             if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid Address passed" });
-            const result = await paymaster.removeWhitelistAddress(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
+            const result = await paymaster.removeWhitelistAddress(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, chain, server.log);
             if (body.jsonrpc)
                 return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
             return reply.code(ReturnCode.SUCCESS).send(result);
@@ -154,7 +156,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
                 const api_key = query['apiKey'] ?? body.params[2];
                 if (!api_key)
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-                let privateKey = '';
+                let privateKey: Hex;
                 let supportedNetworks;
                 if (!unsafeMode) {
                     const AWSresponse = await client.send(
@@ -175,7 +177,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
                 if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 if (
                     !accountAddress ||
-                    !ethers.utils.isAddress(accountAddress) ||
+                    !isAddress(accountAddress) ||
                     !chainId ||
                     isNaN(chainId)
                 ) {

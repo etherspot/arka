@@ -1,15 +1,21 @@
 import { FastifyBaseLogger } from "fastify";
-import { ethers, providers } from "ethers";
 import fetch from 'node-fetch';
 import EtherspotAbi from "../abi/EtherspotAbi.js";
+import { createPublicClient, formatEther, getContract, Hex, http, parseEther } from "viem";
 
-export async function checkDeposit(paymasterAddress: string, bundlerUrl: string, webhookUrl: string, thresholdValue: string, chainId: number, log: FastifyBaseLogger) {
+export async function checkDeposit(paymasterAddress: Hex, bundlerUrl: string, webhookUrl: string, thresholdValue: string, chainId: number, log: FastifyBaseLogger) {
   try {
-    const provider = new providers.JsonRpcProvider(bundlerUrl);
-    const contract = new ethers.Contract(paymasterAddress, EtherspotAbi, provider);
-    const currentDeposit = await contract.getDeposit();
-    if (ethers.utils.parseEther(thresholdValue).gte(currentDeposit)) {
-      const body = { message: `Balance below threshold. Please deposit on tokenPaymasterAddress: ${paymasterAddress} chainId: ${chainId}`, currentDeposit: ethers.utils.formatEther(currentDeposit) }
+    const client = createPublicClient({
+      transport: http(bundlerUrl)
+    })
+    const contract = getContract({
+      abi: EtherspotAbi,
+      address: paymasterAddress,
+      client
+    })
+    const currentDeposit = await contract.read.getDeposit();
+    if (parseEther(thresholdValue) >= currentDeposit) {
+      const body = { message: `Balance below threshold. Please deposit on tokenPaymasterAddress: ${paymasterAddress} chainId: ${chainId}`, currentDeposit: formatEther(currentDeposit) }
       await fetch(webhookUrl, {
         method: 'POST',
         body: JSON.stringify(body)
