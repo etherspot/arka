@@ -1,8 +1,7 @@
 import { UserOperationStruct } from "../types/entrypoint"
 import abi from "../abi/PimlicoAbi.js";
 import { NATIVE_ASSET, ORACLE_ADDRESS, TOKEN_ADDRESS, bytecode } from "../constants/Pimlico.js";
-import { encodeDeployData, getContract, getContractAddress, Hex, keccak256, pad, parseUnits, PublicClient, toHex, WalletClient } from "viem";
-import { hexConcat } from "ethers/lib/utils.js";
+import { encodeDeployData, getContract, getContractAddress, Hex, keccak256, pad, parseUnits, PublicClient, toHex, WalletClient, concat } from "viem";
 
 export interface ERC20PaymasterBuildOptions {
     entrypoint?: Hex
@@ -44,29 +43,20 @@ export class PimlicoPaymaster {
             throw new Error("ERC20Paymaster: no previous price set");
         }
 
-        // const requiredPreFund = BigNumber.from(userOp.preVerificationGas)
-        //     .add(BigNumber.from(userOp.verificationGasLimit).mul(3)) // 3 is for buffer when using paymaster
-        //     .add(BigNumber.from(userOp.callGasLimit))
-        //     .mul(BigNumber.from(userOp.maxFeePerGas).mul(2))
         const requiredPreFund = (
             userOp.preVerificationGas +
-            (userOp.verificationGasLimit * BigInt(3)) +
+            (userOp.verificationGasLimit * BigInt(3)) + // 3 is for buffer when using paymaster
             userOp.callGasLimit
         ) * (userOp.maxFeePerGas * BigInt(2));
-        // let tokenAmount = requiredPreFund
-            // .add(BigNumber.from(userOp.maxFeePerGas).mul(40000)) // 40000 is the REFUND_POSTOP_COST constant
-            // .mul(priceMarkup)
-            // .mul(cachedPrice)
-            // .div(1e6) // 1e6 is the priceDenominator constant
 
         let tokenAmount = (
             (
                 (
                     requiredPreFund +
-                    (userOp.maxFeePerGas * BigInt(40000))
+                    (userOp.maxFeePerGas * BigInt(40000)) // 40000 is the REFUND_POSTOP_COST constant
                 ) * BigInt(priceMarkup)
             ) * BigInt(cachedPrice)
-        ) / BigInt(1e6);
+        ) / BigInt(1e6); // 1e6 is the priceDenominator constant
 
         /**
          * Don't know why but the below calculation is for tokens with 6 decimals such as USDC, USDT
@@ -88,7 +78,7 @@ export class PimlicoPaymaster {
     async generatePaymasterAndData(userOp: UserOperationStruct): Promise<Hex> {
         const tokenAmount = await this.calculateTokenAmount(userOp)
         const paymasterAndData = toHex(
-            hexConcat([this.contract.address, pad(toHex(tokenAmount), {size: 32})])
+            concat([this.contract.address, pad(toHex(tokenAmount), {size: 32})])
         );
         return paymasterAndData;
     }
@@ -102,7 +92,7 @@ export class PimlicoPaymaster {
      */
     async generatePaymasterAndDataForTokenAmount(userOp: UserOperationStruct, tokenAmount: bigint): Promise<Hex> {
         const paymasterAndData = toHex(
-            hexConcat([this.contract.address, pad(toHex(tokenAmount), {size: 32})])
+            concat([this.contract.address, pad(toHex(tokenAmount), {size: 32})])
         );
         return paymasterAndData;
     }
