@@ -1,7 +1,8 @@
 import { FastifyBaseLogger, FastifyRequest } from "fastify";
-import { BigNumber, ethers } from "ethers";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
+import { parseUnits } from "viem";
+import * as chains from "viem/chains"; 
 
 export function printRequest(methodName: string, request: FastifyRequest, log: FastifyBaseLogger) {
   log.info(methodName, "called: ");
@@ -41,16 +42,16 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
         const response: EtherscanResponse = await data.json();
         if (response.result && typeof response.result === "object" && response.status === "1") {
           if(log) log.info('setting maxFeePerGas and maxPriorityFeePerGas as received')
-          const maxFeePerGas = ethers.utils.parseUnits(response.result.suggestBaseFee, 'gwei')
-          const fastGasPrice = ethers.utils.parseUnits(response.result.FastGasPrice, 'gwei')
+          const maxFeePerGas = parseUnits(response.result.suggestBaseFee, 9);
+          const fastGasPrice = parseUnits(response.result.FastGasPrice, 9);
           return { 
-            maxPriorityFeePerGas: fastGasPrice.sub(maxFeePerGas),
+            maxPriorityFeePerGas: fastGasPrice - maxFeePerGas,
             maxFeePerGas,
             gasPrice: maxFeePerGas,
           }
         }
         if (response.result && typeof response.result === "string" && response.jsonrpc) {
-          const gasPrice = BigNumber.from(response.result)
+          const gasPrice = BigInt(response.result)
           if(log) log.info('setting gas price as received')
           return {
             maxFeePerGas: gasPrice,
@@ -72,3 +73,11 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
   }
 }
 
+export function getViemChain(chainId: number): chains.Chain | undefined {
+  for(const chain of Object.values(chains)) {
+    if (chain.id === chainId) {
+      return chain;
+    }
+  }
+  return undefined;
+}

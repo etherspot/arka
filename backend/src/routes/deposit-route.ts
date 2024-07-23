@@ -7,8 +7,9 @@ import SupportedNetworks from "../../config.json" assert { type: "json" };
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
-import { printRequest, getNetworkConfig } from "../utils/common.js";
+import { printRequest, getNetworkConfig, getViemChain } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
+import { Hex } from "viem";
 
 const SUPPORTED_ENTRYPOINTS = {
     'EPV_06': "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -53,7 +54,7 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 const api_key = query['apiKey'] ?? body.params[2];
                 if (!api_key)
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-                let privateKey = '';
+                let privateKey: Hex;
                 let supportedNetworks;
                 if (!unsafeMode) {
                     const AWSresponse = await client.send(
@@ -78,12 +79,16 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 ) {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
                 }
-                if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+                const chain = getViemChain(Number(chainId));
+                if (
+                    (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) ||
+                    !chain
+                ) {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
                 }
                 const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
                 if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-                return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, true, server.log);
+                return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, true, chain, server.log);
             } catch (err: any) {
                 request.log.error(err);
                 if (err.name == "ResourceNotFoundException")
@@ -105,7 +110,7 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 const api_key = query['apiKey'] ?? body.params[2];
                 if (!api_key)
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-                let privateKey = '';
+                let privateKey: Hex;
                 let supportedNetworks;
                 if (!unsafeMode) {
                     const AWSresponse = await client.send(
@@ -130,12 +135,16 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 ) {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
                 }
-                if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+                const chain = getViemChain(Number(chainId));
+                if (
+                    (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) ||
+                    !chain
+                ) {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
                 }
                 const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
                 if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-                return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, false, server.log);
+                return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, false, chain, server.log);
             } catch (err: any) {
                 request.log.error(err);
                 if (err.name == "ResourceNotFoundException")

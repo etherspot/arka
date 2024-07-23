@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { providers, Wallet, ethers, Contract, BigNumber, BigNumberish } from 'ethers';
-import { arrayify, BytesLike, defaultAbiCoder, hexConcat, hexZeroPad } from 'ethers/lib/utils.js';
 import { FastifyBaseLogger } from 'fastify';
 import EtherspotAbiV06 from '../abi/EtherspotAbi.js';
 import EtherspotAbiV07 from "../abi/EtherspotVerifyingSignerAbi.js";
@@ -11,63 +9,93 @@ import { getEtherscanFee } from '../utils/common.js';
 import MultiTokenPaymasterAbi from '../abi/MultiTokenPaymasterAbi.js';
 import OrochiOracleAbi from '../abi/OrochiOracleAbi.js';
 import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
+import {
+  pad,
+  toHex,
+  concat,
+  parseUnits,
+  PrivateKeyAccount,
+  encodeAbiParameters,
+  http,
+  GetContractReturnType,
+  createPublicClient,
+  getContract,
+  createWalletClient,
+  parseEther,
+  encodeFunctionData,
+  SendTransactionReturnType,
+  erc20Abi,
+  Hex,
+  formatEther,
+  PublicClient,
+  stringToBytes,
+  formatUnits,
+  zeroAddress,
+  Chain
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 export class Paymaster {
-  feeMarkUp: BigNumber;
-  multiTokenMarkUp: number;
+  feeMarkUp: bigint;
+  multiTokenMarkUp: Number;
 
   constructor(feeMarkUp: string, multiTokenMarkUp: string) {
-    this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
+    this.feeMarkUp = parseUnits(feeMarkUp, 9);
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
   }
 
-  packUint (high128: BigNumberish, low128: BigNumberish): string {
-    return hexZeroPad(BigNumber.from(high128).shl(128).add(low128).toHexString(), 32)
+  packUint (high128: bigint, low128: bigint): Hex {
+    return pad((toHex((high128 << BigInt(128)) + low128)), {size: 32});
   }
 
-  packPaymasterData (paymaster: string, paymasterVerificationGasLimit: BigNumberish, postOpGasLimit: BigNumberish, paymasterData?: BytesLike): BytesLike {
-    return ethers.utils.hexConcat([
+  packPaymasterData (paymaster: Hex, paymasterVerificationGasLimit: bigint, postOpGasLimit: bigint, paymasterData?: Hex): Hex {
+    return concat([
       paymaster,
       this.packUint(paymasterVerificationGasLimit, postOpGasLimit),
       paymasterData ?? '0x'
     ])
   }
 
-  async getPaymasterData(userOp: any, validUntil: string, validAfter: string, paymasterContract: Contract, signer: Wallet) {
+  async getPaymasterData(userOp: any, validUntil: number, validAfter: number, paymasterContract: GetContractReturnType<typeof EtherspotAbiV07, PublicClient>, signer: PrivateKeyAccount) {
     // actual signing...
-    const hash = await paymasterContract.getHash(
-      userOp,
-      validUntil,
-      validAfter
-    );
+    const hash = await paymasterContract.read.getHash([userOp, validUntil, validAfter]);
 
-    const sig = await signer.signMessage(arrayify(hash));
+    const sig = await signer.signMessage({message: {raw: hash}});
 
-    const paymasterData = hexConcat([
-      defaultAbiCoder.encode(
-        ['uint48', 'uint48'],
-        [validUntil, validAfter]
+    const paymasterData = concat([
+      encodeAbiParameters(
+        [{type: 'uint48'}, {type: 'uint48'}],
+        [validUntil, validAfter]  
       ),
-      sig,
+      sig
     ]);
 
     return paymasterData;
   }
 
-  async signV07(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, 
-    bundlerRpc: string, signer: Wallet, estimate: boolean, log?: FastifyBaseLogger) {
+  async signV07(userOp: any, validUntil: string, validAfter: string, entryPoint: Hex, paymasterAddress: Hex,
+    bundlerRpc: string, signer: PrivateKeyAccount, estimate: boolean, log?: FastifyBaseLogger) {
     try {
-      const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV07, provider);
+      const client = createPublicClient({
+        transport: http(bundlerRpc)
+      });
+      const paymasterContract = getContract({
+        abi: EtherspotAbiV07,
+        address: paymasterAddress,
+        client
+      })
       if (!userOp.signature) userOp.signature = '0x';
-      if (userOp.factory && userOp.factoryData) userOp.initCode = hexConcat([userOp.factory, userOp.factoryData ?? ''])
+      if (userOp.factory && userOp.factoryData) userOp.initCode = concat([userOp.factory, userOp.factoryData ?? ''])
       if (!userOp.initCode) userOp.initCode = "0x";
       if (estimate) {
-        const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
-        userOp.verificationGasLimit = response.verificationGasLimit;
-        userOp.callGasLimit = response.callGasLimit;
-        userOp.preVerificationGas = response.preVerificationGas;
+        const response: {verificationGasLimit: string, preVerificationGas: string, callGasLimit: string} = await client.request({
+          method: "eth_estimateUserOperationGas" as any,
+          params: [userOp, entryPoint]
+        })
+        userOp.verificationGasLimit = BigInt(response.verificationGasLimit);
+        userOp.callGasLimit = BigInt(response.callGasLimit);
+        userOp.preVerificationGas = BigInt(response.preVerificationGas);
       }
       const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
       const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
@@ -79,11 +107,11 @@ export class Paymaster {
         accountGasLimits: accountGasLimits,
         preVerificationGas: userOp.preVerificationGas,
         gasFees: gasFees,
-        paymasterAndData: this.packPaymasterData(paymasterAddress, BigNumber.from(30000), "0x1"),
+        paymasterAndData: this.packPaymasterData(paymasterAddress, BigInt(30000), BigInt("0x1")),
         signature: userOp.signature
       }
 
-      const paymasterData = await this.getPaymasterData(packedUserOp, validUntil, validAfter, paymasterContract, signer);
+      let paymasterData = await this.getPaymasterData(packedUserOp, +validUntil, +validAfter, paymasterContract, signer);
       let returnValue;
       if (estimate) {
         returnValue = {
@@ -92,8 +120,8 @@ export class Paymaster {
           preVerificationGas: packedUserOp.preVerificationGas.toString(),
           verificationGasLimit: userOp.verificationGasLimit,
           callGasLimit: userOp.callGasLimit,
-          paymasterVerificationGasLimit: BigNumber.from(30000).toString(),
-          paymasterPostOpGasLimit: "0x1"
+          paymasterVerificationGasLimit: BigInt(30000).toString(),
+          paymasterPostOpGasLimit: BigInt("0x1").toString()
         }
       } else {
         returnValue = {
@@ -109,20 +137,20 @@ export class Paymaster {
     }
   }
 
-  async getPaymasterAndData(userOp: any, validUntil: string, validAfter: string, paymasterContract: Contract, signer: Wallet) {
+  async getPaymasterAndData(userOp: any, validUntil: number, validAfter: number, paymasterContract: GetContractReturnType<typeof EtherspotAbiV06, PublicClient>, signer: PrivateKeyAccount) {
     // actual signing...
-    const hash = await paymasterContract.getHash(
+    const hash = await paymasterContract.read.getHash([
       userOp,
       validUntil,
       validAfter
-    );
+    ]);
 
-    const sig = await signer.signMessage(arrayify(hash));
+    const sig = await signer.signMessage({message: {raw: hash}});
 
-    const paymasterAndData = hexConcat([
+    const paymasterAndData = concat([
       paymasterContract.address,
-      defaultAbiCoder.encode(
-        ['uint48', 'uint48'],
+      encodeAbiParameters(
+        [{type: 'uint48'}, {type: 'uint48'}],
         [validUntil, validAfter]
       ),
       sig,
@@ -131,27 +159,36 @@ export class Paymaster {
     return paymasterAndData;
   }
 
-  async signV06(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, 
-    bundlerRpc: string, signer: Wallet, estimate: boolean, log?: FastifyBaseLogger) {
+  async signV06(userOp: any, validUntil: string, validAfter: string, entryPoint: Hex, paymasterAddress: Hex,
+    bundlerRpc: string, signer: PrivateKeyAccount, estimate: boolean, log?: FastifyBaseLogger) {
     try {
-      const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV06, provider);
-      userOp.paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
+      const client = createPublicClient({
+        transport: http(bundlerRpc)
+      });
+      const paymasterContract = getContract({
+        abi: EtherspotAbiV06,
+        address: paymasterAddress,
+        client
+      });
+      userOp.paymasterAndData = await this.getPaymasterAndData(userOp, +validUntil, +validAfter, paymasterContract, signer);
       if (!userOp.signature) userOp.signature = '0x';
       if (estimate) {
-      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
-        userOp.verificationGasLimit = response.verificationGasLimit;
-        userOp.preVerificationGas = response.preVerificationGas;
-        userOp.callGasLimit = response.callGasLimit;
+        const response: {verificationGasLimit: string, preVerificationGas: string, callGasLimit: string} = await client.request({
+          method: "eth_estimateUserOperationGas" as any,
+          params: [userOp, entryPoint]
+        })
+        userOp.verificationGasLimit = BigInt(response.verificationGasLimit);
+        userOp.preVerificationGas = BigInt(response.preVerificationGas);
+        userOp.callGasLimit = BigInt(response.callGasLimit);
       }
-      const paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
+      const paymasterAndData = await this.getPaymasterAndData(userOp, +validUntil, +validAfter, paymasterContract, signer);
       let returnValue;
       if (estimate) {
         returnValue = {
           paymasterAndData,
-          verificationGasLimit: userOp.verificationGasLimit,
-          preVerificationGas: userOp.preVerificationGas,
-          callGasLimit: userOp.callGasLimit,
+          verificationGasLimit: userOp.verificationGasLimit.toString(),
+          preVerificationGas: userOp.preVerificationGas.toString(),
+          callGasLimit: userOp.callGasLimit.toString(),
         }
       } else {
         returnValue = {
@@ -166,63 +203,80 @@ export class Paymaster {
     }
   } 
 
-  async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string, 
-    ethPrice: string, paymasterContract: Contract, signer: Wallet) {
-    const exchangeRate = 1000000; // This is for setting min tokens required for the txn that gets validated on estimate
-    const rate = ethers.BigNumber.from(exchangeRate).mul(ethPrice);
-    const priceMarkup = this.multiTokenMarkUp;
+  async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: number, validAfter: number, feeToken: Hex,
+    ethPrice: string, paymasterContract: GetContractReturnType<typeof MultiTokenPaymasterAbi, PublicClient>, signer: PrivateKeyAccount) {
+    const exchangeRate = 1000000n; // This is for setting min tokens required for the txn that gets validated on estimate
+    const rate = exchangeRate * BigInt(ethPrice);
+    const priceMarkup = this.multiTokenMarkUp as number;
     // actual signing...
     // priceSource inputs available 0 - for using external exchange price and 1 - for oracle based price
-    const hash = await paymasterContract.getHash(
+    const hash = await paymasterContract.read.getHash([
       userOp,
       0,
       validUntil,
       validAfter,
       feeToken,
-      ethers.constants.AddressZero,
-      rate.toNumber().toFixed(0),
+      zeroAddress,
+      rate,
       priceMarkup,
-    );
+    ]);
 
-    const sig = await signer.signMessage(arrayify(hash));
+    const sig = await signer.signMessage({message: {raw: hash}});
 
-    const paymasterAndData = hexConcat([
+    const paymasterAndData = concat([
       paymasterContract.address,
       '0x00',
-      defaultAbiCoder.encode(
-        ['uint48', 'uint48', 'address', 'address', 'uint256', 'uint32'],
-        [validUntil, validAfter, feeToken, ethers.constants.AddressZero, rate.toNumber().toFixed(0), priceMarkup]
+      encodeAbiParameters(
+        [{type: 'uint48'}, {type: 'uint48'}, {type: 'address'}, {type: 'address'}, {type: 'uint256'}, {type: 'uint32'}],
+        [validUntil, validAfter, feeToken, zeroAddress, rate, priceMarkup]
       ),
-      sig,
+      sig
     ]);
 
     return paymasterAndData;
   }
 
-  async signMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string,
-    feeToken: string, oracleAggregator: string, bundlerRpc: string, signer: Wallet, oracleName: string, log?: FastifyBaseLogger) {
+  async signMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, entryPoint: Hex, paymasterAddress: Hex,
+    feeToken: Hex, oracleAggregator: Hex, bundlerRpc: string, signer: PrivateKeyAccount, oracleName: string, log?: FastifyBaseLogger) {
     try {
-      const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbi, provider);
+      const client = createPublicClient({
+        transport: http(bundlerRpc)
+      });
+      const paymasterContract = getContract({
+        abi: MultiTokenPaymasterAbi,
+        address: paymasterAddress,
+        client
+      });
       let ethPrice = "";
       if (oracleName === "orochi") {
-        const oracleContract = new ethers.Contract(oracleAggregator, OrochiOracleAbi, provider);
-        const result = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
-        ethPrice = Number(ethers.utils.formatEther(result)).toFixed(0);
+        const oracleContract = getContract({
+          abi: OrochiOracleAbi,
+          address: oracleAggregator,
+          client
+        });
+        const result = await oracleContract.read.getLatestData([1, toHex(stringToBytes('ETH')).padEnd(42, '0') as Hex]);
+        ethPrice = Number(formatEther(BigInt(result))).toFixed(0);
       } else {
-        const chainlinkContract = new ethers.Contract(oracleAggregator, ChainlinkOracleAbi, provider);
-        const decimals = await chainlinkContract.decimals();
-        const result = await chainlinkContract.latestAnswer();
-        ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
+        const chainlinkContract = getContract({
+          abi: ChainlinkOracleAbi,
+          address: oracleAggregator,
+          client
+        });
+        const decimals = await chainlinkContract.read.decimals();
+        const result = await chainlinkContract.read.latestAnswer();
+        ethPrice = Number(formatUnits(result, decimals)).toFixed(0);
       }
-      userOp.paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
+      userOp.paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, +validUntil, +validAfter, feeToken, ethPrice, paymasterContract, signer);
 
       if (!userOp.signature) userOp.signature = '0x';
-      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
-      userOp.verificationGasLimit = response.verificationGasLimit;
-      userOp.preVerificationGas = response.preVerificationGas;
-      userOp.callGasLimit = response.callGasLimit;
-      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
+      const response: {verificationGasLimit: string, preVerificationGas: string, callGasLimit: string} = await client.request({
+        method: "eth_estimateUserOperationGas" as any,
+        params: [userOp, entryPoint]
+      })
+      userOp.verificationGasLimit = BigInt(response.verificationGasLimit);
+      userOp.preVerificationGas = BigInt(response.preVerificationGas);
+      userOp.callGasLimit = BigInt(response.callGasLimit);
+      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, +validUntil, +validAfter, feeToken, ethPrice, paymasterContract, signer);
 
       const returnValue = {
         paymasterAndData,
@@ -238,46 +292,39 @@ export class Paymaster {
     }
   }
 
-  async pimlico(userOp: any, bundlerRpc: string, entryPoint: string, PaymasterAddress: string, log?: FastifyBaseLogger) {
+  async pimlico(userOp: any, bundlerRpc: string, entryPoint: Hex, PaymasterAddress: Hex, log?: FastifyBaseLogger) {
     try {
-      const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const erc20Paymaster = new PimlicoPaymaster(PaymasterAddress, provider)
+      const client = createPublicClient({
+        transport: http(bundlerRpc)
+      });
+      const erc20Paymaster = new PimlicoPaymaster(PaymasterAddress, client)
       if (!userOp.signature) userOp.signature = '0x';
-
-      // The minimum ABI to get the ERC20 Token balance
-      const minABI = [
-        // balanceOf
-        {
-          constant: true,
-
-          inputs: [{ name: '_owner', type: 'address' }],
-
-          name: 'balanceOf',
-
-          outputs: [{ name: 'balance', type: 'uint256' }],
-
-          type: 'function',
-        },
-      ]
       const tokenAmountRequired = await erc20Paymaster.calculateTokenAmount(userOp);
-      const tokenContract = new Contract(await erc20Paymaster.tokenAddress, minABI, provider)
-      const tokenBalance = await tokenContract.balanceOf(userOp.sender);
+      const tokenContract = getContract({
+        abi: erc20Abi,
+        address: (await erc20Paymaster.tokenAddress),
+        client
+      });
+      const tokenBalance = await tokenContract.read.balanceOf([userOp.sender]);
 
-      if (tokenAmountRequired.gte(tokenBalance)) 
+      if (tokenAmountRequired >= tokenBalance)
         throw new Error(`The required token amount ${tokenAmountRequired.toString()} is more than what the sender has ${tokenBalance}`)
 
       let paymasterAndData = await erc20Paymaster.generatePaymasterAndDataForTokenAmount(userOp, tokenAmountRequired)
       userOp.paymasterAndData = paymasterAndData;
 
-      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
-      userOp.verificationGasLimit = ethers.BigNumber.from(response.verificationGasLimit).add(100000).toString();
-      userOp.preVerificationGas = response.preVerificationGas;
-      userOp.callGasLimit = response.callGasLimit;
+      const response: {verficationGasLimit: string, preVerificationGas: string, callGasLimit: string} = await client.request({
+        method: "eth_estimateUserOperationGas" as any,
+        params: [userOp, entryPoint]
+      })
+      userOp.verificationGasLimit = (BigInt(response.verficationGasLimit) + BigInt(100000))
+      userOp.preVerificationGas = BigInt(response.preVerificationGas)
+      userOp.callGasLimit = BigInt(response.callGasLimit)
       paymasterAndData = await erc20Paymaster.generatePaymasterAndData(userOp);
 
       return {
         paymasterAndData,
-        verificationGasLimit: userOp.verificationGasLimit,
+        verificationGasLimit: userOp.verificationGasLimit.toString(),
         preVerificationGas: response.preVerificationGas,
         callGasLimit: response.callGasLimit,
       };
@@ -299,51 +346,66 @@ export class Paymaster {
     }
   }
 
-  async whitelistAddresses(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, log?: FastifyBaseLogger) {
+  async whitelistAddresses(address: Hex[], paymasterAddress: Hex, bundlerRpc: string, relayerKey: Hex, chainId: number, chain: Chain, log?: FastifyBaseLogger) {
     try {
-      const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV06, provider);
-      const signer = new Wallet(relayerKey, provider)
+      const client = createPublicClient({
+        transport: http(bundlerRpc),
+        chain
+      });
+      const paymasterContract = getContract({
+        abi: EtherspotAbiV06,
+        address: paymasterAddress,
+        client
+      });
+      const signer = createWalletClient({
+        transport: http(bundlerRpc),
+        account: privateKeyToAccount(relayerKey),
+        chain
+      });
       for (let i = 0; i < address.length; i++) {
-        const isAdded = await paymasterContract.check(signer.address, address[i]);
+        const isAdded = await paymasterContract.read.check([signer.account.address, address[i]]);
         if (isAdded) {
           throw new Error(`${address[i]} already whitelisted`)
         }
       }
-      const encodedData = paymasterContract.interface.encodeFunctionData('addBatchToWhitelist', [address]);
+      const encodedData = encodeFunctionData({
+        abi: EtherspotAbiV06,
+        args: [address],
+        functionName: 'addBatchToWhitelist'
+      })
 
       const etherscanFeeData = await getEtherscanFee(chainId);
       let feeData;
       if (etherscanFeeData) {
         feeData = etherscanFeeData;
       } else {
-        feeData = await provider.getFeeData();
-        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
-        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
-        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
+        feeData = await client.estimateFeesPerGas();
+        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice + this.feeMarkUp : undefined;
+        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas + this.feeMarkUp : undefined;
+        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas + this.feeMarkUp : undefined;
       }
 
-      let tx: providers.TransactionResponse;
+      let tx: SendTransactionReturnType;
       if (!feeData.maxFeePerGas) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
-          gasPrice: feeData.gasPrice ?? undefined,
-        })
+          gasPrice: feeData.gasPrice ?? undefined
+        });
       } else {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
           maxFeePerGas: feeData.maxFeePerGas ?? undefined,
           maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-          type: 2,
+          type: "eip1559"
         });
       }
       // commented the below line to avoid timeouts for long delays in transaction confirmation.
       // await tx.wait();
 
       return {
-        message: `Successfully whitelisted with transaction Hash ${tx.hash}`
+        message: `Successfully whitelisted with transaction Hash ${tx}`
       };
     } catch (err: any) {
       if (err.message.includes('already whitelisted')) throw new Error(err.message);
@@ -352,31 +414,45 @@ export class Paymaster {
     }
   }
 
-  async removeWhitelistAddress(address: string[], paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, log?: FastifyBaseLogger) {
+  async removeWhitelistAddress(address: Hex[], paymasterAddress: Hex, bundlerRpc: string, relayerKey: Hex, chainId: number, chain: Chain, log?: FastifyBaseLogger) {
     try {
-      const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV06, provider);
-      const signer = new Wallet(relayerKey, provider)
+      const client = createPublicClient({
+        transport: http(bundlerRpc),
+        chain
+      });
+      const paymasterContract = getContract({
+        abi: EtherspotAbiV06,
+        address: paymasterAddress,
+        client
+      });
+      const signer = createWalletClient({
+        transport: http(bundlerRpc),
+        account: privateKeyToAccount(relayerKey),
+        chain
+      });
       for (let i = 0; i < address.length; i++) {
-        const isAdded = await paymasterContract.check(signer.address, address[i]);
+        const isAdded = await paymasterContract.read.check([signer.account.address, address[i]]);
         if (!isAdded) {
           throw new Error(`${address[i]} is not whitelisted`)
         }
       }
-
-      const encodedData = paymasterContract.interface.encodeFunctionData('removeBatchFromWhitelist', [address]);
+      const encodedData = encodeFunctionData({
+        abi: EtherspotAbiV06,
+        args: [address],
+        functionName: 'removeBatchFromWhitelist'
+      })
       const etherscanFeeData = await getEtherscanFee(chainId);
       let feeData;
       if (etherscanFeeData) {
         feeData = etherscanFeeData;
       } else {
-        feeData = await provider.getFeeData();
-        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
-        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
-        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
+        feeData = await client.estimateFeesPerGas();
+        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice + this.feeMarkUp : undefined;
+        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas + this.feeMarkUp : undefined;
+        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas + this.feeMarkUp : undefined;
       }
 
-      let tx: providers.TransactionResponse;
+      let tx: SendTransactionReturnType;
       if (!feeData.maxFeePerGas) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
@@ -389,14 +465,14 @@ export class Paymaster {
           data: encodedData,
           maxFeePerGas: feeData.maxFeePerGas ?? undefined,
           maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-          type: 2,
+          type: "eip1559",
         });
       }
       // commented the below line to avoid timeouts for long delays in transaction confirmation.
       // await tx.wait();
 
       return {
-        message: `Successfully removed whitelisted addresses with transaction Hash ${tx.hash}`
+        message: `Successfully removed whitelisted addresses with transaction Hash ${tx}`
       };
     } catch (err: any) {
       if (err.message.includes('is not whitelisted')) throw new Error(err.message);
@@ -405,64 +481,86 @@ export class Paymaster {
     }
   }
 
-  async checkWhitelistAddress(accountAddress: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string, log?: FastifyBaseLogger) {
+  async checkWhitelistAddress(accountAddress: Hex, paymasterAddress: Hex, bundlerRpc: string, relayerKey: Hex, log?: FastifyBaseLogger) {
     try {
-      const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const signer = new Wallet(relayerKey, provider)
-      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV06, provider);
-      return paymasterContract.check(signer.address, accountAddress);
+      const client = createPublicClient({
+        transport: http(bundlerRpc)
+      });
+      const account = privateKeyToAccount(relayerKey);
+      const paymasterContract = getContract({
+        abi: EtherspotAbiV06,
+        address: paymasterAddress,
+        client
+      });
+      return paymasterContract.read.check([account.address, accountAddress]);
     } catch (err) {
       if (log) log.error(err, 'checkWhitelistAddress');
       throw new Error(ErrorMessage.RPC_ERROR);
     }
   }
 
-  async deposit(amount: string, paymasterAddress: string, bundlerRpc: string, relayerKey: string, chainId: number, isEpv06: boolean, log?: FastifyBaseLogger) {
+  async deposit(amount: string, paymasterAddress: Hex, bundlerRpc: string, relayerKey: Hex, chainId: number, isEpv06: boolean, chain: Chain, log?: FastifyBaseLogger) {
     try {
-      const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, isEpv06 ? EtherspotAbiV06 : EtherspotAbiV07, provider);
-      const signer = new Wallet(relayerKey, provider)
-      const balance = await signer.getBalance();
-      const amountInWei = ethers.utils.parseEther(amount.toString());
-      if (amountInWei.gte(balance))
-        throw new Error(`${signer.address} Balance is less than the amount to be deposited`)
+      const client = createPublicClient({
+        transport: http(bundlerRpc),
+        chain
+      });
+      const abi = isEpv06 ? EtherspotAbiV06 : EtherspotAbiV07;
+      const signer = createWalletClient({
+        account: privateKeyToAccount(relayerKey),
+        transport: http(bundlerRpc),
+        chain
+      });
+      const balance = await client.getBalance({
+        address: signer.account.address
+      });
+      const amountInWei = parseEther(amount);
+      if (amountInWei >= balance)
+        throw new Error(`${signer.account.address} Balance is less than the amount to be deposited`)
 
-      const encodedData = paymasterContract.interface.encodeFunctionData(isEpv06 ? 'depositFunds': 'deposit', []);
+      const encodedData = encodeFunctionData({
+        abi,
+        args: [],
+        functionName: isEpv06 ? 'depositFunds' : 'deposit'
+      });
 
       const etherscanFeeData = await getEtherscanFee(chainId);
       let feeData;
       if (etherscanFeeData) {
         feeData = etherscanFeeData;
       } else {
-        feeData = await provider.getFeeData();
-        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
-        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
-        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
+        feeData = await client.estimateFeesPerGas({
+          type: 'eip1559'
+        })
+        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice + this.feeMarkUp : undefined;
+        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas + this.feeMarkUp : undefined;
+        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas + this.feeMarkUp : undefined;
       }
 
-      let tx: providers.TransactionResponse;
+      let tx: SendTransactionReturnType;
       if (!feeData.maxFeePerGas) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
           value: amountInWei,
-          gasPrice: feeData.gasPrice ?? undefined,
+          gasPrice: feeData.gasPrice
         })
       } else {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
           value: amountInWei,
-          maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+          maxFeePerGas: feeData.maxFeePerGas ? feeData.maxFeePerGas : undefined,
           maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-          type: 2,
+          type: "eip1559",
+          chain
         });
       }
       // commented the below line to avoid timeouts for long delays in transaction confirmation.
       // await tx.wait(); 
 
       return {
-        message: `Successfully deposited with transaction Hash ${tx.hash}`
+        message: `Successfully deposited with transaction Hash ${tx}`
       };
     } catch (err: any) {
       if (log) log.error(err, 'deposit');

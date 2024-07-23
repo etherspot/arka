@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyPluginAsync } from "fastify";
-import { BigNumber, Wallet, ethers, providers } from "ethers";
 import { gql, request as GLRequest } from "graphql-request";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { Paymaster } from "../paymaster/index.js";
@@ -12,6 +11,8 @@ import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { SponsorshipPolicy } from "../models/sponsorship-policy.js";
 import { DEFAULT_EP_VERSION, EPVersions, getEPVersion } from "../types/sponsorship-policy-dto.js";
+import { createPublicClient, getAddress, Hex, http, isAddress } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 const SUPPORTED_ENTRYPOINTS = {
   'EPV_06': "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -56,7 +57,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             }
             // eslint-disable-next-line no-fallthrough
             case 'pm_getPaymasterStubData': {
-              chainId = BigNumber.from(body.params[2]).toNumber();
+              chainId = Number(BigInt(body.params[2]))
               context = body.params[3];
               gasToken = context?.token ? context.token : null;
               mode = context?.mode ? String(context.mode) : "sponsor";
@@ -81,7 +82,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         let customPaymasters = [];
         let multiTokenPaymasters = [];
         let multiTokenOracles = [];
-        let privateKey = '';
+        let privateKey: Hex = '0x';
         let supportedNetworks;
         let noOfTxns;
         let txnMode;
@@ -175,7 +176,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
         ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
 
-        if (gasToken && ethers.utils.isAddress(gasToken)) gasToken = ethers.utils.getAddress(gasToken)
+        if (gasToken && isAddress(gasToken)) gasToken = getAddress(gasToken)
 
         if (mode.toLowerCase() == 'multitoken' &&
           !(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
@@ -189,11 +190,13 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         switch (mode.toLowerCase()) {
           case 'sponsor': {
             const date = new Date();
-            const provider = new providers.JsonRpcProvider(networkConfig.bundler);
-            const signer = new Wallet(privateKey, provider)
+            const provider = createPublicClient({
+              transport: http(networkConfig.bundler)
+            });
+            const signer = privateKeyToAccount(privateKey);
 
             // get chainid from provider
-            const chainId = await provider.getNetwork();
+            const chainId = await provider.getChainId();
 
             // get wallet_address from api_key
             const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
@@ -202,24 +205,24 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             // get sponsorshipPolicy for the user from walletAddress and entrypoint version
             const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(apiKeyData?.walletAddress, getEPVersion(epVersion));
             if (!sponsorshipPolicy) {
-              const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
+              const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId });
               return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
             }
 
             if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) {
-              const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
+              const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId });
               return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
             }
 
             // get supported networks from sponsorshipPolicy
             const supportedNetworks: number[] | undefined | null = sponsorshipPolicy.enabledChains;
-            if (!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+            if (!supportedNetworks || !supportedNetworks.includes(chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
 
             // is chainId exists in supportedNetworks
-            if (!supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+            if (!supportedNetworks.includes(chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
 
             if (txnMode) {
-              const signerAddress = await signer.getAddress();
+              const signerAddress = getAddress(signer.address);
               const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
               if (IndexerData.length >= noOfTxns) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.QUOTA_EXCEEDED })
             }
@@ -252,7 +255,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           case 'erc20': {
             if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06)
               throw new Error('Currently only 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 entryPoint address is supported')
-            let paymasterAddress: string;
+            let paymasterAddress: Hex;
             if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
             else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
             result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, paymasterAddress, server.log);
@@ -262,8 +265,10 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06)
               throw new Error('Currently only 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 entryPoint address is supported')
             const date = new Date();
-            const provider = new providers.JsonRpcProvider(networkConfig.bundler);
-            const signer = new Wallet(privateKey, provider)
+            const provider = createPublicClient({
+              transport: http(networkConfig.bundler)
+            });
+            const signer = privateKeyToAccount(privateKey);
             const validUntil = context.validUntil ? new Date(context.validUntil) : date;
             const validAfter = context.validAfter ? new Date(context.validAfter) : date;
             const hex = (Number((validUntil.valueOf() / 1000).toFixed(0)) + 600).toString(16);

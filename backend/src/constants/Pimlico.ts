@@ -1,4 +1,6 @@
-export const TOKEN_ADDRESS: Record<number, Record<string, string>> = {
+import { Hex } from "viem"
+
+export const TOKEN_ADDRESS: Record<number, Record<string, Hex>> = {
     1: {
         USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     },
@@ -49,7 +51,7 @@ export const NATIVE_ASSET: Record<number, string> = {
     84531: "ETH"
 }
 
-export const ORACLE_ADDRESS: Record<number, Record<string, string>> = {
+export const ORACLE_ADDRESS: Record<number, Record<string, Hex>> = {
     1: {
         ETH: "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
         DAI: "0xaed0c38402a5d19df6e4c03f4e2dced6e29c1ee9",
@@ -99,7 +101,7 @@ export const ORACLE_ADDRESS: Record<number, Record<string, string>> = {
 /**
  * Example Structure for adding deployed erc20 paymasters on AWS secrets manager
  */
-export const CustomDeployedPaymasters: Record<number, Record<string, string>> = {
+export const CustomDeployedPaymasters: Record<number, Record<string, Hex>> = {
     "137": {
         "USDT": "0xFB8A7D1786E01f31Fc6466A48243Ca9FF0820cCB"
     },
@@ -140,7 +142,7 @@ export const CustomDeployedPaymasters: Record<number, Record<string, string>> = 
     }
 }
 
-export const PAYMASTER_ADDRESS: Record<number, Record<string, string>> = {
+export const PAYMASTER_ADDRESS: Record<number, Record<string, Hex>> = {
     1: {
         USDC: "0x0000000000fABFA8079AB313D1D14Dcf4D15582a"
     },
@@ -181,7 +183,7 @@ export const PAYMASTER_ADDRESS: Record<number, Record<string, string>> = {
 /**
  * Example Structure for adding deployed multi-token paymasters on AWS secrets manager
  */
-export const MULTI_TOKEN_PAYMASTERS: Record<number, Record<string, string>> = {
+export const MULTI_TOKEN_PAYMASTERS: Record<number, Record<string, Hex>> = {
     "80001": {
         "0x453478E2E0c846c069e544405d5877086960BEf2": "0xe85649152D15825F2226B2d9C49c07b1cd2b36C7"
     },
@@ -193,7 +195,7 @@ export const MULTI_TOKEN_PAYMASTERS: Record<number, Record<string, string>> = {
 /**
  * Example Structure for adding deployed multi-token oracles on AWS secrets manager
  */
-export const MULTI_TOKEN_ORACLES: Record<number, Record<string, string>> = {
+export const MULTI_TOKEN_ORACLES: Record<number, Record<string, Hex>> = {
     "80001": {
         "0x453478E2E0c846c069e544405d5877086960BEf2": "0x75bDb3803d671ac3051112E8A7745fF88eEd6d94"
     },

@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyPluginAsync } from "fastify";
 import { CronTime } from 'cron';
-import { ethers } from "ethers";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { encode, decode } from "../utils/crypto.js";
@@ -9,6 +8,8 @@ import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { APIKey } from "../models/api-key.js";
 import { ArkaConfigUpdateData } from "../types/arka-config-dto.js";
 import { ApiKeyDto } from "../types/apikey-dto.js";
+import { getAddress } from 'viem';
+import { privateKeyToAccount } from "viem/accounts";
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/adminLogin', async function (request, reply) {
@@ -19,7 +20,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
       if (!body.walletAddress) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-      if (ethers.utils.getAddress(body.walletAddress) === ethers.utils.getAddress(server.config.ADMIN_WALLET_ADDRESS)) return reply.code(ReturnCode.SUCCESS).send({ error: null, message: "Successfully Logged in" });
+      if (getAddress(body.walletAddress) === getAddress(server.config.ADMIN_WALLET_ADDRESS)) return reply.code(ReturnCode.SUCCESS).send({ error: null, message: "Successfully Logged in" });
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
     } catch (err: any) {
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
@@ -87,8 +88,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.apiKey))
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_VALIDATION_FAILED })
 
-      const wallet = new ethers.Wallet(body.privateKey);
-      const publicAddress = await wallet.getAddress();
+      const wallet = privateKeyToAccount(body.privateKey);
+      const publicAddress = getAddress(wallet.address);
 
       // Use Sequelize to find the API key
       const result = await server.apiKeyRepository.findOneByWalletAddress(publicAddress);

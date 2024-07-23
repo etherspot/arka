@@ -1,7 +1,8 @@
 import { Sequelize, Op } from 'sequelize';
 import { SponsorshipPolicy } from '../models/sponsorship-policy.js';
 import { EPVersions, SponsorshipPolicyDto, getEPVersionString } from '../types/sponsorship-policy-dto.js';
-import { ethers } from 'ethers';
+import { isAddress } from 'viem';
+import { server } from 'server.js';
 
 export class SponsorshipPolicyRepository {
     private sequelize: Sequelize;
@@ -662,7 +663,7 @@ export class SponsorshipPolicyRepository {
             const invalidAddresses: string[] = [];
 
             sponsorshipPolicy.addressAllowList.forEach(address => {
-                if (!address || !ethers.utils.isAddress(address)) {
+                if (!address || !isAddress(address)) {
                     invalidAddresses.push(address);
                 }
             });
@@ -676,7 +677,7 @@ export class SponsorshipPolicyRepository {
             const invalidAddresses: string[] = [];
 
             sponsorshipPolicy.addressBlockList.forEach(address => {
-                if (!address || !ethers.utils.isAddress(address)) {
+                if (!address || !isAddress(address)) {
                     invalidAddresses.push(address);
                 }
             });
