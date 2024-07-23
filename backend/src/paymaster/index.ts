@@ -99,7 +99,7 @@ export class Paymaster {
       }
       const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
       const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
-      let packedUserOp = {
+      const packedUserOp = {
         sender: userOp.sender,
         nonce: userOp.nonce,
         initCode: userOp.initCode,

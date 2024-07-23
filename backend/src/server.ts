@@ -101,7 +101,7 @@ const initializeServer = async (): Promise<void> => {
               Object.keys(DEPLOYED_ERC20_PAYMASTERS).forEach(async (chain) => {
                 //EP-v6 entrypoint address
                 const networkConfig = getNetworkConfig(chain, '', "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
-                const chainDef = getViemChain(+chain);
+                const chainDef = getViemChain(+chain)!;
                 if (networkConfig) {
                   const deployedPaymasters: Hex[] = DEPLOYED_ERC20_PAYMASTERS[chain];
                   const client = createPublicClient({

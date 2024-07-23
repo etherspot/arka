@@ -51,7 +51,6 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 const query: any = request.query;
                 const amount = body.params[0];
                 const chainId = query['chainId'] ?? body.params[1];
-                const chain = getViemChain(Number(chainId));
                 const api_key = query['apiKey'] ?? body.params[2];
                 if (!api_key)
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -80,7 +79,11 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 ) {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
                 }
-                if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+                const chain = getViemChain(Number(chainId));
+                if (
+                    (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) ||
+                    !chain
+                ) {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
                 }
                 const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
@@ -104,7 +107,6 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 const query: any = request.query;
                 const amount = body.params[0];
                 const chainId = query['chainId'] ?? body.params[1];
-                const chain = getViemChain(Number(chainId));
                 const api_key = query['apiKey'] ?? body.params[2];
                 if (!api_key)
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -133,7 +135,11 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 ) {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
                 }
-                if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+                const chain = getViemChain(Number(chainId));
+                if (
+                    (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) ||
+                    !chain
+                ) {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
                 }
                 const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);

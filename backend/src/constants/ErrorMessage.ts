@@ -33,6 +33,10 @@ export default {
     API_KEY_VALIDATION_FAILED: 'Api Key is not in the right format as described in readme file',
     UNSUPPORTED_METHOD: 'Unsupported method name received',
     UNSUPPORTED_ENTRYPOINT: 'Unsupported EntryPoint Address',
+    ADDRESS_ALREADY_ADDED: 'Addresses were already added',
+    ADDRESS_NOT_WHITELISTED: 'Addresses sent were not whitelisted',
+    NO_WHITELIST_FOUND: 'No whitelist were found on the given apiKey/policyId',
+    INVALID_ADDRESS_PASSSED: 'Invalid Address passed',
 }
 
 export function generateErrorMessage(template: string, values: { [key: string]: string | number }): string {

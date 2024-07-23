@@ -55,16 +55,17 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
               estimate = false;
               sponsorDetails = true;
             }
+            // eslint-disable-next-line no-fallthrough
             case 'pm_getPaymasterStubData': {
               chainId = Number(BigInt(body.params[2]))
               context = body.params[3];
               gasToken = context?.token ? context.token : null;
               mode = context?.mode ? String(context.mode) : "sponsor";
               break;
-            };
+            }
             case 'pm_sponsorUserOperation': {
               break;
-            };
+            }
             default: {
               return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_METHOD });
             }
@@ -202,7 +203,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
 
             // get sponsorshipPolicy for the user from walletAddress and entrypoint version
-            const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersionAndChain(apiKeyData?.walletAddress, getEPVersion(epVersion), chainId);
+            const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(apiKeyData?.walletAddress, getEPVersion(epVersion));
             if (!sponsorshipPolicy) {
               const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId });
               return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
@@ -211,7 +212,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) {
               const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId });
               return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
-            } 
+            }
 
             // get supported networks from sponsorshipPolicy
             const supportedNetworks: number[] | undefined | null = sponsorshipPolicy.enabledChains;
@@ -241,7 +242,14 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             str1 += hex1;
             if (entryPoint == SUPPORTED_ENTRYPOINTS.EPV_06)
               result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer, estimate, server.log);
-            else result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer, estimate, server.log);
+            else {
+              const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
+              if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
+                const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
+                if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+              }
+              result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer, estimate, server.log);
+            }
             break;
           }
           case 'erc20': {

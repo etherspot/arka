@@ -545,7 +545,7 @@ export class SponsorshipPolicyRepository {
     }
 
     validateSponsorshipPolicy(sponsorshipPolicy: SponsorshipPolicyDto) {
-        let errors: string[] = [];
+        const errors: string[] = [];
 
         if (!sponsorshipPolicy.name || !sponsorshipPolicy.description) {
             errors.push('Name and description are required fields');

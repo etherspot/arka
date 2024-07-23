@@ -73,11 +73,11 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
   }
 }
 
-export function getViemChain(chainId: number): chains.Chain {
+export function getViemChain(chainId: number): chains.Chain | undefined {
   for(const chain of Object.values(chains)) {
     if (chain.id === chainId) {
       return chain;
     }
   }
-  throw Error(`Chain with id ${chainId} not found`);
+  return undefined;
 }
