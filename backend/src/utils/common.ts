@@ -18,6 +18,10 @@ export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint: s
     return SupportedNetworks.find((chain) => chain.chainId == key && chain.entryPoint == entryPoint);
 }
 
+export function getChainIdsFromDefaultSupportedNetworks() {
+  return SupportedNetworks.map((chain) => chain.chainId);
+}
+
 export function decodeSupportedNetworks(supportedNetworksForDecode: string) {
   const buffer = Buffer.from(supportedNetworksForDecode, "base64");
   return JSON.parse(buffer.toString());

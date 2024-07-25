@@ -3,6 +3,7 @@ export default {
     INVALID_SPONSORSHIP_POLICY: 'Invalid sponsorship policy data',
     INVALID_SPONSORSHIP_POLICY_ID: 'Invalid sponsorship policy id',
     INVALID_API_KEY: 'Invalid Api Key',
+    API_KEY_NOT_CONFIGURED_IN_DATABASE: 'Api Key not configured in database',
     UNSUPPORTED_NETWORK: 'Unsupported network',
     UNSUPPORTED_NETWORK_TOKEN: 'Unsupported network/token',
     EMPTY_BODY: 'Empty Body received',
