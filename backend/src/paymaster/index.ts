@@ -11,6 +11,7 @@ import { getEtherscanFee } from '../utils/common.js';
 import MultiTokenPaymasterAbi from '../abi/MultiTokenPaymasterAbi.js';
 import OrochiOracleAbi from '../abi/OrochiOracleAbi.js';
 import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
+import ERC20PaymasterV07Abi from '../abi/ERC20PaymasterV07Abi.js';
 
 export class Paymaster {
   feeMarkUp: BigNumber;
@@ -89,9 +90,9 @@ export class Paymaster {
         returnValue = {
           paymaster: paymasterAddress,
           paymasterData: paymasterData,
-          preVerificationGas: packedUserOp.preVerificationGas.toString(),
-          verificationGasLimit: userOp.verificationGasLimit,
-          callGasLimit: userOp.callGasLimit,
+          preVerificationGas: BigNumber.from(packedUserOp.preVerificationGas).toHexString(),
+          verificationGasLimit: BigNumber.from(userOp.verificationGasLimit).toHexString(),
+          callGasLimit: BigNumber.from(userOp.callGasLimit).toHexString(),
           paymasterVerificationGasLimit: BigNumber.from(30000).toString(),
           paymasterPostOpGasLimit: "0x1"
         }
@@ -285,6 +286,74 @@ export class Paymaster {
       if (err.message.includes('The required token amount')) throw new Error(err.message);
       if (log) log.error(err, 'pimlico');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg: ' + err.message)
+    }
+  }
+
+  async ERC20PaymasterV07(userOp: any, bundlerRpc: string, entryPoint: string, paymasterAddress: string, estimate: boolean, log?: FastifyBaseLogger) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      if (!userOp.signature) userOp.signature = '0x';
+      if (userOp.factory && userOp.factoryData) userOp.initCode = hexConcat([userOp.factory, userOp.factoryData ?? ''])
+      if (!userOp.initCode) userOp.initCode = "0x";
+      const erc20Paymaster = new Contract(paymasterAddress, ERC20PaymasterV07Abi, provider)
+      const tokenAddress = await erc20Paymaster.token();
+      const tokenPrice = await erc20Paymaster.getPrice();
+      const priceMarkup = await erc20Paymaster.priceMarkup();
+      // The minimum ABI to get the ERC20 Token balance
+      const minABI = [
+        // balanceOf
+        {
+          constant: true,
+
+          inputs: [{ name: '_owner', type: 'address' }],
+
+          name: 'balanceOf',
+
+          outputs: [{ name: 'balance', type: 'uint256' }],
+
+          type: 'function',
+        },
+      ]
+      const maxCost = BigNumber.from(userOp.preVerificationGas ?? 0).add(userOp.callGasLimit ?? 0).add(userOp.verificationGasLimit ?? 0);
+      if (!userOp.maxFeePerGas) userOp.maxFeePerGas = "0x1";
+      let tokenAmountRequired = maxCost.add('30000').mul(userOp.maxFeePerGas)
+      tokenAmountRequired = tokenAmountRequired.mul(priceMarkup).div(1e6).mul(tokenPrice).div(ethers.utils.parseEther('1'))
+      const tokenContract = new Contract(tokenAddress, minABI, provider)
+      const tokenBalance = await tokenContract.balanceOf(userOp.sender);
+
+      if (tokenAmountRequired.gte(tokenBalance)) 
+        throw new Error(`The required token amount ${tokenAmountRequired.toString()} is more than what the sender has ${tokenBalance}`)
+      if (estimate) {
+        userOp.paymaster = paymasterAddress;
+        userOp.paymasterVerificationGasLimit = BigNumber.from('60000').toHexString();
+        userOp.paymasterPostOpGasLimit = BigNumber.from('100000').toHexString();
+        const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+        userOp.verificationGasLimit = response.verificationGasLimit;
+        userOp.callGasLimit = response.callGasLimit;
+        userOp.preVerificationGas = response.preVerificationGas;
+      }
+      let returnValue;
+      if (estimate) {
+        returnValue = {
+          paymaster: paymasterAddress,
+          paymasterData: "0x", // since the default mode is 0
+          preVerificationGas: BigNumber.from(userOp.preVerificationGas).toHexString(),
+          verificationGasLimit: BigNumber.from(userOp.verificationGasLimit).toHexString(),
+          callGasLimit: BigNumber.from(userOp.callGasLimit).toHexString(),
+          paymasterVerificationGasLimit: BigNumber.from('60000').toHexString(),
+          paymasterPostOpGasLimit: BigNumber.from('100000').toHexString()
+        }
+      } else {
+        returnValue = {
+          paymaster: paymasterAddress,
+          paymasterData: "0x",
+        }
+      }
+
+      return returnValue;
+    } catch (err: any) {
+      if (log) log.error(err, 'ERC20Paymaster');
+      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
     }
   }
 
