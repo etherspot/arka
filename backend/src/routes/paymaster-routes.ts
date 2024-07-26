@@ -79,6 +79,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         else epVersion = EPVersions.EPV_07;
 
         let customPaymasters = [];
+        let customPaymastersV2 = [];
         let multiTokenPaymasters = [];
         let multiTokenOracles = [];
         let privateKey = '';
@@ -101,6 +102,10 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           if (secrets['ERC20_PAYMASTERS']) {
             const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
             customPaymasters = JSON.parse(buffer.toString());
+          }
+          if (secrets['ERC20_PAYMASTERS_V2']) {
+            const buffer = Buffer.from(secrets['ERC20_PAYMASTERS_V2'], 'base64');
+            customPaymastersV2 = JSON.parse(buffer.toString());
           }
           if (secrets['MULTI_TOKEN_PAYMASTERS']) {
             const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
@@ -137,10 +142,16 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             customPaymasters = JSON.parse(buffer.toString());
           }
 
+          if (apiKeyEntity.erc20PaymastersV2) {
+            const buffer = Buffer.from(apiKeyEntity.erc20PaymastersV2, 'base64');
+            customPaymastersV2 = JSON.parse(buffer.toString());
+          }
+
           if (apiKeyEntity.multiTokenPaymasters) {
             const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
             multiTokenPaymasters = JSON.parse(buffer.toString());
           }
+
           if (apiKeyEntity.multiTokenOracles) {
             const buffer = Buffer.from(apiKeyEntity.multiTokenOracles, 'base64');
             multiTokenOracles = JSON.parse(buffer.toString());
@@ -168,12 +179,6 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-
-        if (
-          mode.toLowerCase() == 'erc20' &&
-          !(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken]) &&
-          !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
-        ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
 
         if (gasToken && ethers.utils.isAddress(gasToken)) gasToken = ethers.utils.getAddress(gasToken)
 
@@ -247,12 +252,25 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             break;
           }
           case 'erc20': {
-            if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06)
-              throw new Error('Currently only 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 entryPoint address is supported')
-            let paymasterAddress: string;
-            if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
-            else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
-            result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, paymasterAddress, server.log);
+            if (entryPoint === SUPPORTED_ENTRYPOINTS.EPV_06) {
+              if (
+                !(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken]) &&
+                !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
+              ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
+              let paymasterAddress: string;
+              if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
+              else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
+              result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, paymasterAddress, server.log);
+            } else if (entryPoint === SUPPORTED_ENTRYPOINTS.EPV_07) {
+              if (
+                !(customPaymastersV2[chainId] && customPaymastersV2[chainId][gasToken]) &&
+                entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_07
+              ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
+              const paymasterAddress = customPaymastersV2[chainId][gasToken];
+              result = await paymaster.ERC20PaymasterV07(userOp, networkConfig.bundler, entryPoint, paymasterAddress, estimate, server.log);
+            } else {
+              throw new Error(`Currently only ${SUPPORTED_ENTRYPOINTS.EPV_06} & ${SUPPORTED_ENTRYPOINTS.EPV_07} entryPoint addresses are supported`)
+            }
             break;
           }
           case 'multitoken': {
