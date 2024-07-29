@@ -263,8 +263,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
               result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, paymasterAddress, server.log);
             } else if (entryPoint === SUPPORTED_ENTRYPOINTS.EPV_07) {
               if (
-                !(customPaymastersV2[chainId] && customPaymastersV2[chainId][gasToken]) &&
-                entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_07
+                !(customPaymastersV2[chainId] && customPaymastersV2[chainId][gasToken])
               ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
               const paymasterAddress = customPaymastersV2[chainId][gasToken];
               result = await paymaster.ERC20PaymasterV07(userOp, networkConfig.bundler, entryPoint, paymasterAddress, estimate, server.log);
