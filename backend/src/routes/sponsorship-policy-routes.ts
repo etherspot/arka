@@ -5,6 +5,8 @@ import ReturnCode from "../constants/ReturnCode.js";
 import { SponsorshipPolicyDto, getEPVersion } from "../types/sponsorship-policy-dto.js";
 import { SponsorshipPolicy } from "../models/sponsorship-policy.js";
 import { getChainIdsFromDefaultSupportedNetworks, getChainIdsFromSupportedNetworks } from "../utils/common.js";
+import { APIKey } from "models/api-key.js";
+import { getApiKeyDetailsForAChainIdInSafeMode } from "utils/apikey-safemode-query.js";
 
 interface RouteParams {
   id?: string;
@@ -223,10 +225,19 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.API_KEY_IS_REQUIRED_IN_HEADER });
     }
 
+    const unsafeMode: boolean = process.env.UNSAFE_MODE == "true" ? true : false;
+
     // Retrieve the wallet address associated with the API key
-    const apiKey = await server.apiKeyRepository.findOneByApiKey(apiKeyHeaderValue);
-    if (!apiKey) {
-      return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_API_KEY });
+    let apiKey : APIKey | null;
+
+    if (unsafeMode) {
+      apiKey = await server.apiKeyRepository.findOneByApiKey(apiKeyHeaderValue);
+    } else {
+      apiKey = await getApiKeyDetailsForAChainIdInSafeMode(apiKeyHeaderValue, server.log);
+    }
+
+    if(!apiKey || apiKey == null) {
+      return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.INVALID_API_KEY });
     }
 
     // Compare wallet addresses
@@ -265,7 +276,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
 
       // get supportedNetworks from defaultConfig
       const supportedChains: number[] = supportedNetworks ? getChainIdsFromSupportedNetworks(supportedNetworks as string) : getChainIdsFromDefaultSupportedNetworks();
-      
+
       if (!supportedChains || supportedChains.length === 0) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
       }
@@ -412,7 +423,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.SUCCESS).send({ message: `Successfully enabled policy with id ${id}` });
 
     } catch (err) {
-      const errorMessage: string = generateErrorMessage(ErrorMessage.FAILED_TO_ENABLE_SPONSORSHIP_POLICY, { error: err as string});
+      const errorMessage: string = generateErrorMessage(ErrorMessage.FAILED_TO_ENABLE_SPONSORSHIP_POLICY, { error: err as string });
       request.log.error(errorMessage);
       return reply.code(ReturnCode.INTERNAL_SERVER_ERROR).send({ error: errorMessage });
     }
@@ -447,7 +458,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
       await server.sponsorshipPolicyRepository.disableSponsorshipPolicy(id);
       return reply.code(ReturnCode.SUCCESS).send({ message: `Successfully disabled policy with id ${id}` });
     } catch (err) {
-      const errorMessage: string = generateErrorMessage(ErrorMessage.FAILED_TO_DISABLE_SPONSORSHIP_POLICY, { error: err as string});
+      const errorMessage: string = generateErrorMessage(ErrorMessage.FAILED_TO_DISABLE_SPONSORSHIP_POLICY, { error: err as string });
       request.log.error(errorMessage);
       return reply.code(ReturnCode.INTERNAL_SERVER_ERROR).send({ error: errorMessage });
     }
