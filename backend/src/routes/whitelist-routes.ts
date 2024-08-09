@@ -257,14 +257,14 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
               existingWhitelistRecord.addresses.splice(existingWhitelistRecord.addresses.indexOf(ele), 1);
             }
           });
-          if (toBeRemoved.length < 1) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.ADDRESS_ALREADY_ADDED });
+          if (toBeRemoved.length < 1) return reply.code(ReturnCode.CONFLICT).send({ error: ErrorMessage.ADDRESS_NOT_WHITELISTED });
 
           if (existingWhitelistRecord.addresses.length < 1) await server.whitelistRepository.deleteById(existingWhitelistRecord.id);
           else await server.whitelistRepository.updateOneById(existingWhitelistRecord);
         } else {
           throw new Error(ErrorMessage.NO_WHITELIST_FOUND);
         }
-        const result = { message: "Successfully deleted from Whitelist" }
+        const result = { message: "Successfully removed whitelisted addresses" }
         server.log.info(result, 'Response sent: ');
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
@@ -399,7 +399,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           address.filter(ele => {
             if (!existingWhitelistRecord.addresses.includes(ele)) toBeAdded.push(ele);
           });
-          if (toBeAdded.length < 1) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.ADDRESS_ALREADY_ADDED });
+          if (toBeAdded.length < 1) return reply.code(ReturnCode.CONFLICT).send({ error: ErrorMessage.ADDRESS_ALREADY_ADDED });
           const allAddresses = toBeAdded.concat(existingWhitelistRecord.addresses);
           existingWhitelistRecord.addresses = allAddresses;
           await server.whitelistRepository.updateOneById(existingWhitelistRecord);
@@ -412,7 +412,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           await server.whitelistRepository.create(addWhitelistDto);
 
         }
-        const result = { message: "Successfully added to Whitelist" }
+        const result = { message: "Successfully whitelisted" }
         server.log.info(result, 'Response sent: ');
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })

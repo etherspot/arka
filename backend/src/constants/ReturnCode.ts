@@ -5,4 +5,5 @@ export default {
     NOT_FOUND: 404,
     INTERNAL_SERVER_ERROR: 500,
     NOT_AUTHORIZED: 403,
+    CONFLICT: 409
 }

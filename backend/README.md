@@ -181,6 +181,22 @@ Parameters:
 
 - `/deposit` - This url accepts one parameter and returns the submitted transaction hash if successful. This url is used to deposit some funds to the entryPointAddress from the sponsor wallet
   1. amount - The amount to be deposited in ETH
+
+- `/whitelist/v2` - This url accepts one parameter and returns a message indicating whether the offchain whitelist was successful. This url is used to whitelist an array of addresses thats needed to be whitelisted for sponsorship. If all the addresses were already whitelisted, an error message will be thrown. If some of the addresses were already whitelisted the rest of the addresses will be whitelisted.
+  1. address - an array of addresses (max. 10 per request)
+
+- `/removeWhitelist/v2` - This url accepts one parameter and returns a message indicating whether the offchain whitelist removal was successful. This url is used to remove whitelist of an array of addresses. If all the addresses were not whitelisted, an error message will be thrown. If some of the addresses were not whitelisted the rest of the addresses will be removed from whitelist.
+  1. address - an array of addresses (max. 10 per request)
+
+- `/checkWhitelist/v2` - This url accepts one parameter and returns if the address has been whitelisted or not
+  1. address - The address which needs to be checked.
+  2. policyId - Optional policy id.
+
+- `/deposit/v2` - This url accepts one parameter and returns the submitted transaction hash if successful. This url is used to deposit some funds to the entryPointAddress from the sponsor wallet
+  1. amount - The amount to be deposited in ETH.
+
+- `/getAllWhitelist/v2` - This url accepts optionally one parameter and returns all the addresses which are whitelisted for the apiKey/policyId.
+  1. policyId - Optional policy id.
   
 ## Local Docker Networks
 
