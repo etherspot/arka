@@ -10,6 +10,8 @@ import { ArkaConfigRepository } from "../repository/arka-config-repository.js";
 import { SponsorshipPolicyRepository } from "../repository/sponsorship-policy-repository.js";
 import { WhitelistRepository } from "../repository/whitelist-repository.js";
 import { initializeArkaWhitelistModel } from "../models/whitelist.js";
+import { ContractWhitelistRepository } from "../repository/contract-whitelist-repository.js";
+import { initializeContractWhitelistModel } from "../models/contract-whitelist.js";
 const pg = await import('pg');
 const Client = pg.default.Client;
 
@@ -52,6 +54,7 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     server.log.info(`Initialized APIKey model... ${sequelize.models.APIKey}`);
     initializeSponsorshipPolicyModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     initializeArkaWhitelistModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
+    initializeContractWhitelistModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     server.log.info('Initialized SponsorshipPolicy model...');
 
     server.log.info('Initialized all models...');
@@ -66,6 +69,8 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     server.decorate('sponsorshipPolicyRepository', sponsorshipPolicyRepository);
     const whitelistRepository: WhitelistRepository = new WhitelistRepository(sequelize);
     server.decorate('whitelistRepository', whitelistRepository);
+    const contractWhitelistRepository: ContractWhitelistRepository = new ContractWhitelistRepository(sequelize);
+    server.decorate('contractWhitelistRepository', contractWhitelistRepository);
 
     server.log.info('decorated fastify server with models...');
 
@@ -83,6 +88,7 @@ declare module "fastify" {
         arkaConfigRepository: ArkaConfigRepository;
         sponsorshipPolicyRepository: SponsorshipPolicyRepository;
         whitelistRepository: WhitelistRepository;
+        contractWhitelistRepository: ContractWhitelistRepository;
     }
 }
 

@@ -19,7 +19,7 @@ const SUPPORTED_ENTRYPOINTS = {
 }
 
 const paymasterRoutes: FastifyPluginAsync = async (server) => {
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
 
   const prefixSecretId = 'arka_';
 
@@ -88,6 +88,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         let txnMode;
         let indexerEndpoint;
         let sponsorName = '', sponsorImage = '';
+        let contractWhitelistMode = false;
         if (!unsafeMode) {
           const AWSresponse = await client.send(
             new GetSecretValueCommand({
@@ -122,6 +123,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           noOfTxns = secrets['NO_OF_TRANSACTIONS_IN_A_MONTH'] ?? 10;
           txnMode = secrets['TRANSACTION_LIMIT'] ?? 0;
           indexerEndpoint = secrets['INDEXER_ENDPOINT'] ?? process.env.DEFAULT_INDEXER_ENDPOINT;
+          contractWhitelistMode = (secrets['CONTRACT_WHITELIST_MODE'] ?? false) == 'true' ? true : false;
         } else {
 
           //validate api_key
@@ -163,6 +165,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           noOfTxns = apiKeyEntity.noOfTransactionsInAMonth;
           txnMode = apiKeyEntity.transactionLimit;
           indexerEndpoint = apiKeyEntity.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT;
+          contractWhitelistMode = apiKeyEntity.contractWhitelistMode ?? false;
         }
 
         if (
@@ -239,6 +242,10 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             }
             str += hex;
             str1 += hex1;
+            if (contractWhitelistMode) {
+              const contractWhitelistResult = await checkContractWhitelist(userOp.callData, chainId.chainId, signer.address);
+              if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
+            }
             if (entryPoint == SUPPORTED_ENTRYPOINTS.EPV_06)
               result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer, estimate, server.log);
             else {
@@ -339,6 +346,66 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
       server.log.error(err);
       return [];
     }
+  }
+
+  // This works only when used with etherspot-modular-sdk & etherspot-prime-sdk
+  async function checkContractWhitelist(callData: string, chainId: number, walletAddress: string): Promise<boolean> {
+    let returnValue = true;
+    const bytes4 = callData.substring(0, 10);
+    if (bytes4 === '0xe9ae5c53') { // fn executeBatch encoding on epv7 
+      const iface = new ethers.utils.Interface(['function execute(bytes32, bytes)']);
+      const decodedData = iface.decodeFunctionData('execute', callData);
+      const txnDatas = ethers.utils.defaultAbiCoder.decode(
+        ["tuple(address target,uint256 value,bytes callData)[]"],
+        decodedData[1],
+        true
+      );
+      for (let i=0;i<txnDatas[0].length;i++){
+        const transactionData = txnDatas[0][i]["callData"];
+        if (transactionData !== "0x") {
+          returnValue = false; // To see if anyone of the transactions is calling any data else returns true since all are native transfers
+          try{
+            const contractRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, walletAddress, txnDatas[0][i]["target"]);
+            if (contractRecord) {
+              const iface1 = new ethers.utils.Interface(contractRecord.abi);
+              const functionName = iface1.getFunction(transactionData.substring(0, 10))
+              if (contractRecord.functionSelectors.includes(functionName.name)) {
+                return true;
+              }
+            }
+          } catch (err) {
+            server.log.error(err);
+            // something went wrong on decoding or functionName not present so continue with the loop to see all the transactions in the batch
+            continue;
+          }
+        }
+      }
+    } else if (bytes4 === '0x47e1da2a') { // fn executeBatch encoding on epv6
+      const iface = new ethers.utils.Interface(['function executeBatch(address[], uint256[], bytes[])']);
+      const decodedData = iface.decodeFunctionData('executeBatch', callData);
+
+      for (let i = 0; i < decodedData[2].length; i++) { // decodedData[2] will always be data array
+        const transactionData = decodedData[2][i]
+        if (transactionData !== "0x") {
+          returnValue = false; // To see if anyone of the transactions is calling any data else returns true since all are native transfers
+          try {
+            const contractRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, walletAddress, decodedData[0][i]);
+            if (contractRecord) {
+              const iface1 = new ethers.utils.Interface(contractRecord.abi);
+              const functionName = iface1.getFunction(transactionData.substring(0, 10))
+              if (contractRecord.functionSelectors.includes(functionName.name)) {
+                return true;
+              }
+            }
+          } catch (err) {
+            server.log.error(err);
+            // something went wrong on decoding or functionName not present so continue with the loop to see all the transactions in the batch
+            continue;
+          }
+        }
+      }
+    }
+    return returnValue;
   }
 };
 
