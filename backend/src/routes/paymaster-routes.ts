@@ -369,7 +369,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             if (contractRecord) {
               const iface1 = new ethers.utils.Interface(contractRecord.abi);
               const functionName = iface1.getFunction(transactionData.substring(0, 10))
-              if (contractRecord.eventNames.includes(functionName.name)) {
+              if (contractRecord.functionSelectors.includes(functionName.name)) {
                 return true;
               }
             }
@@ -393,7 +393,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             if (contractRecord) {
               const iface1 = new ethers.utils.Interface(contractRecord.abi);
               const functionName = iface1.getFunction(transactionData.substring(0, 10))
-              if (contractRecord.eventNames.includes(functionName.name)) {
+              if (contractRecord.functionSelectors.includes(functionName.name)) {
                 return true;
               }
             }

@@ -2,7 +2,7 @@
 export interface ContractWhitelistDto {
   walletAddress: string;
   contractAddress: string;
-  eventNames: string[];
+  functionSelectors: string[];
   abi: string;
   chainId: number;
 }

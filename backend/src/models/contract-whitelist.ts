@@ -4,7 +4,7 @@ export class ContractWhitelist extends Model {
   public id!: number;
   public walletAddress!: string;
   public contractAddress!: string;
-  public eventNames!: string[];
+  public functionSelectors!: string[];
   public abi!: string;
   public chainId!: number;
   public createdAt!: Date;
@@ -29,10 +29,10 @@ export function initializeContractWhitelistModel(sequelize: Sequelize, schema: s
       allowNull: false,
       field: 'CONTRACT_ADDRESS'
     },
-    eventNames: {
+    functionSelectors: {
       type: DataTypes.ARRAY(DataTypes.TEXT),
       allowNull: false,
-      field: 'EVENT_NAMES'
+      field: 'FUNCTION_SELECTORS'
     },
     abi: {
       type: DataTypes.TEXT,

@@ -15,7 +15,7 @@ export class ContractWhitelistRepository {
     const result = await this.sequelize.models.ContractWhitelist.create({
       walletAddress: record.walletAddress,
       contractAddress: record.contractAddress,
-      eventNames: record.eventNames,
+      functionSelectors: record.functionSelectors,
       abi: record.abi,
       chainId: record.chainId,
     }) as ContractWhitelist;
@@ -69,7 +69,7 @@ export class ContractWhitelistRepository {
 
   async updateOneById(record: ContractWhitelist): Promise<ContractWhitelist | null> {
     const result = await this.sequelize.models.ContractWhitelist.update({
-      eventNames: record.eventNames,
+      functionSelectors: record.functionSelectors,
       contractAddress: record.contractAddress,
       abi: record.abi
     }, {

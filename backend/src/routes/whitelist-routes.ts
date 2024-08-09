@@ -479,10 +479,10 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
     }
   )
 
-  server.post("/contractAddWhitelist",
+  server.post("/whitelistContractAddress",
     async function (request, reply) {
       try {
-        printRequest("/contractAddWhitelist", request, server.log);
+        printRequest("/whitelistContractAddress", request, server.log);
         const contractWhitelistDto: ContractWhitelistDto = JSON.parse(JSON.stringify(request.body)) as ContractWhitelistDto;
         const query: any = request.query;
 
@@ -544,10 +544,10 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
     }
   )
 
-  server.post("/contractUpdateWhitelist",
+  server.post("/updateWhitelistContractAddress",
     async function (request, reply) {
       try {
-        printRequest("/contractUpdateWhitelist", request, server.log);
+        printRequest("/updateWhitelistContractAddress", request, server.log);
         const contractWhitelistDto: ContractWhitelistDto = JSON.parse(JSON.stringify(request.body)) as ContractWhitelistDto;
         const query: any = request.query;
         const chainId = query['chainId'];
@@ -591,7 +591,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!existingRecord) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_CONTRACT_WHITELIST_FOUND })
         
         existingRecord.contractAddress = contractWhitelistDto.contractAddress;
-        existingRecord.eventNames = contractWhitelistDto.eventNames;
+        existingRecord.functionSelectors = contractWhitelistDto.functionSelectors;
         existingRecord.abi = contractWhitelistDto.abi;
 
         const result = await server.contractWhitelistRepository.updateOneById(existingRecord);
@@ -610,10 +610,10 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
   )
 
 
-  server.post("/contractDeleteWhitelist",
+  server.post("/deleteContractWhitelist",
     async function (request, reply) {
       try {
-        printRequest("/contractDeleteWhitelist", request, server.log);
+        printRequest("/deleteContractWhitelist", request, server.log);
         const contractWhitelistDto: ContractWhitelistDto = JSON.parse(JSON.stringify(request.body)) as ContractWhitelistDto;
         const query: any = request.query;
         const chainId = query['chainId'];

@@ -16,7 +16,7 @@ async function up({ context: queryInterface }) {
       type: Sequelize.TEXT,
       allowNull: false,
     },
-    EVENT_NAMES: {
+    FUNCTION_SELECTORS: {
       type: Sequelize.ARRAY(Sequelize.TEXT),
       allowNull: false,
     },
