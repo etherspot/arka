@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyPluginAsync } from "fastify";
-import { ethers, Wallet } from "ethers";
+import { ethers, providers, Wallet } from "ethers";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
@@ -9,6 +9,7 @@ import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
+import { ContractWhitelistDto } from "../types/contractWhitelist-dto.js";
 
 const SUPPORTED_ENTRYPOINTS = {
   'EPV_06': "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
@@ -16,7 +17,7 @@ const SUPPORTED_ENTRYPOINTS = {
 }
 
 const whitelistRoutes: FastifyPluginAsync = async (server) => {
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
 
   const prefixSecretId = 'arka_';
 
@@ -349,12 +350,10 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const query: any = request.query;
         const address = body.params[0];
         const policyId = body.params[1];
-        const chainId = query['chainId'] ?? body.params[2];
-        const api_key = query['apiKey'] ?? body.params[3];
+        const api_key = query['apiKey'] ?? body.params[2];
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
-        let supportedNetworks;
         if (!unsafeMode) {
           const AWSresponse = await client.send(
             new GetSecretValueCommand({
@@ -364,33 +363,27 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
-          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
           const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
-          supportedNetworks = apiKeyEntity.supportedNetworks;
         }
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !Array.isArray(address) ||
-          address.length > 10 ||
-          !chainId ||
-          isNaN(chainId)
+          address.length > 10
         ) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
-        if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const validAddresses = address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         const signer = new Wallet(privateKey)
         if (policyId) {
           const policyRecord = await server.sponsorshipPolicyRepository.findOneById(policyId);
-          if (!policyRecord || (policyRecord?.walletAddress !== signer.address)) return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_SPONSORSHIP_POLICY_ID })
+          if (!policyRecord || (policyRecord?.walletAddress !== signer.address)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_SPONSORSHIP_POLICY_ID })
         }
         const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
 
@@ -485,6 +478,199 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
       }
     }
   )
+
+  server.post("/contractAddWhitelist",
+    async function (request, reply) {
+      try {
+        printRequest("/contractAddWhitelist", request, server.log);
+        const contractWhitelistDto: ContractWhitelistDto = JSON.parse(JSON.stringify(request.body)) as ContractWhitelistDto;
+        const query: any = request.query;
+
+        const chainId = query['chainId'];
+        const api_key = query['apiKey'];
+        if (!api_key)
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        let privateKey = '';
+        let supportedNetworks;
+        if (!unsafeMode) {
+          const AWSresponse = await client.send(
+            new GetSecretValueCommand({
+              SecretId: prefixSecretId + api_key,
+            })
+          );
+          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = secrets['PRIVATE_KEY'];
+          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+        } else {
+          const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
+          if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
+          supportedNetworks = apiKeyEntity.supportedNetworks;
+        }
+        if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        if (
+          !chainId ||
+          isNaN(chainId)
+        ) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        }
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
+        if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+        const signer = new Wallet(privateKey, provider)
+
+        const existingRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, signer.address, contractWhitelistDto.contractAddress);
+        if (existingRecord) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_ALREADY_EXISTS_CONTRACT_WHITELIST })
+
+        contractWhitelistDto.chainId = Number(chainId);
+        contractWhitelistDto.walletAddress = signer.address;
+
+        const result = await server.contractWhitelistRepository.create(contractWhitelistDto);
+        if (!result) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.FAILED_TO_CREATE_CONTRACT_WHITELIST });
+        }
+
+        return reply.code(ReturnCode.SUCCESS).send(result);
+      } catch (err: any) {
+        request.log.error(err);
+        if (err.name == "ResourceNotFoundException")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_CREATE_CONTRACT_WHITELIST });
+      }
+    }
+  )
+
+  server.post("/contractUpdateWhitelist",
+    async function (request, reply) {
+      try {
+        printRequest("/contractUpdateWhitelist", request, server.log);
+        const contractWhitelistDto: ContractWhitelistDto = JSON.parse(JSON.stringify(request.body)) as ContractWhitelistDto;
+        const query: any = request.query;
+        const chainId = query['chainId'];
+        const api_key = query['apiKey'];
+        if (!api_key)
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        let privateKey = '';
+        let supportedNetworks;
+        if (!unsafeMode) {
+          const AWSresponse = await client.send(
+            new GetSecretValueCommand({
+              SecretId: prefixSecretId + api_key,
+            })
+          );
+          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = secrets['PRIVATE_KEY'];
+          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+        } else {
+          const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
+          if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
+          supportedNetworks = apiKeyEntity.supportedNetworks;
+        }
+        if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        if (
+          !chainId ||
+          isNaN(chainId)
+        ) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        }
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
+        if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+        const signer = new Wallet(privateKey, provider)
+
+        const existingRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, signer.address, contractWhitelistDto.contractAddress);
+        if (!existingRecord) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_CONTRACT_WHITELIST_FOUND })
+        
+        existingRecord.contractAddress = contractWhitelistDto.contractAddress;
+        existingRecord.eventNames = contractWhitelistDto.eventNames;
+        existingRecord.abi = contractWhitelistDto.abi;
+
+        const result = await server.contractWhitelistRepository.updateOneById(existingRecord);
+        if (!result) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.FAILED_TO_UPDATE_CONTRACT_WHITELIST });
+        }
+
+        return reply.code(ReturnCode.SUCCESS).send(result);
+      } catch (err: any) {
+        request.log.error(err);
+        if (err.name == "ResourceNotFoundException")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_UPDATE_CONTRACT_WHITELIST });
+      }
+    }
+  )
+
+
+  server.post("/contractDeleteWhitelist",
+    async function (request, reply) {
+      try {
+        printRequest("/contractDeleteWhitelist", request, server.log);
+        const contractWhitelistDto: ContractWhitelistDto = JSON.parse(JSON.stringify(request.body)) as ContractWhitelistDto;
+        const query: any = request.query;
+        const chainId = query['chainId'];
+        const api_key = query['apiKey'];
+        if (!api_key)
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        let privateKey = '';
+        let supportedNetworks;
+        if (!unsafeMode) {
+          const AWSresponse = await client.send(
+            new GetSecretValueCommand({
+              SecretId: prefixSecretId + api_key,
+            })
+          );
+          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = secrets['PRIVATE_KEY'];
+          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+        } else {
+          const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
+          if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
+          supportedNetworks = apiKeyEntity.supportedNetworks;
+        }
+        if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        if (
+          !chainId ||
+          isNaN(chainId)
+        ) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
+        if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        }
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
+        if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+        const signer = new Wallet(privateKey, provider)
+
+        const existingRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, signer.address, contractWhitelistDto.contractAddress);
+        if (!existingRecord) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_CONTRACT_WHITELIST_FOUND })
+
+        const result = await server.contractWhitelistRepository.deleteById(existingRecord.id);
+        if (!result) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.FAILED_TO_DELETE_CONTRACT_WHITELIST });
+        }
+
+        return reply.code(ReturnCode.SUCCESS).send(result);
+      } catch (err: any) {
+        request.log.error(err);
+        if (err.name == "ResourceNotFoundException")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+        return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_DELETE_CONTRACT_WHITELIST });
+      }
+    }
+  )
+
 };
 
 export default whitelistRoutes;

@@ -25,6 +25,8 @@ const ConfigSchema = Type.Strict(
     DATABASE_SCHEMA_NAME: Type.String() || undefined,
     HMAC_SECRET: Type.String({ minLength: 1 }),
     UNSAFE_MODE: Type.Boolean() || undefined,
+    EP7_TOKEN_VGL: Type.String() || '90000',
+    EP7_TOKEN_PGL: Type.String() || '150000'
   })
 );
 
@@ -64,6 +66,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     DATABASE_SCHEMA_NAME: process.env.DATABASE_SCHEMA_NAME ?? 'arka',
     HMAC_SECRET: process.env.HMAC_SECRET ?? '',
     UNSAFE_MODE: process.env.UNSAFE_MODE === 'true',
+    EP7_TOKEN_VGL: process.env.EP7_TOKEN_VGL ?? '90000',
+    EP7_TOKEN_PGL: process.env.EP7_TOKEN_PGL ?? '150000'
   }
 
   server.decorate("config", config);

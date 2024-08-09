@@ -38,6 +38,11 @@ export default {
     ADDRESS_NOT_WHITELISTED: 'Addresses sent were not whitelisted',
     NO_WHITELIST_FOUND: 'No whitelist were found on the given apiKey/policyId',
     INVALID_ADDRESS_PASSSED: 'Invalid Address passed',
+    FAILED_TO_CREATE_CONTRACT_WHITELIST: 'Failed to create a record on contract whitelist',
+    FAILED_TO_UPDATE_CONTRACT_WHITELIST: 'Failed to update the record on contract whitelist',
+    FAILED_TO_DELETE_CONTRACT_WHITELIST: 'Failed to delete the record on contract whitelist',
+    NO_CONTRACT_WHITELIST_FOUND: 'No contract whitelist found for the given chainId, apiKey and contractAddress passed',
+    RECORD_ALREADY_EXISTS_CONTRACT_WHITELIST: 'Record already exists for the chainId, apiKey and contractAddress passed',
 }
 
 export function generateErrorMessage(template: string, values: { [key: string]: string | number }): string {
