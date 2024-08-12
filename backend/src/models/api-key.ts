@@ -14,6 +14,7 @@ export class APIKey extends Model {
   public transactionLimit!: number;
   public noOfTransactionsInAMonth?: number | null;
   public indexerEndpoint?: string | null;
+  public contractWhitelistMode?: boolean | null;
   public createdAt!: Date;
   public updatedAt!: Date;
 }
@@ -86,6 +87,11 @@ export function initializeAPIKeyModel(sequelize: Sequelize, schema: string) {
       type: DataTypes.STRING,
       allowNull: true,
       field: 'INDEXER_ENDPOINT'
+    },
+    contractWhitelistMode: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      field: 'CONTRACT_WHITELIST_MODE'
     },
     createdAt: {
       type: DataTypes.DATE,
