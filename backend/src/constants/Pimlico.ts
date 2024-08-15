@@ -127,7 +127,8 @@ export const CustomDeployedPaymasters: Record<number, Record<string, string>> = 
         "FRAX": "0xE0221Db5bF2F3C22d6639a749B764f52f5B05dfb"
     },
     "114": {
-        "USDC": "0x8b067387ec0B922483Eadb771bc9290194685522"
+        "USDC": "0x8b067387ec0B922483Eadb771bc9290194685522",
+        "USDT": "0xED35f8fa422Ba95A52A000236F1EAFd7e4fA4D52"
     },
     "14": {
         "eUSDT": "0x6Bb048981E67f1a0aD41c0BD05635244d3ADaA2c"
@@ -176,6 +177,9 @@ export const PAYMASTER_ADDRESS: Record<number, Record<string, string>> = {
     80001: {
         USDC: "0x000000000009B901DeC1aaB9389285965F49D387"
     },
+    114: {
+        USDT: "0xED35f8fa422Ba95A52A000236F1EAFd7e4fA4D52"
+    }
 }
 
 /**
