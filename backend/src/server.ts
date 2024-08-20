@@ -77,8 +77,6 @@ const initializeServer = async (): Promise<void> => {
   server.log.info('registered sequelizePlugin...')
 
   const arkaConfigRepository = new ArkaConfigRepository(server.sequelize);
-  const configDatas = await arkaConfigRepository.findAll();
-  const configData: ArkaConfig | null = configDatas.length > 0 ? configDatas[0] : null;
 
   await server.register(fastifyCron, {
     jobs: [
@@ -86,14 +84,41 @@ const initializeServer = async (): Promise<void> => {
         // Only these two properties are required,
         // the rest is from the node-cron API:
         // https://github.com/kelektiv/node-cron#api
-        cronTime: configData?.cronTime ?? '0 0 * * *', // Default: Everyday at midnight UTC,
+        cronTime: process.env.PRICE_UPDATE_CRON_EXP ?? '0 0 * * *', // Default: Everyday at midnight UTC,
         name: 'PriceUpdate',
 
         // Note: the callbacks (onTick & onComplete) take the server
         // as an argument, as opposed to nothing in the node-cron API:
         onTick: async () => {
+          let configData: any
           if (process.env.CRON_PRIVATE_KEY) {
-            const paymastersAdrbase64 = configData?.deployedErc20Paymasters ?? ''
+            const unsafeMode = process.env.UNSAFE_MODE === "true" ? true : false;
+            if(!unsafeMode) {
+              const client = new SecretsManagerClient();
+              const api_key = process.env.DEFAULT_API_KEY;
+              const prefixSecretId = "arka_";
+              const AWSresponse = await client.send(
+                new GetSecretValueCommand({
+                  SecretId: prefixSecretId + api_key,
+                })
+              );
+              const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+              configData = {
+                coingeckoApiUrl: secrets["COINGECKO_API_URL"],
+                coingeckoIds: secrets["COINGECKO_IDS"],
+                customChainlinkDeployed: secrets["CUSTOM_CHAINLINK_DEPLOYED"],
+                deployedErc20Paymasters: secrets["DEPLOYED_ERC20_PAYMASTERS"],
+                pythMainnetChainIds: secrets["PYTH_MAINNET_CHAINIDS"],
+                pythMainnetUrl: secrets["PYTH_MAINNET_URL"],
+                pythTestnetChainIds: secrets["PYTH_TESTNET_CHAINIDS"],
+                pythTestnetUrl: secrets["PYTH_TESTNET_URL"]
+              }
+              client.destroy();
+            } else {
+              const configDatas = await arkaConfigRepository.findAll();
+              configData = configDatas.length > 0 ? configDatas[0] : null;
+            }
+            const paymastersAdrbase64 = configData?.deployedErc20Paymasters ?? '';
             if (paymastersAdrbase64) {
               const buffer = Buffer.from(paymastersAdrbase64, 'base64');
               const DEPLOYED_ERC20_PAYMASTERS = JSON.parse(buffer.toString());
