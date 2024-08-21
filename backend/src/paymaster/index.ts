@@ -16,11 +16,15 @@ import ERC20PaymasterV07Abi from '../abi/ERC20PaymasterV07Abi.js';
 export class Paymaster {
   feeMarkUp: BigNumber;
   multiTokenMarkUp: number;
+  EP7_TOKEN_VGL: string;
+  EP7_TOKEN_PGL: string;
 
-  constructor(feeMarkUp: string, multiTokenMarkUp: string) {
+  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
+    this.EP7_TOKEN_PGL = ep7TokenPGL;
+    this.EP7_TOKEN_VGL = ep7TokenVGL;
   }
 
   packUint (high128: BigNumberish, low128: BigNumberish): string {
@@ -325,8 +329,8 @@ export class Paymaster {
         throw new Error(`The required token amount ${tokenAmountRequired.toString()} is more than what the sender has ${tokenBalance}`)
       if (estimate) {
         userOp.paymaster = paymasterAddress;
-        userOp.paymasterVerificationGasLimit = BigNumber.from('60000').toHexString();
-        userOp.paymasterPostOpGasLimit = BigNumber.from('100000').toHexString();
+        userOp.paymasterVerificationGasLimit = BigNumber.from(this.EP7_TOKEN_VGL).toHexString();
+        userOp.paymasterPostOpGasLimit = BigNumber.from(this.EP7_TOKEN_PGL).toHexString();
         const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
         userOp.verificationGasLimit = response.verificationGasLimit;
         userOp.callGasLimit = response.callGasLimit;
@@ -340,8 +344,8 @@ export class Paymaster {
           preVerificationGas: BigNumber.from(userOp.preVerificationGas).toHexString(),
           verificationGasLimit: BigNumber.from(userOp.verificationGasLimit).toHexString(),
           callGasLimit: BigNumber.from(userOp.callGasLimit).toHexString(),
-          paymasterVerificationGasLimit: BigNumber.from('60000').toHexString(),
-          paymasterPostOpGasLimit: BigNumber.from('100000').toHexString()
+          paymasterVerificationGasLimit: BigNumber.from(this.EP7_TOKEN_VGL).toHexString(),
+          paymasterPostOpGasLimit: BigNumber.from(this.EP7_TOKEN_PGL).toHexString()
         }
       } else {
         returnValue = {
