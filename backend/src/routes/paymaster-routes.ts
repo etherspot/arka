@@ -89,6 +89,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         let indexerEndpoint;
         let sponsorName = '', sponsorImage = '';
         let contractWhitelistMode = false;
+        let bundlerApiKey = api_key;
         if (!unsafeMode) {
           const AWSresponse = await client.send(
             new GetSecretValueCommand({
@@ -115,6 +116,9 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           if (secrets['MULTI_TOKEN_ORACLES']) {
             const buffer = Buffer.from(secrets['MULTI_TOKEN_ORACLES'], 'base64');
             multiTokenOracles = JSON.parse(buffer.toString());
+          }
+          if (secrets['BUNDLER_API_KEY']) {
+            bundlerApiKey = secrets['BUNDLER_API_KEY'];
           }
           sponsorName = secrets['SPONSOR_NAME'];
           sponsorImage = secrets['LOGO_URL'];
@@ -158,6 +162,11 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             const buffer = Buffer.from(apiKeyEntity.multiTokenOracles, 'base64');
             multiTokenOracles = JSON.parse(buffer.toString());
           }
+
+          if (apiKeyEntity.bundlerApiKey) {
+            bundlerApiKey = apiKeyEntity.bundlerApiKey;
+          }
+
           sponsorName = apiKeyEntity.sponsorName ? apiKeyEntity.sponsorName : '';
           sponsorImage = apiKeyEntity.logoUrl ? apiKeyEntity.logoUrl : '';
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
@@ -193,6 +202,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', entryPoint);
         server.log.warn(networkConfig, `Network Config fetched for ${api_key}: `);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+        if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
 
         let result: any;
         switch (mode.toLowerCase()) {

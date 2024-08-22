@@ -1,7 +1,7 @@
 [
     {
         "chainId": 1,
-        "bundler": "https://ethereum-bundler.etherspot.io/",
+        "bundler": "https://rpc.etherspot.io/ethereum",
         "contracts": {
             "etherspotPaymasterAddress": "0x7F690e93CecFca5A31E6e1dF50A33F6d3059048c"
         },
@@ -11,7 +11,7 @@
     },
     {
         "chainId": 10,
-        "bundler": "https://optimism-bundler.etherspot.io",
+        "bundler": "https://rpc.etherspot.io/optimism",
         "contracts": {
             "etherspotPaymasterAddress": "0x805650ce74561C85baA44a8Bd13E19633Fd0F79d"
         },
@@ -21,7 +21,7 @@
     },
     {
         "chainId": 14,
-        "bundler": "https://flare-bundler.etherspot.io",
+        "bundler": "https://rpc.etherspot.io/flare",
         "contracts": {
             "etherspotPaymasterAddress": "0x8A41594e5c6Fe492e437414c24eA6f401186b8d2"
         },
@@ -31,7 +31,7 @@
     },
     {
         "chainId": 30,
-        "bundler": "https://rootstock-bundler.etherspot.io",
+        "bundler": "https://rpc.etherspot.io/rootstock",
         "contracts": {
             "etherspotPaymasterAddress": "0xe893A26dD53b325bFFaACdFA224692EFF4C448C4"
         },
@@ -60,6 +60,16 @@
         "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
     },
     {
+        "chainId": 50,
+        "bundler": "https://rpc.etherspot.io/v2/50",
+        "contracts": {
+            "etherspotPaymasterAddress": "0xABA00E929d66119A4A7F4B2E27150fC387ee801c"
+        },
+        "thresholdValue": "0.01",
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+    },
+    {
         "chainId": 51,
         "bundler": "https://testnet-rpc.etherspot.io/v2/51",
         "contracts": {
@@ -71,7 +81,7 @@
     },
     {
         "chainId": 56,
-        "bundler": "https://bnb-bundler.etherspot.io/",
+        "bundler": "https://rpc.etherspot.io/bnb",
         "contracts": {
             "etherspotPaymasterAddress": "0xEA5ecE95D3A28f9faB161779d20128b449F9EC9C"
         },
@@ -101,7 +111,7 @@
     },
     {
         "chainId": 100,
-        "bundler": "https://gnosis-bundler.etherspot.io/",
+        "bundler": "https://rpc.etherspot.io/gnosis",
         "contracts": {
             "etherspotPaymasterAddress": "0x373aBcF1EA9e5802778E32870e7f72C8A6a90349"
         },
@@ -131,7 +141,7 @@
     },
     {
         "chainId": 122,
-        "bundler": "https://fuse-bundler.etherspot.io",
+        "bundler": "https://rpc.etherspot.io/fuse",
         "contracts": {
             "etherspotPaymasterAddress": "0xEC2EE24E79C73DB13Dd9bC782856a5296626b7eb"
         },
@@ -161,7 +171,7 @@
     },
     {
         "chainId": 137,
-        "bundler": "https://polygon-bundler.etherspot.io",
+        "bundler": "https://rpc.etherspot.io/polygon",
         "contracts": {
             "etherspotPaymasterAddress": "0x26FeC24b0D467C9de105217B483931e8f944ff50"
         },
@@ -181,7 +191,7 @@
     },
     {
         "chainId": 5000,
-        "bundler": "https://mantle-bundler.etherspot.io/",
+        "bundler": "https://rpc.etherspot.io/mantle",
         "contracts": {
             "etherspotPaymasterAddress": "0x8A41594e5c6Fe492e437414c24eA6f401186b8d2"
         },
@@ -210,18 +220,8 @@
         "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
     },
     {
-        "chainId": 8217,
-        "bundler": "https://klaytn-bundler.etherspot.io/",
-        "contracts": {
-            "etherspotPaymasterAddress": "0x4ebd86AAF89151b5303DB072e0205C668e31E5E7"
-        },
-        "thresholdValue": "275.2",
-        "MultiTokenPaymasterOracleUsed": "chainlink",
-        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
-    },
-    {
         "chainId": 8453,
-        "bundler": "https://base-bundler.etherspot.io/",
+        "bundler": "https://rpc.etherspot.io/base",
         "contracts": {
             "etherspotPaymasterAddress": "0x810FA4C915015b703db0878CF2B9344bEB254a40"
         },
@@ -241,7 +241,7 @@
     },
     {
         "chainId": 42161,
-        "bundler": "https://arbitrum-bundler.etherspot.io",
+        "bundler": "https://rpc.etherspot.io/arbitrum",
         "contracts": {
             "etherspotPaymasterAddress": "0xEC2EE24E79C73DB13Dd9bC782856a5296626b7eb"
         },
@@ -261,7 +261,7 @@
     },
     {
         "chainId": 43114,
-        "bundler": "https://avalanche-bundler.etherspot.io/",
+        "bundler": "https://rpc.etherspot.io/avalanche",
         "contracts": {
             "etherspotPaymasterAddress": "0x527569794781671319f20374A050BDbef4181aB3"
         },
@@ -271,7 +271,7 @@
     },
     {
         "chainId": 59144,
-        "bundler": "https://linea-bundler.etherspot.io/",
+        "bundler": "https://rpc.etherspot.io/linea",
         "contracts": {
             "etherspotPaymasterAddress": "0xB3AD9B9B06c6016f81404ee8FcCD0526F018Cf0C"
         },
@@ -361,7 +361,7 @@
     },
     {
         "chainId": 534352,
-        "bundler": "https://scroll-bundler.etherspot.io",
+        "bundler": "https://rpc.etherspot.io/scroll",
         "contracts": {
             "etherspotPaymasterAddress": "0xB3AD9B9B06c6016f81404ee8FcCD0526F018Cf0C"
         },
@@ -431,7 +431,7 @@
     },
     {
         "chainId": 888888888,
-        "bundler": "https://ancient8-bundler.etherspot.io",
+        "bundler": "https://rpc.etherspot.io/ancient8",
         "contracts": {
             "etherspotPaymasterAddress": "0x810FA4C915015b703db0878CF2B9344bEB254a40"
         },

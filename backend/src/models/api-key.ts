@@ -11,6 +11,7 @@ export class APIKey extends Model {
   public multiTokenOracles?: string | null;
   public sponsorName?: string | null;
   public logoUrl?: string | null;
+  public bundlerApiKey?: string | null;
   public transactionLimit!: number;
   public noOfTransactionsInAMonth?: number | null;
   public indexerEndpoint?: string | null;
@@ -52,6 +53,12 @@ export function initializeAPIKeyModel(sequelize: Sequelize, schema: string) {
       type: DataTypes.TEXT,
       allowNull: true,
       field: 'ERC20_PAYMASTERS_V2'
+    },
+    bundlerApiKey: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'BUNDLER_API_KEY',
+      defaultValue: null
     },
     multiTokenPaymasters: {
       type: DataTypes.TEXT,

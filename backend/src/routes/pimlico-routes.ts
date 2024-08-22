@@ -52,6 +52,7 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                 let customPaymasters = [];
                 let privateKey = '';
                 let supportedNetworks;
+                let bundlerApiKey = api_key;
                 if (!unsafeMode) {
                     const AWSresponse = await client.send(
                         new GetSecretValueCommand({
@@ -63,6 +64,9 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                     if (secrets['ERC20_PAYMASTERS']) {
                         const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
                         customPaymasters = JSON.parse(buffer.toString());
+                    }
+                    if (secrets['BUNDLER_API_KEY']) {
+                        bundlerApiKey = secrets['BUNDLER_API_KEY'];
                     }
                     privateKey = secrets['PRIVATE_KEY'];
                     supportedNetworks = secrets['SUPPORTED_NETWORKS'];
@@ -78,6 +82,9 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                     privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
 
                     supportedNetworks = apiKeyEntity.supportedNetworks;
+                    if (apiKeyEntity.bundlerApiKey) {
+                        bundlerApiKey = apiKeyEntity.bundlerApiKey;
+                    }
                 }
                 if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 if (
@@ -93,6 +100,7 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                 }
                 const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', entryPoint);
                 if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+                if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
                 let result;
                 if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) result = { message: customPaymasters[chainId][gasToken] }
                 else {

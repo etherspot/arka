@@ -4,6 +4,7 @@ export interface ApiKeyDto {
      walletAddress: string | null;
      privateKey: string | null;
      supportedNetworks: string | null;
+     bundlerApiKey: string | null;
      erc20Paymasters: string | null;
      multiTokenPaymasters: string | null;
      multiTokenOracles: string | null;

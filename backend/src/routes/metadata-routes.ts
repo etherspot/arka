@@ -38,6 +38,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       let privateKey = '';
       let supportedNetworks;
       let sponsorName = '', sponsorImage = '';
+      let bundlerApiKey = api_key;
       if (!unsafeMode) {
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
@@ -57,6 +58,9 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
           const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
           multiTokenPaymasters = JSON.parse(buffer.toString()); 
         }
+        if (secrets['BUNDLER_API_KEY']) {
+          bundlerApiKey = secrets['BUNDLER_API_KEY'];
+        }
         sponsorName = secrets['SPONSOR_NAME'];
         sponsorImage = secrets['LOGO_URL'];
         privateKey = secrets['PRIVATE_KEY'];
@@ -75,6 +79,9 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
           const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
           multiTokenPaymasters = JSON.parse(buffer.toString()); 
         }
+        if (apiKeyEntity.bundlerApiKey) {
+          bundlerApiKey = apiKeyEntity.bundlerApiKey;
+        }
         sponsorName = apiKeyEntity.sponsorName ? apiKeyEntity.sponsorName : "";
         sponsorImage = apiKeyEntity.logoUrl ? apiKeyEntity.logoUrl : "";
         privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
@@ -85,7 +92,9 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       }
       const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
       if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-      const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+      let bundlerUrl = networkConfig.bundler;
+      if (bundlerUrl.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+      const provider = new providers.JsonRpcProvider(bundlerUrl);
       const signer = new Wallet(privateKey, provider)
       const sponsorWalletBalance = await signer.getBalance();
       const sponsorAddress = await signer.getAddress();
