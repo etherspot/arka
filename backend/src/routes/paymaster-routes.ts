@@ -200,9 +200,9 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
 
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', entryPoint);
-        server.log.warn(networkConfig, `Network Config fetched for ${api_key}: `);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+        server.log.warn(networkConfig, `Network Config fetched for ${api_key}: `);
 
         let result: any;
         switch (mode.toLowerCase()) {
