@@ -160,8 +160,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           }
           sponsorName = apiKeyEntity.sponsorName ? apiKeyEntity.sponsorName : '';
           sponsorImage = apiKeyEntity.logoUrl ? apiKeyEntity.logoUrl : '';
-          // privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
-          privateKey = apiKeyEntity.privateKey;
+          privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
           supportedNetworks = apiKeyEntity.supportedNetworks;
           noOfTxns = apiKeyEntity.noOfTransactionsInAMonth;
           txnMode = apiKeyEntity.transactionLimit;
