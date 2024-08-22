@@ -110,7 +110,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         logoUrl: body.logoUrl ?? null,
         transactionLimit: body.transactionLimit ?? 0,
         noOfTransactionsInAMonth: body.noOfTransactionsInAMonth ?? 10,
-        indexerEndpoint: body.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT
+        indexerEndpoint: body.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT,
+        bundlerApiKey: body.bundlerApiKey ?? null,
       });
 
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully saved' });
@@ -141,7 +142,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         erc20Paymasters: body.erc20Paymasters,
         transactionLimit: body.transactionLimit ?? 0,
         noOfTransactionsInAMonth: body.noOfTransactionsInAMonth ?? 10,
-        indexerEndpoint: body.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT
+        indexerEndpoint: body.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT,
+        bundlerApiKey: body.bundlerApiKey ?? null,
       });
 
       return reply.code(ReturnCode.SUCCESS).send({ error: null, message: 'Successfully updated' });

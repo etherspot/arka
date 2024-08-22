@@ -16,7 +16,7 @@ const SUPPORTED_ENTRYPOINTS = {
 }
 
 const depositRoutes: FastifyPluginAsync = async (server) => {
-    const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP);
+    const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
 
     const prefixSecretId = 'arka_';
 
@@ -55,6 +55,7 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 let privateKey = '';
                 let supportedNetworks;
+                let bundlerApiKey = api_key;
                 if (!unsafeMode) {
                     const AWSresponse = await client.send(
                         new GetSecretValueCommand({
@@ -63,6 +64,9 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                     );
                     const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
                     if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+                    if (secrets['BUNDLER_API_KEY']) {
+                        bundlerApiKey = secrets['BUNDLER_API_KEY'];
+                    }
                     privateKey = secrets['PRIVATE_KEY'];
                     supportedNetworks = secrets['SUPPORTED_NETWORKS'];
                 } else {
@@ -70,6 +74,9 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                     if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                     privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
                     supportedNetworks = apiKeyEntity.supportedNetworks;
+                    if (apiKeyEntity.bundlerApiKey) {
+                        bundlerApiKey = apiKeyEntity.bundlerApiKey;
+                    }
                 }
                 if (
                     isNaN(amount) ||
@@ -83,6 +90,7 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 }
                 const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
                 if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+                if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
                 return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, true, server.log);
             } catch (err: any) {
                 request.log.error(err);
@@ -107,6 +115,7 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 let privateKey = '';
                 let supportedNetworks;
+                let bundlerApiKey = api_key;
                 if (!unsafeMode) {
                     const AWSresponse = await client.send(
                         new GetSecretValueCommand({
@@ -115,6 +124,9 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                     );
                     const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
                     if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+                    if (secrets['BUNDLER_API_KEY']) {
+                        bundlerApiKey = secrets['BUNDLER_API_KEY'];
+                    }
                     privateKey = secrets['PRIVATE_KEY'];
                     supportedNetworks = secrets['SUPPORTED_NETWORKS'];
                 } else {
@@ -122,6 +134,9 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                     if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                     privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
                     supportedNetworks = apiKeyEntity.supportedNetworks;
+                    if (apiKeyEntity.bundlerApiKey) {
+                        bundlerApiKey = apiKeyEntity.bundlerApiKey;
+                    }
                 }
                 if (
                     isNaN(amount) ||
@@ -135,6 +150,7 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 }
                 const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
                 if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+                if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
                 return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, false, server.log);
             } catch (err: any) {
                 request.log.error(err);

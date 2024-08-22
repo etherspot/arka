@@ -23,7 +23,8 @@ export class APIKeyRepository {
       logoUrl: apiKey.logoUrl,
       transactionLimit: apiKey.transactionLimit,
       noOfTransactionsInAMonth: apiKey.noOfTransactionsInAMonth,
-      indexerEndpoint: apiKey.indexerEndpoint
+      indexerEndpoint: apiKey.indexerEndpoint,
+      bundlerApiKey: apiKey.bundlerApiKey,
     }) as APIKey;
 
     
