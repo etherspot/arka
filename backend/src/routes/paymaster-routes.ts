@@ -160,7 +160,8 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           }
           sponsorName = apiKeyEntity.sponsorName ? apiKeyEntity.sponsorName : '';
           sponsorImage = apiKeyEntity.logoUrl ? apiKeyEntity.logoUrl : '';
-          privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
+          // privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
+          privateKey = apiKeyEntity.privateKey;
           supportedNetworks = apiKeyEntity.supportedNetworks;
           noOfTxns = apiKeyEntity.noOfTransactionsInAMonth;
           txnMode = apiKeyEntity.transactionLimit;
@@ -191,6 +192,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
 
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', entryPoint);
+        server.log.warn(networkConfig, `Network Config fetched for ${api_key}: `);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
 
         let result: any;
