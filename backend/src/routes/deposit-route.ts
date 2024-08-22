@@ -90,8 +90,9 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 }
                 const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
                 if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-                if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-                return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, true, server.log);
+                let bundlerUrl = networkConfig.bundler;
+                if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+                return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, privateKey, chainId, true, server.log);
             } catch (err: any) {
                 request.log.error(err);
                 if (err.name == "ResourceNotFoundException")
@@ -150,8 +151,9 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 }
                 const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
                 if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-                if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-                return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, false, server.log);
+                let bundlerUrl = networkConfig.bundler;
+                if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+                return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, privateKey, chainId, false, server.log);
             } catch (err: any) {
                 request.log.error(err);
                 if (err.name == "ResourceNotFoundException")

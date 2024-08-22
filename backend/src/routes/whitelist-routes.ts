@@ -79,10 +79,11 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+        let bundlerUrl = networkConfig.bundler;
+        if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
         const validAddresses = address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
-        const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
+        const result = await paymaster.whitelistAddresses(address, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, privateKey, chainId, server.log);
         server.log.info(result, 'Response sent: ');
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
@@ -143,10 +144,11 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
       }
       const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
       if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-      if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+      let bundlerUrl = networkConfig.bundler;
+      if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
       const validAddresses = address.every(ethers.utils.isAddress);
       if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
-      const result = await paymaster.removeWhitelistAddress(address, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, chainId, server.log);
+      const result = await paymaster.removeWhitelistAddress(address, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, privateKey, chainId, server.log);
       if (body.jsonrpc)
         return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
       return reply.code(ReturnCode.SUCCESS).send(result);
@@ -204,8 +206,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-        const response = await paymaster.checkWhitelistAddress(accountAddress, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, privateKey, server.log);
+        let bundlerUrl = networkConfig.bundler;
+        if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+        const response = await paymaster.checkWhitelistAddress(accountAddress, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, privateKey, server.log);
         server.log.info(response, 'Response sent: ');
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result: { message: response === true ? 'Already added' : 'Not added yet' }, error: null })
@@ -233,7 +236,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
-        let bundlerApiKey = api_key;
         if (!unsafeMode) {
           const AWSresponse = await client.send(
             new GetSecretValueCommand({
@@ -242,13 +244,11 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           );
           const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          if (secrets['BUNDLER_API_KEY']) bundlerApiKey = secrets['BUNDLER_API_KEY'];
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
           const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          if (apiKeyEntity.bundlerApiKey) bundlerApiKey = apiKeyEntity.bundlerApiKey;
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
           supportedNetworks = apiKeyEntity.supportedNetworks;
         }
@@ -266,7 +266,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
         const validAddresses = address.every(ethers.utils.isAddress);
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
@@ -315,7 +314,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
-        let bundlerApiKey = api_key;
         if (!unsafeMode) {
           const AWSresponse = await client.send(
             new GetSecretValueCommand({
@@ -324,13 +322,11 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           );
           const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          if (secrets['BUNDLER_API_KEY']) bundlerApiKey = secrets['BUNDLER_API_KEY'];
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
           const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          if (apiKeyEntity.bundlerApiKey) bundlerApiKey = apiKeyEntity.bundlerApiKey;
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
           supportedNetworks = apiKeyEntity.supportedNetworks;
         }
@@ -348,7 +344,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
         const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
 
         if (!existingWhitelistRecord) {
@@ -458,7 +453,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
-        let bundlerApiKey = api_key;
         if (!unsafeMode) {
           const AWSresponse = await client.send(
             new GetSecretValueCommand({
@@ -467,14 +461,12 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           );
           const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          if (secrets['BUNDLER_API_KEY']) bundlerApiKey = secrets['BUNDLER_API_KEY'];
           privateKey = secrets['PRIVATE_KEY'];
           supportedNetworks = secrets['SUPPORTED_NETWORKS'];
         } else {
           const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
           if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
-          if (apiKeyEntity.bundlerApiKey) bundlerApiKey = apiKeyEntity.bundlerApiKey;
           supportedNetworks = apiKeyEntity.supportedNetworks;
         }
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -489,7 +481,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
         const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
 
         if (!existingWhitelistRecord) {
@@ -621,8 +612,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-        const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+        let bundlerUrl = networkConfig.bundler;
+        if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+        const provider = new providers.JsonRpcProvider(bundlerUrl);
         const signer = new Wallet(privateKey, provider)
 
         const existingRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, signer.address, contractWhitelistDto.contractAddress);
@@ -695,8 +687,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-        const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+        let bundlerUrl = networkConfig.bundler;
+        if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+        const provider = new providers.JsonRpcProvider(bundlerUrl);
         const signer = new Wallet(privateKey, provider)
 
         const existingRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, signer.address, contractWhitelistDto.contractAddress);

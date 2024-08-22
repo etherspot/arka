@@ -201,14 +201,15 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
 
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', entryPoint);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+        let bundlerUrl = networkConfig.bundler;
+        if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
         server.log.warn(networkConfig, `Network Config fetched for ${api_key}: `);
 
         let result: any;
         switch (mode.toLowerCase()) {
           case 'sponsor': {
             const date = new Date();
-            const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+            const provider = new providers.JsonRpcProvider(bundlerUrl);
             const signer = new Wallet(privateKey, provider)
 
             // get chainid from provider
@@ -258,14 +259,14 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
               if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
             }
             if (entryPoint == SUPPORTED_ENTRYPOINTS.EPV_06)
-              result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer, estimate, server.log);
+              result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
             else {
               const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
               if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
                 const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
                 if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
               }
-              result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, networkConfig.bundler, signer, estimate, server.log);
+              result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
             }
             break;
           }
@@ -278,13 +279,13 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
               let paymasterAddress: string;
               if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
               else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
-              result = await paymaster.pimlico(userOp, networkConfig.bundler, entryPoint, paymasterAddress, server.log);
+              result = await paymaster.pimlico(userOp, bundlerUrl, entryPoint, paymasterAddress, server.log);
             } else if (entryPoint === SUPPORTED_ENTRYPOINTS.EPV_07) {
               if (
                 !(customPaymastersV2[chainId] && customPaymastersV2[chainId][gasToken])
               ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
               const paymasterAddress = customPaymastersV2[chainId][gasToken];
-              result = await paymaster.ERC20PaymasterV07(userOp, networkConfig.bundler, entryPoint, paymasterAddress, estimate, server.log);
+              result = await paymaster.ERC20PaymasterV07(userOp, bundlerUrl, entryPoint, paymasterAddress, estimate, server.log);
             } else {
               throw new Error(`Currently only ${SUPPORTED_ENTRYPOINTS.EPV_06} & ${SUPPORTED_ENTRYPOINTS.EPV_07} entryPoint addresses are supported`)
             }
@@ -294,7 +295,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06)
               throw new Error('Currently only 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 entryPoint address is supported')
             const date = new Date();
-            const provider = new providers.JsonRpcProvider(networkConfig.bundler);
+            const provider = new providers.JsonRpcProvider(bundlerUrl);
             const signer = new Wallet(privateKey, provider)
             const validUntil = context.validUntil ? new Date(context.validUntil) : date;
             const validAfter = context.validAfter ? new Date(context.validAfter) : date;
@@ -313,7 +314,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             if (!networkConfig.MultiTokenPaymasterOracleUsed ||
               !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink"))
               throw new Error("Oracle is not Defined/Invalid");
-            result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], networkConfig.bundler, signer, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
+            result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
             break;
           }
           default: {
