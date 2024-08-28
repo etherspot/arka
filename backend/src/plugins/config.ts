@@ -26,7 +26,9 @@ const ConfigSchema = Type.Strict(
     HMAC_SECRET: Type.String({ minLength: 1 }),
     UNSAFE_MODE: Type.Boolean() || undefined,
     EP7_TOKEN_VGL: Type.String() || '90000',
-    EP7_TOKEN_PGL: Type.String() || '150000'
+    EP7_TOKEN_PGL: Type.String() || '150000',
+    EPV_06: Type.Array(Type.String()) || ['0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'],
+    EPV_07: Type.Array(Type.String()) || ['0x0000000071727De22E5E9d8BAf0edAc6f37da032']
   })
 );
 
@@ -42,8 +44,27 @@ export type ArkaConfig = Static<typeof ConfigSchema>;
 
 const configPlugin: FastifyPluginAsync = async (server) => {
   const validate = ajv.compile(ConfigSchema);
-  server.log.info("Validating .env file");
-  const valid = validate(process.env);
+  server.log.info("Validating .env file on config");
+  const envVar = {
+    LOG_LEVEL: process.env.LOG_LEVEL,
+    API_PORT: process.env.API_PORT,
+    API_HOST: process.env.API_HOST,
+    SUPPORTED_NETWORKS: process.env.SUPPORTED_NETWORKS,
+    ADMIN_WALLET_ADDRESS: process.env.ADMIN_WALLET_ADDRESS,
+    FEE_MARKUP: process.env.FEE_MARKUP,
+    MULTI_TOKEN_MARKUP: process.env.MULTI_TOKEN_MARKUP,
+    DATABASE_URL: process.env.DATABASE_URL,
+    DATABASE_SSL_ENABLED: process.env.DATABASE_SSL_ENABLED,
+    DATABASE_SCHEMA_NAME: process.env.DATABASE_SCHEMA_NAME,
+    HMAC_SECRET: process.env.HMAC_SECRET,
+    UNSAFE_MODE: process.env.UNSAFE_MODE,
+    EP7_TOKEN_VGL: process.env.EP7_TOKEN_VGL,
+    EP7_TOKEN_PGL: process.env.EP7_TOKEN_PGL,
+    EPV_06: process.env.EPV_06?.split(','),
+    EPV_07: process.env.EPV_07?.split(',')
+  }
+
+  const valid = validate(envVar);
   if (!valid) {
     throw new Error(
       ".env file validation failed - " +
@@ -51,7 +72,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     );
   }
 
-  server.log.info("Configuring .env file");
+  server.log.info("Configuring .env file with defaultValues for optional properties");
 
   const config = {
     LOG_LEVEL: process.env.LOG_LEVEL ?? '',
@@ -67,8 +88,12 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     HMAC_SECRET: process.env.HMAC_SECRET ?? '',
     UNSAFE_MODE: process.env.UNSAFE_MODE === 'true',
     EP7_TOKEN_VGL: process.env.EP7_TOKEN_VGL ?? '90000',
-    EP7_TOKEN_PGL: process.env.EP7_TOKEN_PGL ?? '150000'
+    EP7_TOKEN_PGL: process.env.EP7_TOKEN_PGL ?? '150000',
+    EPV_06: process.env.EPV_06?.split(',') ?? ['0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'],
+    EPV_07: process.env.EPV_07?.split(',') ?? ['0x0000000071727De22E5E9d8BAf0edAc6f37da032']
   }
+
+  server.log.info(config, "config:");
 
   server.decorate("config", config);
 };

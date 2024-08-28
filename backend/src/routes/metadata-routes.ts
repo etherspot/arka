@@ -14,6 +14,11 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
 
   const prefixSecretId = 'arka_';
 
+  const SUPPORTED_ENTRYPOINTS = {
+    EPV_06: server.config.EPV_06,
+    EPV_07: server.config.EPV_07
+  }
+
   let client: SecretsManagerClient;
 
   const unsafeMode: boolean = process.env.UNSAFE_MODE == "true" ? true : false;
@@ -90,7 +95,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
       }
-      const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
+      const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
       if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
       let bundlerUrl = networkConfig.bundler;
       if (bundlerUrl.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
@@ -108,11 +113,11 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         const buffer = Buffer.from(supportedNetworks, 'base64');
         const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
         SUPPORTED_NETWORKS.map((element: { chainId: number, entryPoint: string }) => {
-          chainsSupported.push({chainId: element.chainId, entryPoint: element.entryPoint ?? "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"});
+          chainsSupported.push({chainId: element.chainId, entryPoint: element.entryPoint});
         })
       } else {
         SupportedNetworks.map(element => {
-          chainsSupported.push({chainId: element.chainId, entryPoint: element.entryPoint ?? "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"});
+          chainsSupported.push({chainId: element.chainId, entryPoint: element.entryPoint});
         })
       }
       const tokenPaymasterAddresses = {
