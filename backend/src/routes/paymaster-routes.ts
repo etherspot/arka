@@ -13,13 +13,13 @@ import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { SponsorshipPolicy } from "../models/sponsorship-policy.js";
 import { DEFAULT_EP_VERSION, EPVersions, getEPVersion } from "../types/sponsorship-policy-dto.js";
 
-const SUPPORTED_ENTRYPOINTS = {
-  'EPV_06': "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
-  'EPV_07': "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
-}
-
 const paymasterRoutes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
+
+  const SUPPORTED_ENTRYPOINTS = {
+    EPV_06: server.config.EPV_06,
+    EPV_07: server.config.EPV_07
+  }
 
   const prefixSecretId = 'arka_';
 
@@ -72,10 +72,10 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         }
         if (!api_key)
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        if ((entryPoint != SUPPORTED_ENTRYPOINTS.EPV_06) && (entryPoint != SUPPORTED_ENTRYPOINTS.EPV_07))
+        if (!SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint) && !SUPPORTED_ENTRYPOINTS.EPV_07?.includes(entryPoint))
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
 
-        if (entryPoint == SUPPORTED_ENTRYPOINTS.EPV_06) epVersion = EPVersions.EPV_06;
+        if (SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint)) epVersion = EPVersions.EPV_06;
         else epVersion = EPVersions.EPV_07;
 
         let customPaymasters = [];
@@ -199,7 +199,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           !(multiTokenOracles[chainId] && multiTokenOracles[chainId][gasToken])
         ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
 
-        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', entryPoint);
+        const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', [entryPoint]);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         let bundlerUrl = networkConfig.bundler;
         if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
@@ -258,7 +258,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
               const contractWhitelistResult = await checkContractWhitelist(userOp.callData, chainId.chainId, signer.address);
               if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
             }
-            if (entryPoint == SUPPORTED_ENTRYPOINTS.EPV_06)
+            if (epVersion === EPVersions.EPV_06)
               result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
             else {
               const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
@@ -271,7 +271,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             break;
           }
           case 'erc20': {
-            if (entryPoint === SUPPORTED_ENTRYPOINTS.EPV_06) {
+            if (epVersion === EPVersions.EPV_06) {
               if (
                 !(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken]) &&
                 !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
@@ -280,7 +280,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
               if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
               else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
               result = await paymaster.pimlico(userOp, bundlerUrl, entryPoint, paymasterAddress, server.log);
-            } else if (entryPoint === SUPPORTED_ENTRYPOINTS.EPV_07) {
+            } else if (epVersion === EPVersions.EPV_07) {
               if (
                 !(customPaymastersV2[chainId] && customPaymastersV2[chainId][gasToken])
               ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
@@ -292,8 +292,8 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             break;
           }
           case 'multitoken': {
-            if (entryPoint !== SUPPORTED_ENTRYPOINTS.EPV_06)
-              throw new Error('Currently only 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 entryPoint address is supported')
+            if (epVersion !== EPVersions.EPV_06)
+              throw new Error('Currently only EPV06 entryPoint address is supported')
             const date = new Date();
             const provider = new providers.JsonRpcProvider(bundlerUrl);
             const signer = new Wallet(privateKey, provider)
@@ -372,11 +372,11 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         decodedData[1],
         true
       );
-      for (let i=0;i<txnDatas[0].length;i++){
+      for (let i = 0; i < txnDatas[0].length; i++) {
         const transactionData = txnDatas[0][i]["callData"];
         if (transactionData !== "0x") {
           returnValue = false; // To see if anyone of the transactions is calling any data else returns true since all are native transfers
-          try{
+          try {
             const contractRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, walletAddress, txnDatas[0][i]["target"]);
             if (contractRecord) {
               const iface1 = new ethers.utils.Interface(contractRecord.abi);

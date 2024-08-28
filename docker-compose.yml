@@ -33,6 +33,8 @@ services:
       - DATABASE_SCHEMA_NAME=${DATABASE_SCHEMA_NAME}
       - DATABASE_SSL_ENABLED=${DATABASE_SSL_ENABLED}
       - DATABASE_SSL_REJECT_UNAUTHORIZED=${DATABASE_SSL_REJECT_UNAUTHORIZED}
+      - EPV_06=${EPV_06}
+      - EPV_07=${EPV_07}
     build: 
       context: ./backend
       dockerfile: Dockerfile

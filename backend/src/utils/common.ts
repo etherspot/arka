@@ -9,13 +9,13 @@ export function printRequest(methodName: string, request: FastifyRequest, log: F
   log.info(request.body, "body passed: ");
 }
 
-export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint: string) {
+export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint: string[]) {
   if (supportedNetworks !== '') {
     const buffer = Buffer.from(supportedNetworks, 'base64');
     const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
-    return SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key && chain["entryPoint"] == entryPoint });
+    return SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key && entryPoint.includes(chain["entryPoint"]) });
   } else
-    return SupportedNetworks.find((chain) => chain.chainId == key && chain.entryPoint == entryPoint);
+    return SupportedNetworks.find((chain) => chain.chainId == key && entryPoint.includes(chain.entryPoint));
 }
 
 export function getChainIdsFromDefaultSupportedNetworks() {

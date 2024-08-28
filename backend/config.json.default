@@ -47,7 +47,7 @@
         },
         "thresholdValue": "0.00079",
         "MultiTokenPaymasterOracleUsed": "chainlink",
-        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
+        "entryPoint": "0x48e60BBb664aEfAc9f14aDB42e5FB5b4a119EB66"
     },
     {
         "chainId": 31,

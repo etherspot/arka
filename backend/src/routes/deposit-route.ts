@@ -10,13 +10,13 @@ import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
 
-const SUPPORTED_ENTRYPOINTS = {
-    'EPV_06': "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
-    'EPV_07': "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
-}
-
 const depositRoutes: FastifyPluginAsync = async (server) => {
     const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
+
+    const SUPPORTED_ENTRYPOINTS = {
+        EPV_06: server.config.EPV_06,
+        EPV_07: server.config.EPV_07
+    }
 
     const prefixSecretId = 'arka_';
 
