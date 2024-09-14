@@ -230,10 +230,11 @@ const initializeServer = async (): Promise<void> => {
                 for(const network of supportedNetworks) {
                   const networkConfig = getNetworkConfig(network.chainId, '', server.config.EPV_07);
                   if(
-                    network.contracts?.etherspotPaymasterAddress
+                    network.contracts?.etherspotPaymasterAddress &&
+                    networkConfig
                   ) {
-                    const thresholdValue = network.thresholdValue ?? networkConfig?.thresholdValue;
-                    const bundler = network.bundler ?? networkConfig?.bundler;
+                    const thresholdValue = network.thresholdValue ?? networkConfig.thresholdValue;
+                    const bundler = network.bundler ?? networkConfig.bundler;
                     checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
                   }
                 }
