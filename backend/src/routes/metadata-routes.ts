@@ -34,8 +34,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       const query: any = request.query;
       const chainId = query['chainId'] ?? 1;
       const api_key = query['apiKey'];
-
-      if (!api_key)
+      if (!api_key || typeof(api_key) !== "string")
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
       if (!chainId)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA })
