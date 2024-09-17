@@ -109,7 +109,9 @@ export class Paymaster {
 
       return returnValue;
     } catch (err: any) {
-      if (log) log.error(err, 'signv07');
+      if (err.message.includes("Quota exceeded"))
+        throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
+      if (log) log.error(err, 'signV07');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
     }
   }
@@ -166,10 +168,12 @@ export class Paymaster {
 
       return returnValue;
     } catch (err: any) {
+      if (err.message.includes("Quota exceeded"))
+        throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
       if (log) log.error(err, 'signV06');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
     }
-  } 
+  }
 
   async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string, 
     ethPrice: string, paymasterContract: Contract, signer: Wallet) {
@@ -238,6 +242,8 @@ export class Paymaster {
 
       return returnValue;
     } catch (err: any) {
+      if (err.message.includes("Quota exceeded"))
+        throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
       if (log) log.error(err, 'signCombinedPaymaster');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
     }
@@ -287,6 +293,8 @@ export class Paymaster {
         callGasLimit: response.callGasLimit,
       };
     } catch (err: any) {
+      if (err.message.includes("Quota exceeded"))
+        throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
       if (err.message.includes('The required token amount')) throw new Error(err.message);
       if (log) log.error(err, 'pimlico');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg: ' + err.message)
@@ -356,6 +364,8 @@ export class Paymaster {
 
       return returnValue;
     } catch (err: any) {
+      if (err.message.includes("Quota exceeded"))
+        throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
       if (log) log.error(err, 'ERC20Paymaster');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
     }
