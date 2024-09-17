@@ -24,6 +24,7 @@ import paymasterRoutes from './routes/paymaster-routes.js';
 import pimlicoRoutes from './routes/pimlico-routes.js';
 import whitelistRoutes from './routes/whitelist-routes.js';
 import sponsorshipPolicyRoutes from './routes/sponsorship-policy-routes.js';
+import SupportedNetworks from "../config.json" assert { type: "json" };
 
 let server: FastifyInstance;
 
@@ -124,7 +125,7 @@ const initializeServer = async (): Promise<void> => {
               const DEPLOYED_ERC20_PAYMASTERS = JSON.parse(buffer.toString());
               Object.keys(DEPLOYED_ERC20_PAYMASTERS).forEach(async (chain) => {
                 //EP-v6 entrypoint address
-                const networkConfig = getNetworkConfig(chain, '', "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
+                const networkConfig = getNetworkConfig(chain, '', server.config.EPV_06);
                 if (networkConfig) {
                   const deployedPaymasters: string[] = DEPLOYED_ERC20_PAYMASTERS[chain];
                   const provider = new providers.JsonRpcProvider(networkConfig.bundler);
@@ -216,7 +217,38 @@ const initializeServer = async (): Promise<void> => {
             let client: SecretsManagerClient;
             const unsafeMode: boolean = process.env.UNSAFE_MODE == "true" ? true : false;
             const api_key = process.env.DEFAULT_API_KEY;
-            let customPaymasters = [], multiTokenPaymasters = [];
+            let customPaymasters = [], multiTokenPaymasters = [], customPaymastersV2 = [];
+            const apiKeyRepository = new APIKeyRepository(server.sequelize);
+
+            // checking deposit for epv7 native paymasters on db for all apikeys.
+            const apiKeys = await apiKeyRepository.findAll();
+            
+            for(const apiKey of apiKeys) {
+              if(apiKey.supportedNetworks) {
+                const buffer = Buffer.from(apiKey.supportedNetworks, 'base64');
+                const supportedNetworks = JSON.parse(buffer.toString());
+                for(const network of supportedNetworks) {
+                  const networkConfig = getNetworkConfig(network.chainId, '', server.config.EPV_07);
+                  if(
+                    network.contracts?.etherspotPaymasterAddress &&
+                    networkConfig
+                  ) {
+                    const thresholdValue = network.thresholdValue ?? networkConfig.thresholdValue;
+                    const bundler = network.bundler ?? networkConfig.bundler;
+                    checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                  }
+                }
+              }
+            }
+
+            // checking deposit for epv6 native paymasters from default config.json.
+            for(const network of SupportedNetworks) {
+              const networkConfig = getNetworkConfig(network.chainId, '', server.config.EPV_06);
+              if(networkConfig) {
+                checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
+              }
+            }
+
             if (!unsafeMode) {
               client = new SecretsManagerClient();
               const AWSresponse = await client.send(
@@ -234,8 +266,11 @@ const initializeServer = async (): Promise<void> => {
                 const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
                 multiTokenPaymasters = JSON.parse(buffer.toString());
               }
+              if (secrets['ERC20_PAYMASTERS_V2']) {
+                const buffer = Buffer.from(secrets['ERC20_PAYMASTERS_V2'], 'base64');
+                customPaymastersV2 = JSON.parse(buffer.toString());
+              }
             } else {
-              const apiKeyRepository = new APIKeyRepository(server.sequelize);
               const apiKeyEntity: APIKey | null = await apiKeyRepository.findOneByApiKey(api_key);
 
               if (apiKeyEntity?.erc20Paymasters) {
@@ -246,13 +281,29 @@ const initializeServer = async (): Promise<void> => {
                 const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
                 multiTokenPaymasters = JSON.parse(buffer.toString());
               }
+              if (apiKeyEntity?.erc20PaymastersV2) {
+                const buffer = Buffer.from(apiKeyEntity.erc20PaymastersV2, 'base64');
+                customPaymastersV2 = JSON.parse(buffer.toString());
+              }
             }
+
+            // checking deposit for epv6 ERC20_PAYMASTERS.
             customPaymasters = { ...customPaymasters, ...multiTokenPaymasters };
             for (const chainId in customPaymasters) {
-              const networkConfig = getNetworkConfig(chainId, '', "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
+              const networkConfig = getNetworkConfig(chainId, '', server.config.EPV_06);
               if (networkConfig) {
                 for (const symbol in customPaymasters[chainId]) {
                   checkDeposit(customPaymasters[chainId][symbol], networkConfig.bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)
+                }
+              }
+            }
+
+            // checking deposit for epv7 ERC20_PAYMASTERS_V2.
+            for(const chainId in customPaymastersV2) {
+              const networkConfig = getNetworkConfig(chainId, '', server.config.EPV_07);
+              if(networkConfig) {
+                for(const symbol in customPaymastersV2[chainId]) {
+                  checkDeposit(customPaymastersV2[chainId][symbol], networkConfig.bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log);
                 }
               }
             }
