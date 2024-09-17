@@ -70,7 +70,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             }
           }
         }
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint) && !SUPPORTED_ENTRYPOINTS.EPV_07?.includes(entryPoint))
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
@@ -90,6 +90,14 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         let sponsorName = '', sponsorImage = '';
         let contractWhitelistMode = false;
         let bundlerApiKey = api_key;
+
+        const apiKeyEntity = await server.apiKeyRepository.findOneByApiKey(api_key);
+
+        if (!apiKeyEntity) {
+          server.log.error("APIKey not configured in database")
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+        }
+        
         if (!unsafeMode) {
           const AWSresponse = await client.send(
             new GetSecretValueCommand({
@@ -134,13 +142,6 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           if (!api_key) {
             server.log.error("Invalid Api Key provided")
             return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          }
-
-          const apiKeyEntity = await server.apiKeyRepository.findOneByApiKey(api_key);
-
-          if (!apiKeyEntity) {
-            server.log.error("APIKey not configured in database")
-            return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_NOT_CONFIGURED_IN_DATABASE })
           }
 
           if (apiKeyEntity.erc20Paymasters) {
@@ -327,9 +328,9 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(ReturnCode.SUCCESS).send(result);
       } catch (err: any) {
-        request.log.error(err);
         if (err.name == "ResourceNotFoundException")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+        request.log.error(err);
         return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
       }
     }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { FastifyPluginAsync } from "fastify";
 import { Contract, Wallet, providers } from "ethers";
@@ -33,17 +34,21 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       const query: any = request.query;
       const chainId = query['chainId'] ?? 1;
       const api_key = query['apiKey'];
-
-      if (!api_key)
+      if (!api_key || typeof(api_key) !== "string")
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
       if (!chainId)
-        return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_DATA})
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA })
       let customPaymasters = [];
       let multiTokenPaymasters = [];
       let privateKey = '';
       let supportedNetworks;
       let sponsorName = '', sponsorImage = '';
       let bundlerApiKey = api_key;
+      const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
+      if (!apiKeyEntity) {
+        server.log.info("Invalid Api Key provided")
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+      }
       if (!unsafeMode) {
         const AWSresponse = await client.send(
           new GetSecretValueCommand({
@@ -61,7 +66,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         }
         if (secrets['MULTI_TOKEN_PAYMASTERS']) {
           const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
-          multiTokenPaymasters = JSON.parse(buffer.toString()); 
+          multiTokenPaymasters = JSON.parse(buffer.toString());
         }
         if (secrets['BUNDLER_API_KEY']) {
           bundlerApiKey = secrets['BUNDLER_API_KEY'];
@@ -71,18 +76,13 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         privateKey = secrets['PRIVATE_KEY'];
         supportedNetworks = secrets['SUPPORTED_NETWORKS'];
       } else {
-        const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
-        if (!apiKeyEntity) {
-          server.log.info("Invalid Api Key provided")
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        }
         if (apiKeyEntity.erc20Paymasters) {
           const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
           customPaymasters = JSON.parse(buffer.toString());
         }
         if (apiKeyEntity.multiTokenPaymasters) {
           const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
-          multiTokenPaymasters = JSON.parse(buffer.toString()); 
+          multiTokenPaymasters = JSON.parse(buffer.toString());
         }
         if (apiKeyEntity.bundlerApiKey) {
           bundlerApiKey = apiKeyEntity.bundlerApiKey;
@@ -108,16 +108,16 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
       const sponsorBalance = await paymasterContract.getSponsorBalance(sponsorAddress);
 
-      const chainsSupported: {chainId: number, entryPoint: string}[] = [];
+      const chainsSupported: { chainId: number, entryPoint: string }[] = [];
       if (supportedNetworks) {
         const buffer = Buffer.from(supportedNetworks, 'base64');
         const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
         SUPPORTED_NETWORKS.map((element: { chainId: number, entryPoint: string }) => {
-          chainsSupported.push({chainId: element.chainId, entryPoint: element.entryPoint});
+          chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
         })
       } else {
         SupportedNetworks.map(element => {
-          chainsSupported.push({chainId: element.chainId, entryPoint: element.entryPoint});
+          chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
         })
       }
       const tokenPaymasterAddresses = {

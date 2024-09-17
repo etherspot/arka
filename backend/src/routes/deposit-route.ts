@@ -51,11 +51,13 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 const amount = body.params[0];
                 const chainId = query['chainId'] ?? body.params[1];
                 const api_key = query['apiKey'] ?? body.params[2];
-                if (!api_key)
+                if (!api_key || typeof(api_key) !== "string")
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 let privateKey = '';
                 let supportedNetworks;
                 let bundlerApiKey = api_key;
+                const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
+                if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 if (!unsafeMode) {
                     const AWSresponse = await client.send(
                         new GetSecretValueCommand({
@@ -70,8 +72,6 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                     privateKey = secrets['PRIVATE_KEY'];
                     supportedNetworks = secrets['SUPPORTED_NETWORKS'];
                 } else {
-                    const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
-                    if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                     privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
                     supportedNetworks = apiKeyEntity.supportedNetworks;
                     if (apiKeyEntity.bundlerApiKey) {
@@ -112,11 +112,13 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 const amount = body.params[0];
                 const chainId = query['chainId'] ?? body.params[1];
                 const api_key = query['apiKey'] ?? body.params[2];
-                if (!api_key)
+                if (!api_key || typeof(api_key) !== "string")
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 let privateKey = '';
                 let supportedNetworks;
                 let bundlerApiKey = api_key;
+                const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
+                if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 if (!unsafeMode) {
                     const AWSresponse = await client.send(
                         new GetSecretValueCommand({
@@ -131,8 +133,6 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                     privateKey = secrets['PRIVATE_KEY'];
                     supportedNetworks = secrets['SUPPORTED_NETWORKS'];
                 } else {
-                    const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
-                    if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                     privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
                     supportedNetworks = apiKeyEntity.supportedNetworks;
                     if (apiKeyEntity.bundlerApiKey) {
