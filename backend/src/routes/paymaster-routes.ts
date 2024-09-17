@@ -70,7 +70,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             }
           }
         }
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint) && !SUPPORTED_ENTRYPOINTS.EPV_07?.includes(entryPoint))
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })

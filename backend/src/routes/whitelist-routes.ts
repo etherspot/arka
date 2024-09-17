@@ -38,7 +38,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const address = body.params[0];
         const chainId = query['chainId'] ?? body.params[1];
         const api_key = query['apiKey'] ?? body.params[2];
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
@@ -105,7 +105,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
       const address = body.params[0];
       const chainId = query['chainId'] ?? body.params[1];
       const api_key = query['apiKey'] ?? body.params[2];
-      if (!api_key)
+      if (!api_key || typeof(api_key) !== "string")
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
       let privateKey = '';
       let supportedNetworks;
@@ -169,7 +169,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const accountAddress = body.params[0];
         const chainId = query['chainId'] ?? body.params[1];
         const api_key = query['apiKey'] ?? body.params[2];
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
@@ -232,7 +232,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const policyId = body.params[1];
         const chainId = query['chainId'] ?? body.params[2];
         const api_key = query['apiKey'] ?? body.params[3];
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
@@ -310,7 +310,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const policyId = body.params[1];
         const chainId = query['chainId'] ?? body.params[2];
         const api_key = query['apiKey'] ?? body.params[3];
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
@@ -372,7 +372,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const address = body.params[0];
         const policyId = body.params[1];
         const api_key = query['apiKey'] ?? body.params[2];
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
@@ -449,7 +449,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const policyId = body.params[0];
         const chainId = query['chainId'] ?? body.params[1];
         const api_key = query['apiKey'] ?? body.params[2];
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
@@ -509,7 +509,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
 
         const chainId = query['chainId'];
         const api_key = query['apiKey'];
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
@@ -577,7 +577,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const query: any = request.query;
         const chainId = query['chainId'];
         const api_key = query['apiKey'];
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
@@ -648,7 +648,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const query: any = request.query;
         const chainId = query['chainId'];
         const api_key = query['apiKey'];
-        if (!api_key)
+        if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
         let supportedNetworks;
