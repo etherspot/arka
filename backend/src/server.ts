@@ -222,8 +222,12 @@ const initializeServer = async (): Promise<void> => {
 
             // checking deposit for epv7 native paymasters on db for all apikeys.
             const apiKeys = await apiKeyRepository.findAll();
+            let defaultBundlerKey = api_key;
             
             for(const apiKey of apiKeys) {
+              if(apiKey.apiKey === api_key) {
+                defaultBundlerKey = apiKey.bundlerApiKey ?? defaultBundlerKey;
+              }
               if(apiKey.supportedNetworks) {
                 const buffer = Buffer.from(apiKey.supportedNetworks, 'base64');
                 const supportedNetworks = JSON.parse(buffer.toString());
@@ -235,7 +239,8 @@ const initializeServer = async (): Promise<void> => {
                   ) {
                     const thresholdValue = network.thresholdValue ?? networkConfig.thresholdValue;
                     const bundler = network.bundler ?? networkConfig.bundler;
-                    checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                    const bundlerUrl = apiKey.bundlerApiKey ? `${bundler}?api-key=${apiKey.bundlerApiKey}` : `${bundler}?api-key=${apiKey.apiKey}`;
+                    checkDeposit(network.contracts.etherspotPaymasterAddress, bundlerUrl, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
                   }
                 }
               }
@@ -245,7 +250,8 @@ const initializeServer = async (): Promise<void> => {
             for(const network of SupportedNetworks) {
               const networkConfig = getNetworkConfig(network.chainId, '', server.config.EPV_06);
               if(networkConfig) {
-                checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                const bundlerUrl = `${network.bundler}?api-key=${defaultBundlerKey}`;
+                checkDeposit(network.contracts.etherspotPaymasterAddress, bundlerUrl, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
               }
             }
 
@@ -292,8 +298,9 @@ const initializeServer = async (): Promise<void> => {
             for (const chainId in customPaymasters) {
               const networkConfig = getNetworkConfig(chainId, '', server.config.EPV_06);
               if (networkConfig) {
+                const bundlerUrl = `${networkConfig.bundler}?api-key=${defaultBundlerKey}`;
                 for (const symbol in customPaymasters[chainId]) {
-                  checkDeposit(customPaymasters[chainId][symbol], networkConfig.bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)
+                  checkDeposit(customPaymasters[chainId][symbol], bundlerUrl, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)
                 }
               }
             }
@@ -302,8 +309,9 @@ const initializeServer = async (): Promise<void> => {
             for(const chainId in customPaymastersV2) {
               const networkConfig = getNetworkConfig(chainId, '', server.config.EPV_07);
               if(networkConfig) {
+                const bundlerUrl = `${networkConfig.bundler}?api-key=${defaultBundlerKey}`;
                 for(const symbol in customPaymastersV2[chainId]) {
-                  checkDeposit(customPaymastersV2[chainId][symbol], networkConfig.bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log);
+                  checkDeposit(customPaymastersV2[chainId][symbol], bundlerUrl, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log);
                 }
               }
             }
