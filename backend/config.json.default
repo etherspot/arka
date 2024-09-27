@@ -33,7 +33,7 @@
         "chainId": 30,
         "bundler": "https://rpc.etherspot.io/rootstock",
         "contracts": {
-            "etherspotPaymasterAddress": "0xe893A26DD53b325BffAacDfA224692EfF4C448c4"
+            "etherspotPaymasterAddress": "0xe893A26dD53b325bFFaACdFA224692EFF4C448C4"
         },
         "thresholdValue": "0.00079",
         "MultiTokenPaymasterOracleUsed": "chainlink",
