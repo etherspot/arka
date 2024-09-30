@@ -1,4 +1,5 @@
 export default {
+    CONTEXT_NOT_ARRAY: 'Context sent is not an array',
     INVALID_DATA: 'Invalid data provided',
     INVALID_SPONSORSHIP_POLICY: 'Invalid sponsorship policy data',
     INVALID_SPONSORSHIP_POLICY_ID: 'Invalid sponsorship policy id',

@@ -280,6 +280,26 @@
         "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
+        "chainId": 80002,
+        "bundler": "https://testnet-rpc.etherspot.io/v1/80002",
+        "contracts": {
+            "etherspotPaymasterAddress": "0xe893a26dd53b325bffaacdfa224692eff4c448c4"
+        },
+        "thresholdValue": "0.01",
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
+    },
+    {
+        "chainId": 80002,
+        "bundler": "https://testnet-rpc.etherspot.io/v2/80002",
+        "contracts": {
+            "etherspotPaymasterAddress": "0x9ddB9DC20E904206823184577e9C571c713d2c57"
+        },
+        "thresholdValue": "0.01",
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+    },
+    {
         "chainId": 84532,
         "bundler": "https://testnet-rpc.etherspot.io/v1/84532",
         "contracts": {

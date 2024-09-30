@@ -46,8 +46,9 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
         let chainId = query['chainId'] ?? body.params[3];
         const api_key = query['apiKey'] ?? body.params[4];
         let epVersion: EPVersions = DEFAULT_EP_VERSION;
+        let tokens_list: string[] = [];
+        let sponsorDetails = false, estimate = true, tokenQuotes = false;
 
-        let sponsorDetails = false, estimate = true;
         if (body.method) {
           switch (body.method) {
             case 'pm_getPaymasterData': {
@@ -65,12 +66,20 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             case 'pm_sponsorUserOperation': {
               break;
             }
+            case 'pm_getERC20TokenQuotes': {
+              if (!Array.isArray(context)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.CONTEXT_NOT_ARRAY });
+              const validAddresses = context.every((ele: any) => ethers.utils.isAddress(ele.token));
+              if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED })
+              tokens_list = context.map((ele: any) => ethers.utils.getAddress(ele.token));
+              tokenQuotes = true;
+              break;
+            }
             default: {
               return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_METHOD });
             }
           }
         }
-        if (!api_key || typeof(api_key) !== "string")
+        if (!api_key || typeof (api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint) && !SUPPORTED_ENTRYPOINTS.EPV_07?.includes(entryPoint))
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
@@ -97,7 +106,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           server.log.error("APIKey not configured in database")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         }
-        
+
         if (!unsafeMode) {
           const AWSresponse = await client.send(
             new GetSecretValueCommand({
@@ -193,133 +202,143 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
 
-        if (gasToken && ethers.utils.isAddress(gasToken)) gasToken = ethers.utils.getAddress(gasToken)
-
-        if (mode.toLowerCase() == 'multitoken' &&
-          !(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
-          !(multiTokenOracles[chainId] && multiTokenOracles[chainId][gasToken])
-        ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
-
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', [entryPoint]);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         let bundlerUrl = networkConfig.bundler;
         if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
         server.log.warn(networkConfig, `Network Config fetched for ${api_key}: `);
-
         let result: any;
-        switch (mode.toLowerCase()) {
-          case 'sponsor': {
-            const date = new Date();
-            const provider = new providers.JsonRpcProvider(bundlerUrl);
-            const signer = new Wallet(privateKey, provider)
 
-            // get chainid from provider
-            const chainId = await provider.getNetwork();
+        if (tokenQuotes) {
+          if (epVersion !== EPVersions.EPV_06)
+            throw new Error('Currently only EPV06 entryPoint address is supported')
+          if (!networkConfig.MultiTokenPaymasterOracleUsed ||
+            !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" || networkConfig.MultiTokenPaymasterOracleUsed == "etherspotChainlink"))
+            throw new Error("Oracle is not Defined/Invalid");
+          result = await paymaster.getQuotesMultiToken(userOp, entryPoint, chainId, multiTokenPaymasters, tokens_list, multiTokenOracles, bundlerUrl, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
+        }
+        else {
+          if (gasToken && ethers.utils.isAddress(gasToken)) gasToken = ethers.utils.getAddress(gasToken)
 
-            // get wallet_address from api_key
-            const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
-            if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_NOT_CONFIGURED_IN_DATABASE });
+          if (mode.toLowerCase() == 'multitoken' &&
+            !(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
+            !(multiTokenOracles[chainId] && multiTokenOracles[chainId][gasToken])
+          ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
 
-            // get sponsorshipPolicy for the user from walletAddress and entrypoint version
-            const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(apiKeyData?.walletAddress, getEPVersion(epVersion));
-            if (!sponsorshipPolicy) {
-              const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
-              return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
-            }
+          switch (mode.toLowerCase()) {
+            case 'sponsor': {
+              const date = new Date();
+              const provider = new providers.JsonRpcProvider(bundlerUrl);
+              const signer = new Wallet(privateKey, provider)
 
-            if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) {
-              const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
-              return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
-            }
+              // get chainid from provider
+              const chainId = await provider.getNetwork();
 
-            // get supported networks from sponsorshipPolicy
-            const supportedNetworks: number[] | undefined | null = sponsorshipPolicy.enabledChains;
-            if (!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+              // get wallet_address from api_key
+              const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
+              if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_NOT_CONFIGURED_IN_DATABASE });
 
-            if (txnMode) {
-              const signerAddress = await signer.getAddress();
-              const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
-              if (IndexerData.length >= noOfTxns) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.QUOTA_EXCEEDED })
-            }
-            const validUntil = context?.validUntil ? new Date(context.validUntil) : date;
-            const validAfter = context?.validAfter ? new Date(context.validAfter) : date;
-            const hex = (Number((validUntil.valueOf() / 1000).toFixed(0)) + 600).toString(16);
-            const hex1 = (Number((validAfter.valueOf() / 1000).toFixed(0)) - 60).toString(16);
-            let str = '0x'
-            let str1 = '0x'
-            for (let i = 0; i < 14 - hex.length; i++) {
-              str += '0';
-            }
-            for (let i = 0; i < 14 - hex1.length; i++) {
-              str1 += '0';
-            }
-            str += hex;
-            str1 += hex1;
-            if (contractWhitelistMode) {
-              const contractWhitelistResult = await checkContractWhitelist(userOp.callData, chainId.chainId, signer.address);
-              if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
-            }
-            if (epVersion === EPVersions.EPV_06)
-              result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
-            else {
-              const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
-              if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
-                if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+              // get sponsorshipPolicy for the user from walletAddress and entrypoint version
+              const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(apiKeyData?.walletAddress, getEPVersion(epVersion));
+              if (!sponsorshipPolicy) {
+                const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
+                return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
               }
-              result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
+
+              if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) {
+                const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
+                return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
+              }
+
+              // get supported networks from sponsorshipPolicy
+              const supportedNetworks: number[] | undefined | null = sponsorshipPolicy.enabledChains;
+              if (!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+
+              if (txnMode) {
+                const signerAddress = await signer.getAddress();
+                const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
+                if (IndexerData.length >= noOfTxns) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.QUOTA_EXCEEDED })
+              }
+              const validUntil = context?.validUntil ? new Date(context.validUntil) : date;
+              const validAfter = context?.validAfter ? new Date(context.validAfter) : date;
+              const hex = (Number((validUntil.valueOf() / 1000).toFixed(0)) + 600).toString(16);
+              const hex1 = (Number((validAfter.valueOf() / 1000).toFixed(0)) - 60).toString(16);
+              let str = '0x'
+              let str1 = '0x'
+              for (let i = 0; i < 14 - hex.length; i++) {
+                str += '0';
+              }
+              for (let i = 0; i < 14 - hex1.length; i++) {
+                str1 += '0';
+              }
+              str += hex;
+              str1 += hex1;
+              if (contractWhitelistMode) {
+                const contractWhitelistResult = await checkContractWhitelist(userOp.callData, chainId.chainId, signer.address);
+                if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
+              }
+              if (epVersion === EPVersions.EPV_06)
+                result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
+              else {
+                const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
+                if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
+                  const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
+                  if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+                }
+                result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
+              }
+              break;
             }
-            break;
-          }
-          case 'erc20': {
-            if (epVersion === EPVersions.EPV_06) {
-              if (
-                !(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken]) &&
-                !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
-              ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
-              let paymasterAddress: string;
-              if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
-              else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
-              result = await paymaster.pimlico(userOp, bundlerUrl, entryPoint, paymasterAddress, server.log);
-            } else if (epVersion === EPVersions.EPV_07) {
-              if (
-                !(customPaymastersV2[chainId] && customPaymastersV2[chainId][gasToken])
-              ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
-              const paymasterAddress = customPaymastersV2[chainId][gasToken];
-              result = await paymaster.ERC20PaymasterV07(userOp, bundlerUrl, entryPoint, paymasterAddress, estimate, server.log);
-            } else {
-              throw new Error(`Currently only ${SUPPORTED_ENTRYPOINTS.EPV_06} & ${SUPPORTED_ENTRYPOINTS.EPV_07} entryPoint addresses are supported`)
+            case 'erc20': {
+              if (epVersion === EPVersions.EPV_06) {
+                if (
+                  !(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken]) &&
+                  !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
+                ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
+                let paymasterAddress: string;
+                if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
+                else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
+                result = await paymaster.pimlico(userOp, bundlerUrl, entryPoint, paymasterAddress, server.log);
+              } else if (epVersion === EPVersions.EPV_07) {
+                if (
+                  !(customPaymastersV2[chainId] && customPaymastersV2[chainId][gasToken])
+                ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
+                const paymasterAddress = customPaymastersV2[chainId][gasToken];
+                result = await paymaster.ERC20PaymasterV07(userOp, bundlerUrl, entryPoint, paymasterAddress, estimate, server.log);
+              } else {
+                throw new Error(`Currently only ${SUPPORTED_ENTRYPOINTS.EPV_06} & ${SUPPORTED_ENTRYPOINTS.EPV_07} entryPoint addresses are supported`)
+              }
+              break;
             }
-            break;
-          }
-          case 'multitoken': {
-            if (epVersion !== EPVersions.EPV_06)
-              throw new Error('Currently only EPV06 entryPoint address is supported')
-            const date = new Date();
-            const provider = new providers.JsonRpcProvider(bundlerUrl);
-            const signer = new Wallet(privateKey, provider)
-            const validUntil = context.validUntil ? new Date(context.validUntil) : date;
-            const validAfter = context.validAfter ? new Date(context.validAfter) : date;
-            const hex = (Number((validUntil.valueOf() / 1000).toFixed(0)) + 600).toString(16);
-            const hex1 = (Number((validAfter.valueOf() / 1000).toFixed(0)) - 60).toString(16);
-            let str = '0x'
-            let str1 = '0x'
-            for (let i = 0; i < 14 - hex.length; i++) {
-              str += '0';
+            case 'multitoken': {
+              if (epVersion !== EPVersions.EPV_06)
+                throw new Error('Currently only EPV06 entryPoint address is supported')
+              const date = new Date();
+              const provider = new providers.JsonRpcProvider(bundlerUrl);
+              const signer = new Wallet(privateKey, provider)
+              const validUntil = context.validUntil ? new Date(context.validUntil) : date;
+              const validAfter = context.validAfter ? new Date(context.validAfter) : date;
+              const hex = (Number((validUntil.valueOf() / 1000).toFixed(0)) + 600).toString(16);
+              const hex1 = (Number((validAfter.valueOf() / 1000).toFixed(0)) - 60).toString(16);
+              let str = '0x'
+              let str1 = '0x'
+              for (let i = 0; i < 14 - hex.length; i++) {
+                str += '0';
+              }
+              for (let i = 0; i < 14 - hex1.length; i++) {
+                str1 += '0';
+              }
+              str += hex;
+              str1 += hex1;
+              if (!networkConfig.MultiTokenPaymasterOracleUsed ||
+                !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" || networkConfig.MultiTokenPaymasterOracleUsed == "etherspotChainlink"))
+                throw new Error("Oracle is not Defined/Invalid");
+              result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
+              break;
             }
-            for (let i = 0; i < 14 - hex1.length; i++) {
-              str1 += '0';
+            default: {
+              return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_MODE });
             }
-            str += hex;
-            str1 += hex1;
-            if (!networkConfig.MultiTokenPaymasterOracleUsed ||
-              !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink"))
-              throw new Error("Oracle is not Defined/Invalid");
-            result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
-            break;
-          }
-          default: {
-            return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_MODE });
           }
         }
         server.log.info(result, 'Response sent: ');
@@ -328,6 +347,8 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
         return reply.code(ReturnCode.SUCCESS).send(result);
       } catch (err: any) {
+        if (err.name.includes("invalid address"))
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED })
         if (err.name == "ResourceNotFoundException")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
         request.log.error(err);

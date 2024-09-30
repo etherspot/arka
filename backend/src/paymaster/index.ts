@@ -12,6 +12,8 @@ import MultiTokenPaymasterAbi from '../abi/MultiTokenPaymasterAbi.js';
 import OrochiOracleAbi from '../abi/OrochiOracleAbi.js';
 import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
 import ERC20PaymasterV07Abi from '../abi/ERC20PaymasterV07Abi.js';
+import ERC20Abi from '../abi/ERC20Abi.js';
+import EtherspotChainlinkOracleAbi from '../abi/EtherspotChainlinkOracleAbi.js';
 
 export class Paymaster {
   feeMarkUp: BigNumber;
@@ -27,11 +29,11 @@ export class Paymaster {
     this.EP7_TOKEN_VGL = ep7TokenVGL;
   }
 
-  packUint (high128: BigNumberish, low128: BigNumberish): string {
+  packUint(high128: BigNumberish, low128: BigNumberish): string {
     return hexZeroPad(BigNumber.from(high128).shl(128).add(low128).toHexString(), 32)
   }
 
-  packPaymasterData (paymaster: string, paymasterVerificationGasLimit: BigNumberish, postOpGasLimit: BigNumberish, paymasterData?: BytesLike): BytesLike {
+  packPaymasterData(paymaster: string, paymasterVerificationGasLimit: BigNumberish, postOpGasLimit: BigNumberish, paymasterData?: BytesLike): BytesLike {
     return ethers.utils.hexConcat([
       paymaster,
       this.packUint(paymasterVerificationGasLimit, postOpGasLimit),
@@ -60,7 +62,7 @@ export class Paymaster {
     return paymasterData;
   }
 
-  async signV07(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, 
+  async signV07(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string,
     bundlerRpc: string, signer: Wallet, estimate: boolean, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
@@ -138,7 +140,7 @@ export class Paymaster {
     return paymasterAndData;
   }
 
-  async signV06(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string, 
+  async signV06(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string,
     bundlerRpc: string, signer: Wallet, estimate: boolean, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
@@ -146,7 +148,7 @@ export class Paymaster {
       userOp.paymasterAndData = await this.getPaymasterAndData(userOp, validUntil, validAfter, paymasterContract, signer);
       if (!userOp.signature) userOp.signature = '0x';
       if (estimate) {
-      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+        const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
         userOp.verificationGasLimit = response.verificationGasLimit;
         userOp.preVerificationGas = response.preVerificationGas;
         userOp.callGasLimit = response.callGasLimit;
@@ -175,7 +177,7 @@ export class Paymaster {
     }
   }
 
-  async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string, 
+  async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string,
     ethPrice: string, paymasterContract: Contract, signer: Wallet) {
     const exchangeRate = 1000000; // This is for setting min tokens required for the txn that gets validated on estimate
     const rate = ethers.BigNumber.from(exchangeRate).mul(ethPrice);
@@ -208,6 +210,88 @@ export class Paymaster {
     return paymasterAndData;
   }
 
+  async getQuotesMultiToken(userOp: any, entryPoint: string, chainId: number, multiTokenPaymasters: any, tokens_list: string[], oracles: any, bundlerRpc: string, oracleName: string, log?: FastifyBaseLogger) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const quotes = [], unsupportedTokens = [];
+      const result = {
+        "postOpGas": "0x",
+        "etherUSDExchangeRate": "0x",
+        "paymasterAddress": "0x",
+        "gasEstimates": {
+          "preVerificationGas": "0x",
+          "verificationGasLimit": "0x",
+          "callGasLimit": "0x"
+        },
+        "feeEstimates": {
+          "maxFeePerGas": "0x",
+          "maxPriorityFeePerGas": "0x"
+        },
+        "quotes": [{}],
+        "unsupportedTokens": [{}]
+      }
+      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+      result.gasEstimates.preVerificationGas = response.preVerificationGas;
+      result.gasEstimates.callGasLimit = response.callGasLimit;
+      result.gasEstimates.verificationGasLimit = response.verificationGasLimit;
+      result.feeEstimates.maxFeePerGas = response.maxFeePerGas;
+      result.feeEstimates.maxPriorityFeePerGas = response.maxPriorityFeePerGas;
+      if (!multiTokenPaymasters[chainId]) {
+        const paymasterAddress = multiTokenPaymasters[chainId][tokens_list[0]];
+        result.paymasterAddress = paymasterAddress;
+        const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbi, provider);
+        result.postOpGas = await paymasterContract.UNACCOUNTED_COST;
+      }
+
+      for (let i = 0; i < tokens_list.length; i++) {
+        const gasToken = tokens_list[i];
+        if (!(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
+          !(oracles[chainId] && oracles[chainId][gasToken]))
+          unsupportedTokens.push({ token: gasToken })
+        else {
+          const oracleAddress = oracles[chainId][gasToken];
+          let ethPrice = "";
+          if (oracleName === "orochi") {
+            const oracleContract = new ethers.Contract(oracleAddress, OrochiOracleAbi, provider);
+            const result = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
+            ethPrice = Number(ethers.utils.formatEther(result)).toFixed(0);
+          } else if (oracleName === "chainlink") {
+            const chainlinkContract = new ethers.Contract(oracleAddress, ChainlinkOracleAbi, provider);
+            const decimals = await chainlinkContract.decimals();
+            const result = await chainlinkContract.latestAnswer();
+            ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
+          } else {
+            const ecContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider);
+            const decimals = await ecContract.decimals();
+            const result = await ecContract.cachedPrice();
+            ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
+          }
+          result.etherUSDExchangeRate = BigNumber.from(ethPrice).toHexString();
+          const exchangeRate = 1000000; // This is for setting min tokens required for the txn that gets validated on estimate
+          const rate = ethers.BigNumber.from(exchangeRate).mul(ethPrice);
+          const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider)
+          const decimals = await tokenContract.decimals();
+          const symbol = await tokenContract.symbol();
+          quotes.push({
+            token: gasToken,
+            symbol: symbol,
+            decimals: decimals,
+            etherTokenExchangeRate: rate.toHexString(),
+            serviceFeePercent: this.multiTokenMarkUp - 1000000
+          })
+        }
+      }
+      result.quotes = quotes;
+      result.unsupportedTokens = unsupportedTokens;
+      return result;
+    } catch (err: any) {
+      if (err.message.includes("Quota exceeded"))
+        throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
+      if (log) log.error(err, 'getQuotesMultiToken');
+      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
+    }
+  }
+
   async signMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string,
     feeToken: string, oracleAggregator: string, bundlerRpc: string, signer: Wallet, oracleName: string, log?: FastifyBaseLogger) {
     try {
@@ -218,10 +302,15 @@ export class Paymaster {
         const oracleContract = new ethers.Contract(oracleAggregator, OrochiOracleAbi, provider);
         const result = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
         ethPrice = Number(ethers.utils.formatEther(result)).toFixed(0);
-      } else {
+      } else if (oracleName === "chainlink") {
         const chainlinkContract = new ethers.Contract(oracleAggregator, ChainlinkOracleAbi, provider);
         const decimals = await chainlinkContract.decimals();
-        const result = await chainlinkContract.latestAnswer();
+        const result = await chainlinkContract.latestRoundData();
+        ethPrice = Number(ethers.utils.formatUnits(result.answer, decimals)).toFixed(0);
+      } else {
+        const ecContract = new ethers.Contract(oracleAggregator, EtherspotChainlinkOracleAbi, provider);
+        const decimals = await ecContract.decimals();
+        const result = await ecContract.cachedPrice();
         ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
       }
       userOp.paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
@@ -274,7 +363,7 @@ export class Paymaster {
       const tokenContract = new Contract(await erc20Paymaster.tokenAddress, minABI, provider)
       const tokenBalance = await tokenContract.balanceOf(userOp.sender);
 
-      if (tokenAmountRequired.gte(tokenBalance)) 
+      if (tokenAmountRequired.gte(tokenBalance))
         throw new Error(`The required token amount ${tokenAmountRequired.toString()} is more than what the sender has ${tokenBalance}`)
 
       let paymasterAndData = await erc20Paymaster.generatePaymasterAndDataForTokenAmount(userOp, tokenAmountRequired)
@@ -333,7 +422,7 @@ export class Paymaster {
       const tokenContract = new Contract(tokenAddress, minABI, provider)
       const tokenBalance = await tokenContract.balanceOf(userOp.sender);
 
-      if (tokenAmountRequired.gte(tokenBalance)) 
+      if (tokenAmountRequired.gte(tokenBalance))
         throw new Error(`The required token amount ${tokenAmountRequired.toString()} is more than what the sender has ${tokenBalance}`)
       if (estimate) {
         userOp.paymaster = paymasterAddress;
@@ -510,7 +599,7 @@ export class Paymaster {
       if (amountInWei.gte(balance))
         throw new Error(`${signer.address} Balance is less than the amount to be deposited`)
 
-      const encodedData = paymasterContract.interface.encodeFunctionData(isEpv06 ? 'depositFunds': 'deposit', []);
+      const encodedData = paymasterContract.interface.encodeFunctionData(isEpv06 ? 'depositFunds' : 'deposit', []);
 
       const etherscanFeeData = await getEtherscanFee(chainId);
       let feeData;
