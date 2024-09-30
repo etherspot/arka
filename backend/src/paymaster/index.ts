@@ -236,12 +236,11 @@ export class Paymaster {
       result.gasEstimates.verificationGasLimit = response.verificationGasLimit;
       result.feeEstimates.maxFeePerGas = response.maxFeePerGas;
       result.feeEstimates.maxPriorityFeePerGas = response.maxPriorityFeePerGas;
-      if (!multiTokenPaymasters[chainId]) {
-        const paymasterAddress = multiTokenPaymasters[chainId][tokens_list[0]];
-        result.paymasterAddress = paymasterAddress;
-        const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbi, provider);
-        result.postOpGas = await paymasterContract.UNACCOUNTED_COST;
-      }
+      
+      const paymasterKey = Object.keys(multiTokenPaymasters[chainId])[0];
+      result.paymasterAddress = multiTokenPaymasters[chainId][paymasterKey];
+      const paymasterContract = new ethers.Contract(result.paymasterAddress , MultiTokenPaymasterAbi, provider);
+      result.postOpGas = await paymasterContract.UNACCOUNTED_COST;
 
       for (let i = 0; i < tokens_list.length; i++) {
         const gasToken = tokens_list[i];
@@ -267,17 +266,17 @@ export class Paymaster {
             ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
           }
           result.etherUSDExchangeRate = BigNumber.from(ethPrice).toHexString();
-          const exchangeRate = 1000000; // This is for setting min tokens required for the txn that gets validated on estimate
-          const rate = ethers.BigNumber.from(exchangeRate).mul(ethPrice);
           const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider)
           const decimals = await tokenContract.decimals();
+          const exchangeRate = 1000000; // This is for setting min tokens required for the txn that gets validated on estimate
+          const rate = ethers.BigNumber.from(exchangeRate).mul(ethPrice);
           const symbol = await tokenContract.symbol();
           quotes.push({
             token: gasToken,
             symbol: symbol,
             decimals: decimals,
             etherTokenExchangeRate: rate.toHexString(),
-            serviceFeePercent: this.multiTokenMarkUp - 1000000
+            serviceFeePercent: (this.multiTokenMarkUp/10000 - 100)
           })
         }
       }

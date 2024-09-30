@@ -215,6 +215,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           if (!networkConfig.MultiTokenPaymasterOracleUsed ||
             !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" || networkConfig.MultiTokenPaymasterOracleUsed == "etherspotChainlink"))
             throw new Error("Oracle is not Defined/Invalid");
+          if (!multiTokenPaymasters[chainId]) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK })
           result = await paymaster.getQuotesMultiToken(userOp, entryPoint, chainId, multiTokenPaymasters, tokens_list, multiTokenOracles, bundlerUrl, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
         }
         else {
