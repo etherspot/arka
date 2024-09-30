@@ -13,6 +13,7 @@ import OrochiOracleAbi from '../abi/OrochiOracleAbi.js';
 import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
 import ERC20PaymasterV07Abi from '../abi/ERC20PaymasterV07Abi.js';
 import ERC20Abi from '../abi/ERC20Abi.js';
+import EtherspotChainlinkOracleAbi from '../abi/EtherspotChainlinkOracleAbi.js';
 
 export class Paymaster {
   feeMarkUp: BigNumber;
@@ -235,11 +236,12 @@ export class Paymaster {
       result.gasEstimates.verificationGasLimit = response.verificationGasLimit;
       result.feeEstimates.maxFeePerGas = response.maxFeePerGas;
       result.feeEstimates.maxPriorityFeePerGas = response.maxPriorityFeePerGas;
-
-      const paymasterAddress = multiTokenPaymasters[chainId][tokens_list[0]];
-      result.paymasterAddress = paymasterAddress;
-      const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbi, provider);
-      result.postOpGas = await paymasterContract.UNACCOUNTED_COST;
+      if (!multiTokenPaymasters[chainId]) {
+        const paymasterAddress = multiTokenPaymasters[chainId][tokens_list[0]];
+        result.paymasterAddress = paymasterAddress;
+        const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbi, provider);
+        result.postOpGas = await paymasterContract.UNACCOUNTED_COST;
+      }
 
       for (let i = 0; i < tokens_list.length; i++) {
         const gasToken = tokens_list[i];
@@ -253,10 +255,15 @@ export class Paymaster {
             const oracleContract = new ethers.Contract(oracleAddress, OrochiOracleAbi, provider);
             const result = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
             ethPrice = Number(ethers.utils.formatEther(result)).toFixed(0);
-          } else {
+          } else if (oracleName === "chainlink") {
             const chainlinkContract = new ethers.Contract(oracleAddress, ChainlinkOracleAbi, provider);
             const decimals = await chainlinkContract.decimals();
             const result = await chainlinkContract.latestAnswer();
+            ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
+          } else {
+            const ecContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider);
+            const decimals = await ecContract.decimals();
+            const result = await ecContract.cachedPrice();
             ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
           }
           result.etherUSDExchangeRate = BigNumber.from(ethPrice).toHexString();
@@ -295,10 +302,15 @@ export class Paymaster {
         const oracleContract = new ethers.Contract(oracleAggregator, OrochiOracleAbi, provider);
         const result = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
         ethPrice = Number(ethers.utils.formatEther(result)).toFixed(0);
-      } else {
+      } else if (oracleName === "chainlink") {
         const chainlinkContract = new ethers.Contract(oracleAggregator, ChainlinkOracleAbi, provider);
         const decimals = await chainlinkContract.decimals();
-        const result = await chainlinkContract.latestAnswer();
+        const result = await chainlinkContract.latestRoundData();
+        ethPrice = Number(ethers.utils.formatUnits(result.answer, decimals)).toFixed(0);
+      } else {
+        const ecContract = new ethers.Contract(oracleAggregator, EtherspotChainlinkOracleAbi, provider);
+        const decimals = await ecContract.decimals();
+        const result = await ecContract.cachedPrice();
         ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
       }
       userOp.paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);

@@ -213,7 +213,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           if (epVersion !== EPVersions.EPV_06)
             throw new Error('Currently only EPV06 entryPoint address is supported')
           if (!networkConfig.MultiTokenPaymasterOracleUsed ||
-            !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink"))
+            !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" || networkConfig.MultiTokenPaymasterOracleUsed == "etherspotChainlink"))
             throw new Error("Oracle is not Defined/Invalid");
           result = await paymaster.getQuotesMultiToken(userOp, entryPoint, chainId, multiTokenPaymasters, tokens_list, multiTokenOracles, bundlerUrl, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
         }
@@ -331,7 +331,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
               str += hex;
               str1 += hex1;
               if (!networkConfig.MultiTokenPaymasterOracleUsed ||
-                !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink"))
+                !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" || networkConfig.MultiTokenPaymasterOracleUsed == "etherspotChainlink"))
                 throw new Error("Oracle is not Defined/Invalid");
               result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
               break;
