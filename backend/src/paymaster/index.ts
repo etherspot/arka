@@ -179,8 +179,6 @@ export class Paymaster {
 
   async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string,
     ethPrice: string, paymasterContract: Contract, signer: Wallet) {
-    const exchangeRate = 1000000; // This is for setting min tokens required for the txn that gets validated on estimate
-    const rate = ethers.BigNumber.from(exchangeRate).mul(ethPrice);
     const priceMarkup = this.multiTokenMarkUp;
     // actual signing...
     // priceSource inputs available 0 - for using external exchange price and 1 - for oracle based price
@@ -191,7 +189,7 @@ export class Paymaster {
       validAfter,
       feeToken,
       ethers.constants.AddressZero,
-      rate.toNumber().toFixed(0),
+      ethPrice,
       priceMarkup,
     );
 
@@ -202,7 +200,7 @@ export class Paymaster {
       '0x00',
       defaultAbiCoder.encode(
         ['uint48', 'uint48', 'address', 'address', 'uint256', 'uint32'],
-        [validUntil, validAfter, feeToken, ethers.constants.AddressZero, rate.toNumber().toFixed(0), priceMarkup]
+        [validUntil, validAfter, feeToken, ethers.constants.AddressZero, ethPrice, priceMarkup]
       ),
       sig,
     ]);
@@ -250,32 +248,30 @@ export class Paymaster {
         else {
           const oracleAddress = oracles[chainId][gasToken];
           let ethPrice = "";
-          if (oracleName === "orochi") {
-            const oracleContract = new ethers.Contract(oracleAddress, OrochiOracleAbi, provider);
-            const result = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
-            ethPrice = Number(ethers.utils.formatEther(result)).toFixed(0);
-          } else if (oracleName === "chainlink") {
-            const chainlinkContract = new ethers.Contract(oracleAddress, ChainlinkOracleAbi, provider);
-            const decimals = await chainlinkContract.decimals();
-            const result = await chainlinkContract.latestAnswer();
-            ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
-          } else {
-            const ecContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider);
-            const decimals = await ecContract.decimals();
-            const result = await ecContract.cachedPrice();
-            ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
-          }
-          result.etherUSDExchangeRate = BigNumber.from(ethPrice).toHexString();
           const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider)
           const decimals = await tokenContract.decimals();
-          const exchangeRate = 1000000; // This is for setting min tokens required for the txn that gets validated on estimate
-          const rate = ethers.BigNumber.from(exchangeRate).mul(ethPrice);
+          if (oracleName === "orochi") {
+            const oracleContract = new ethers.Contract(oracleAddress, OrochiOracleAbi, provider);
+            const ETHprice = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
+            // For orochi its one native for one usd so only stable tokens can be used
+            if (decimals < 18)
+              ethPrice = Number(ethers.utils.formatUnits(ETHprice, 18 - decimals)).toFixed(0);
+          } else if (oracleName === "chainlink") {
+            const chainlinkContract = new ethers.Contract(oracleAddress, ChainlinkOracleAbi, provider);
+            const ETHprice = await chainlinkContract.latestRoundData();
+            ethPrice = ETHprice.answer;
+          } else {
+            const ecContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider);
+            const ETHprice = await ecContract.cachedPrice();
+            ethPrice = ETHprice
+          }
+          result.etherUSDExchangeRate = BigNumber.from(ethPrice).toHexString();
           const symbol = await tokenContract.symbol();
           quotes.push({
             token: gasToken,
             symbol: symbol,
             decimals: decimals,
-            etherTokenExchangeRate: rate.toHexString(),
+            etherTokenExchangeRate: ethPrice,
             serviceFeePercent: (this.multiTokenMarkUp/10000 - 100)
           })
         }
@@ -299,18 +295,20 @@ export class Paymaster {
       let ethPrice = "";
       if (oracleName === "orochi") {
         const oracleContract = new ethers.Contract(oracleAggregator, OrochiOracleAbi, provider);
-        const result = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
-        ethPrice = Number(ethers.utils.formatEther(result)).toFixed(0);
+        const ETHprice = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
+        // For orochi its one native for one usd so only stable tokens can be used
+        const tokenContract = new ethers.Contract(feeToken, ERC20Abi, provider);
+        const decimals = Number(await tokenContract.decimals());
+        if (decimals < 18)
+          ethPrice = Number(ethers.utils.formatUnits(ETHprice, 18 - decimals)).toFixed(0);
       } else if (oracleName === "chainlink") {
         const chainlinkContract = new ethers.Contract(oracleAggregator, ChainlinkOracleAbi, provider);
-        const decimals = await chainlinkContract.decimals();
-        const result = await chainlinkContract.latestRoundData();
-        ethPrice = Number(ethers.utils.formatUnits(result.answer, decimals)).toFixed(0);
+        const ETHprice = await chainlinkContract.latestRoundData();
+        ethPrice = ETHprice.answer;
       } else {
         const ecContract = new ethers.Contract(oracleAggregator, EtherspotChainlinkOracleAbi, provider);
-        const decimals = await ecContract.decimals();
-        const result = await ecContract.cachedPrice();
-        ethPrice = Number(ethers.utils.formatUnits(result, decimals)).toFixed(0);
+        const ETHprice = await ecContract.cachedPrice();
+        ethPrice = ETHprice
       }
       userOp.paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
 
