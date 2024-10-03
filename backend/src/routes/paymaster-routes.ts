@@ -12,6 +12,7 @@ import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { SponsorshipPolicy } from "../models/sponsorship-policy.js";
 import { DEFAULT_EP_VERSION, EPVersions, getEPVersion } from "../types/sponsorship-policy-dto.js";
+import { NativeOracles } from "../constants/ChainlinkOracles.js";
 
 const paymasterRoutes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
@@ -216,7 +217,9 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
             !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" || networkConfig.MultiTokenPaymasterOracleUsed == "etherspotChainlink"))
             throw new Error("Oracle is not Defined/Invalid");
           if (!multiTokenPaymasters[chainId]) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK })
-          result = await paymaster.getQuotesMultiToken(userOp, entryPoint, chainId, multiTokenPaymasters, tokens_list, multiTokenOracles, bundlerUrl, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
+          if (networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" && !NativeOracles[chainId])
+            throw new Error("Native Oracle address not set for this chainId")
+          result = await paymaster.getQuotesMultiToken(userOp, entryPoint, chainId, multiTokenPaymasters, tokens_list, multiTokenOracles, bundlerUrl, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], server.log);
         }
         else {
           if (gasToken && ethers.utils.isAddress(gasToken)) gasToken = ethers.utils.getAddress(gasToken)
@@ -334,7 +337,9 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
               if (!networkConfig.MultiTokenPaymasterOracleUsed ||
                 !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" || networkConfig.MultiTokenPaymasterOracleUsed == "etherspotChainlink"))
                 throw new Error("Oracle is not Defined/Invalid");
-              result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, server.log);
+              if (networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" && !NativeOracles[chainId])
+                throw new Error("Native Oracle address not set for this chainId")
+              result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], server.log);
               break;
             }
             default: {
