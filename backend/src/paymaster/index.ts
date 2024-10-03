@@ -247,7 +247,7 @@ export class Paymaster {
         const ETHprice = await nativeOracleContract.latestRoundData();
         ETHUSDPrice = ETHprice.answer;
         ETHUSDPriceDecimal = await nativeOracleContract.decimals();
-        result.etherUSDExchangeRate = ETHprice.answer;
+        result.etherUSDExchangeRate = BigNumber.from(ETHprice.answer).toHexString();
       }
       for (let i = 0; i < tokens_list.length; i++) {
         const gasToken = tokens_list[i];
