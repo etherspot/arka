@@ -66,7 +66,7 @@ export function verifySignature(signature: string, data: string, timestamp: stri
   // unauthorize signature if signed before 10s or signed in future.
   const now = Date.now();
   if(
-    now > parseInt(timestamp) ||
+    now < parseInt(timestamp) ||
     now - parseInt(timestamp) > 10000
   ) {
     return false;
