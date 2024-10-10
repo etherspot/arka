@@ -28,7 +28,10 @@ const ConfigSchema = Type.Strict(
     EP7_TOKEN_VGL: Type.String() || '90000',
     EP7_TOKEN_PGL: Type.String() || '150000',
     EPV_06: Type.Array(Type.String()) || ['0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'],
-    EPV_07: Type.Array(Type.String()) || ['0x0000000071727De22E5E9d8BAf0edAc6f37da032']
+    EPV_07: Type.Array(Type.String()) || ['0x0000000071727De22E5E9d8BAf0edAc6f37da032'],
+    DELETE_KEY_RECOVER_WINDOW: Type.Number(),
+    KMS_KEY_ID: Type.String() || undefined,
+    USE_KMS: Type.Boolean() || false
   })
 );
 
@@ -61,7 +64,10 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     EP7_TOKEN_VGL: process.env.EP7_TOKEN_VGL,
     EP7_TOKEN_PGL: process.env.EP7_TOKEN_PGL,
     EPV_06: process.env.EPV_06?.split(','),
-    EPV_07: process.env.EPV_07?.split(',')
+    EPV_07: process.env.EPV_07?.split(','),
+    DELETE_KEY_RECOVER_WINDOW: process.env.DELETE_KEY_RECOVER_WINDOW,
+    KMS_KEY_ID: process.env.KMS_KEY_ID,
+    USE_KMS: process.env.USE_KMS,
   }
 
   const valid = validate(envVar);
@@ -90,7 +96,10 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     EP7_TOKEN_VGL: process.env.EP7_TOKEN_VGL ?? '90000',
     EP7_TOKEN_PGL: process.env.EP7_TOKEN_PGL ?? '150000',
     EPV_06: process.env.EPV_06?.split(',') ?? ['0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'],
-    EPV_07: process.env.EPV_07?.split(',') ?? ['0x0000000071727De22E5E9d8BAf0edAc6f37da032']
+    EPV_07: process.env.EPV_07?.split(',') ?? ['0x0000000071727De22E5E9d8BAf0edAc6f37da032'],
+    DELETE_KEY_RECOVER_WINDOW: parseInt(process.env.DELETE_KEY_RECOVER_WINDOW || '7'),
+    KMS_KEY_ID: process.env.KMS_KEY_ID ?? '',
+    USE_KMS: process.env.USE_KMS === 'true'
   }
 
   server.log.info(config, "config:");

@@ -44,6 +44,8 @@ export default {
     FAILED_TO_DELETE_CONTRACT_WHITELIST: 'Failed to delete the record on contract whitelist',
     NO_CONTRACT_WHITELIST_FOUND: 'No contract whitelist found for the given chainId, apiKey and contractAddress passed',
     RECORD_ALREADY_EXISTS_CONTRACT_WHITELIST: 'Record already exists for the chainId, apiKey and contractAddress passed',
+    BALANCE_EXCEEDS_THRESHOLD: 'Balance exceeds threshold to delete key',
+    INVALID_SIGNATURE_OR_TIMESTAMP: 'Invalid signature or timestamp',
 }
 
 export function generateErrorMessage(template: string, values: { [key: string]: string | number }): string {

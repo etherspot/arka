@@ -197,6 +197,23 @@ Parameters:
 
 - `/getAllWhitelist/v2` - This url accepts optionally one parameter and returns all the addresses which are whitelisted for the apiKey/policyId.
   1. policyId - Optional policy id.
+
+- `/saveKey` - This url is used to save a new api key. This url uses content type as `text/plain`.
+  1. apiKey - The new api key to be created.
+  2. supportedNetworks - Base64 encoded string which follows config.json.default structure.
+  3. erc20Paymasters - Base64 encoded string which represents the list of custom ERC20 paymasters.
+  4. multiTokenPaymasters - Base64 encoded string which represents the list of custom multiToken paymasters.
+  5. multiTokenOracles - Base64 encoded string which represents the list of custom multiToken oracles.
+  6. sponsorName - Name of the sponsorer.
+  7. logoUrl - Url of the logo.
+  8. transactionLimit - Limit for number of transactions.
+  9. noOfTransactionsInAMonth - Number of transaction allowed in a month.
+  10. indexerEndpoint - Endpoint for indexer, defaults to DEFAULT_INDEXER_ENDPOINT environment property.
+
+
+
+- `/deleteKey` - This url accepts one parameter and deletes the api key record. This url uses content type as `text/plain`.
+  1. apiKey - The api key to be deleted.
   
 ## Local Docker Networks
 
