@@ -132,6 +132,22 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         });
 
         await client.send(createCommand);
+
+        await server.apiKeyRepository.create({
+          apiKey: body.apiKey,
+          walletAddress: publicAddress,
+          privateKey: encode(privateKey, server.config.HMAC_SECRET),
+          supportedNetworks: body.supportedNetworks,
+          erc20Paymasters: body.erc20Paymasters,
+          multiTokenPaymasters: body.multiTokenPaymasters ?? null,
+          multiTokenOracles: body.multiTokenOracles ?? null,
+          sponsorName: body.sponsorName ?? null,
+          logoUrl: body.logoUrl ?? null,
+          transactionLimit: body.transactionLimit ?? 0,
+          noOfTransactionsInAMonth: body.noOfTransactionsInAMonth ?? 10,
+          indexerEndpoint: body.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT ?? null,
+          bundlerApiKey: body.bundlerApiKey ?? null,
+        });
       } else {
         const result = await server.apiKeyRepository.findOneByApiKey(body.apiKey);
         if (result) {
@@ -300,6 +316,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         });
 
         await client.send(deleteCommand);
+
+        await server.apiKeyRepository.delete(body.apiKey);
       } else {
         const apiKeyInstance = await server.apiKeyRepository.findOneByApiKey(body.apiKey);
         if (!apiKeyInstance)
