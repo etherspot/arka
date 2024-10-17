@@ -31,7 +31,8 @@ const ConfigSchema = Type.Strict(
     EPV_07: Type.Array(Type.String()) || ['0x0000000071727De22E5E9d8BAf0edAc6f37da032'],
     DELETE_KEY_RECOVER_WINDOW: Type.Number(),
     KMS_KEY_ID: Type.String() || undefined,
-    USE_KMS: Type.Boolean() || false
+    USE_KMS: Type.Boolean() || false,
+    DEFAULT_BUNDLER_API_KEY: Type.String()
   })
 );
 
@@ -68,6 +69,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     DELETE_KEY_RECOVER_WINDOW: process.env.DELETE_KEY_RECOVER_WINDOW,
     KMS_KEY_ID: process.env.KMS_KEY_ID,
     USE_KMS: process.env.USE_KMS,
+    DEFAULT_BUNDLER_API_KEY: process.env.DEFAULT_BUNDLER_API_KEY
   }
 
   const valid = validate(envVar);
@@ -99,7 +101,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     EPV_07: process.env.EPV_07?.split(',') ?? ['0x0000000071727De22E5E9d8BAf0edAc6f37da032'],
     DELETE_KEY_RECOVER_WINDOW: parseInt(process.env.DELETE_KEY_RECOVER_WINDOW || '7'),
     KMS_KEY_ID: process.env.KMS_KEY_ID ?? '',
-    USE_KMS: process.env.USE_KMS === 'true'
+    USE_KMS: process.env.USE_KMS === 'true',
+    DEFAULT_BUNDLER_API_KEY: process.env.DEFAULT_BUNDLER_API_KEY ?? ''
   }
 
   server.log.info(config, "config:");

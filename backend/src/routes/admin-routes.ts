@@ -127,7 +127,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           SecretString: JSON.stringify({
             PRIVATE_KEY: privateKey,
             PUBLIC_ADDRESS: publicAddress,
-            MNEMONIC: mnemonic
+            MNEMONIC: mnemonic,
+            BUNDLER_API_KEY: server.config.DEFAULT_BUNDLER_API_KEY
           }),
         });
 
