@@ -186,7 +186,7 @@
             "etherspotPaymasterAddress": "0x35AfDd0219a5D72f674D728D5544Bc0f838eEFFa"
         },
         "thresholdValue": "0.01",
-        "MultiTokenPaymasterOracleUsed": "cahinlink",
+        "MultiTokenPaymasterOracleUsed": "chainlink",
         "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
