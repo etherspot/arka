@@ -1,6 +1,6 @@
 import crypto, { BinaryToTextEncoding } from 'crypto';
 import { KmsKeyringNode, buildClient, CommitmentPolicy } from '@aws-crypto/client-node';
-import { server } from 'server';
+import { server } from '../server.js';
 
 function createDigest(encodedData: string, format: BinaryToTextEncoding, hmacSecret: string) {
   return crypto
