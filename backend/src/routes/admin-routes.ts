@@ -107,8 +107,15 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       const privateKey = wallet.privateKey;
       const publicAddress = await wallet.getAddress();
 
+      request.log.info(`-----------headers---------- ${JSON.stringify(request.headers)}`);
+      request.log.info(`-----------hmac secret---------- ${server.config.HMAC_SECRET}`);
+      
+
       if(!unsafeMode) {
         const { 'x-signature': signature, 'x-timestamp': timestamp } = request.headers as IncomingHttpHeaders & AuthDto;
+        request.log.info(`-----------signature---------- ${signature}`);
+        request.log.info(`-----------timestamp---------- ${timestamp}`);
+        
         if(!signature || !timestamp)
           return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.INVALID_SIGNATURE_OR_TIMESTAMP });
         if(!verifySignature(signature, request.body as string, timestamp, server.config.HMAC_SECRET))
