@@ -65,6 +65,8 @@ export async function decodeSafe(value: string, hmacSecret: string) {
 export function verifySignature(signature: string, data: string, timestamp: string, hmacSecret: string) {
   // unauthorize signature if signed before 10s or signed in future.
   const now = Date.now();
+  console.log("-----------now----------", now);
+  console.log("-----------hmacSecret----------", hmacSecret);
   if(
     now < parseInt(timestamp) ||
     now - parseInt(timestamp) > 10000
@@ -72,6 +74,7 @@ export function verifySignature(signature: string, data: string, timestamp: stri
     return false;
   }
   const computedSignature = createDigest(data + timestamp, 'hex', hmacSecret);
-  
+  console.log("-----------computedSignature----------", computedSignature);
+  console.log("-----------signature----------", signature, computedSignature===signature);
   return signature === computedSignature;
 }
