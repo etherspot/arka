@@ -114,7 +114,11 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
         enabledChains: {
             type: DataTypes.ARRAY(DataTypes.BIGINT),
             allowNull: true,
-            field: 'ENABLED_CHAINS'
+            field: 'ENABLED_CHAINS',
+            get() {
+                const value = this.getDataValue('enabledChains');
+                return value?.map((item: any) => +item);
+            }
         },
         supportedEPVersions: {
             type: DataTypes.ARRAY(DataTypes.STRING),

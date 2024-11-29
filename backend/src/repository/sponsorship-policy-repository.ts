@@ -39,7 +39,7 @@ export class SponsorshipPolicyRepository {
                 ]
             }
         });
-        return result.map(apiKey => apiKey as SponsorshipPolicy);
+        return result.map(apiKey => apiKey.get() as SponsorshipPolicy);
     }
 
     // findAllEnabled
