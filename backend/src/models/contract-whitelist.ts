@@ -40,9 +40,13 @@ export function initializeContractWhitelistModel(sequelize: Sequelize, schema: s
       field: 'ABI'
     },
     chainId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
       allowNull: false,
-      field: 'CHAIN_ID'
+      field: 'CHAIN_ID',
+      get() {
+        const value = this.getDataValue('chainId');
+        return +value;
+      }
     },
     createdAt: {
       type: DataTypes.DATE,
