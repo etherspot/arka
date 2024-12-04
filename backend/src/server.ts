@@ -52,7 +52,12 @@ const initializeServer = async (): Promise<void> => {
 
   await server.register(fastifyHealthcheck, {
     healthcheckUrl: "/healthcheck",
-    logLevel: "warn"
+    logLevel: "silent"
+  });
+
+  server.get('/', {
+    logLevel: 'silent',
+    handler: async (_request, reply) => reply.code(200).send()
   });
 
   await server.register(paymasterRoutes);
