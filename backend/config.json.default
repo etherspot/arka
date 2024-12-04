@@ -190,16 +190,6 @@
         "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
     {
-        "chainId": 2357,
-        "bundler": "https://testnet-rpc.etherspot.io/v2/2357",
-        "contracts": {
-            "etherspotPaymasterAddress": "0x515D2A390C24dB531e209701d907FC0Ee1C7c224"
-        },
-        "thresholdValue": "0.01",
-        "MultiTokenPaymasterOracleUsed": "chainlink",
-        "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
-    },
-    {
         "chainId": 5000,
         "bundler": "https://rpc.etherspot.io/v1/5000",
         "contracts": {
