@@ -230,7 +230,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
           ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
 
           switch (mode.toLowerCase()) {
-            case 'sponsor': {
+            case 'eps': {
               const date = new Date();
               const provider = new providers.JsonRpcProvider(bundlerUrl);
               const signer = new Wallet(privateKey, provider)
@@ -342,7 +342,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
               result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], server.log);
               break;
             }
-            case 'verifying_paymaster': {
+            case 'sponsor': {
               const date = new Date();
               const provider = new providers.JsonRpcProvider(bundlerUrl);
               const signer = new Wallet(privateKey, provider);

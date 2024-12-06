@@ -47,7 +47,7 @@ export default {
     BALANCE_EXCEEDS_THRESHOLD: 'Balance exceeds threshold to delete key',
     INVALID_SIGNATURE_OR_TIMESTAMP: 'Invalid signature or timestamp',
     VP_NOT_DEPLOYED: 'Verifying paymaster not deployed',
-    INVALID_EP_VERSION: 'Invalid entry point version',
+    INVALID_EP_VERSION: 'Invalid EntryPoint version',
     VP_ALREADY_DEPLOYED: 'Verifying paymaster already deployed',
     FAILED_TO_DEPLOY_VP: 'Failed to deploy verifying paymaster',
     FAILED_TO_ADD_STAKE: 'Failed to add stake',
