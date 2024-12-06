@@ -15,6 +15,7 @@ export class WhitelistRepository {
       apiKey: apiKey.apiKey,
       addresses: apiKey.addresses,
       policyId: apiKey.policyId ?? null,
+      epVersion: apiKey.epVersion
     }) as ArkaWhitelist;
 
 
@@ -46,6 +47,16 @@ export class WhitelistRepository {
       result = await this.sequelize.models.ArkaWhitelist.findOne({ where: { apiKey: apiKey, policyId: policyId } });
     } else {
       result = await this.sequelize.models.ArkaWhitelist.findOne({ where: { apiKey: apiKey, policyId: null } });
+    }
+    return result ? result.get() as ArkaWhitelist : null;
+  }
+
+  async findOneByApiKeyPolicyIdAndEpVersion(apiKey: string, epVersion: string, policyId?: number): Promise<ArkaWhitelist | null> {
+    let result;
+    if(policyId) {
+      result = await this.sequelize.models.ArkaWhitelist.findOne({where: {apiKey, policyId, epVersion}});
+    } else {
+      result = await this.sequelize.models.ArkaWhitelist.findOne({where: {apiKey, epVersion, policyId: null}});
     }
     return result ? result.get() as ArkaWhitelist : null;
   }
