@@ -46,6 +46,12 @@ export default {
     RECORD_ALREADY_EXISTS_CONTRACT_WHITELIST: 'Record already exists for the chainId, apiKey and contractAddress passed',
     BALANCE_EXCEEDS_THRESHOLD: 'Balance exceeds threshold to delete key',
     INVALID_SIGNATURE_OR_TIMESTAMP: 'Invalid signature or timestamp',
+    VP_NOT_DEPLOYED: 'Verifying paymaster not deployed',
+    INVALID_EP_VERSION: 'Invalid entry point version',
+    VP_ALREADY_DEPLOYED: 'Verifying paymaster already deployed',
+    FAILED_TO_DEPLOY_VP: 'Failed to deploy verifying paymaster',
+    FAILED_TO_ADD_STAKE: 'Failed to add stake',
+    INVALID_AMOUNT_TO_STAKE: 'Invalid amount to stake'
 }
 
 export function generateErrorMessage(template: string, values: { [key: string]: string | number }): string {
