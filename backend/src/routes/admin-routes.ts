@@ -554,7 +554,14 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
       }
 
-      const tx = await paymaster.addStake(privateKey, bundlerUrl, amount, verifyingPaymasters[chainId], server.log);
+      const tx = await paymaster.addStake(
+        privateKey,
+        bundlerUrl,
+        amount,
+        verifyingPaymasters[chainId],
+        chainId,
+        server.log
+      );
       return reply.code(ReturnCode.SUCCESS).send({tx});
     } catch (error: any) {
       request.log.error(error);

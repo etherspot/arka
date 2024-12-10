@@ -1,12 +1,10 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
-import { EPVersions } from '../types/sponsorship-policy-dto.js';
 
 export class ArkaWhitelist extends Model {
     public id!: number; // Note that the `null assertion` `!` is required in strict mode.
     public apiKey!: string;
     public addresses!: string[];
     public policyId?: number;
-    public epVersion?: EPVersions;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -35,12 +33,6 @@ const initializeArkaWhitelistModel = (sequelize: Sequelize, schema: string) => {
           type: DataTypes.INTEGER,
           allowNull: true,
           field: 'POLICY_ID'
-        },
-        epVersion: {
-          type: DataTypes.ENUM,
-          values: [EPVersions.EPV_06, EPVersions.EPV_07],
-          allowNull: true,
-          field: 'EP_VERSION'
         },
         createdAt: {
             type: DataTypes.DATE,

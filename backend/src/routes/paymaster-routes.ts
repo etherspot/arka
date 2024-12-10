@@ -284,9 +284,9 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
               if (epVersion === EPVersions.EPV_06)
                 result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
               else {
-                const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyPolicyIdAndEpVersion(api_key, epVersion);
+                const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
                 if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                  const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyPolicyIdAndEpVersion(api_key, epVersion, sponsorshipPolicy.id);
+                  const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
                   if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
                 }
                 result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
@@ -393,6 +393,12 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
                 if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
               }
 
+              const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
+              if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
+                const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
+                if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+              }
+
               if (epVersion === EPVersions.EPV_06) {
                 if(!apiKeyEntity.verifyingPaymasters) {
                   return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
@@ -400,11 +406,6 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
                 const paymasterAddr = JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId.chainId];
                 if(!paymasterAddr) {
                   return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
-                }
-                const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyPolicyIdAndEpVersion(api_key, epVersion);
-                if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                  const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyPolicyIdAndEpVersion(api_key, epVersion, sponsorshipPolicy.id);
-                  if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
                 }
                 result = await paymaster.signV06(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
               }
@@ -415,11 +416,6 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
                 const paymasterAddr = JSON.parse(apiKeyEntity.verifyingPaymastersV2)[chainId.chainId];
                 if(!paymasterAddr) {
                   return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
-                }
-                const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyPolicyIdAndEpVersion(api_key, epVersion);
-                if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                  const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyPolicyIdAndEpVersion(api_key, epVersion, sponsorshipPolicy.id);
-                  if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
                 }
                 result = await paymaster.signV07(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
               }
