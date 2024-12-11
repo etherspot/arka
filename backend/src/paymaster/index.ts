@@ -14,8 +14,6 @@ import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
 import ERC20PaymasterV07Abi from '../abi/ERC20PaymasterV07Abi.js';
 import ERC20Abi from '../abi/ERC20Abi.js';
 import EtherspotChainlinkOracleAbi from '../abi/EtherspotChainlinkOracleAbi.js';
-import { abi as verifyingPaymasterAbi, byteCode as verifyingPaymasterByteCode } from '../abi/VerifyingPaymasterAbi.js';
-import { abi as verifyingPaymasterV2Abi, byteCode as verifyingPaymasterV2ByteCode } from '../abi/VerifyingPaymasterAbiV2.js';
 
 export class Paymaster {
   feeMarkUp: BigNumber;
@@ -667,104 +665,6 @@ export class Paymaster {
       if (log) log.error(err, 'deposit');
       if (err.message.includes('Balance is less than the amount to be deposited')) throw new Error(err.message);
       throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
-    }
-  }
-
-  async deployVp(
-    privateKey: string,
-    bundlerRpcUrl: string,
-    epAddr: string,
-    isEp06: boolean,
-    chainId: number,
-    log?: FastifyBaseLogger
-  ) {
-    try {
-      const provider = new providers.JsonRpcProvider(bundlerRpcUrl);
-      const signer = new Wallet(privateKey, provider);
-      
-      let contract;
-      if(isEp06) {
-        contract = new ethers.ContractFactory(verifyingPaymasterAbi, verifyingPaymasterByteCode, signer);
-      } else {
-        contract = new ethers.ContractFactory(verifyingPaymasterV2Abi, verifyingPaymasterV2ByteCode, signer);
-      }
-
-      const etherscanFeeData = await getEtherscanFee(chainId);
-      let feeData;
-      if (etherscanFeeData) {
-        feeData = etherscanFeeData;
-      } else {
-        feeData = await provider.getFeeData();
-        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
-        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
-        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
-      }
-
-      let tx;
-      if (!feeData.maxFeePerGas) {
-        tx = await contract.deploy(epAddr, signer.address, {gasPrice: feeData.gasPrice});
-      } else {
-        tx = await contract.deploy(
-          epAddr,
-          signer.address,
-          {
-            maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-            type: 2
-          }
-        );
-      }
-      await tx.deployed();
-      return { address: tx.address, hash: tx.deployTransaction.hash };
-    } catch (error) {
-      log?.error(`error while deploying verifying paymaster ${error}`);
-      throw new Error(ErrorMessage.FAILED_TO_DEPLOY_VP);
-    }
-  }
-
-  async addStake(
-    privateKey: string,
-    bundlerRpcUrl: string,
-    amount: string,
-    paymasterAddress: string,
-    chainId: number,
-    log?: FastifyBaseLogger
-  ) {
-    try {
-      const provider = new providers.JsonRpcProvider(bundlerRpcUrl);
-      const signer = new Wallet(privateKey, provider);
-
-      const contract = new ethers.Contract(paymasterAddress, verifyingPaymasterAbi, signer);
-
-      const etherscanFeeData = await getEtherscanFee(chainId);
-      let feeData;
-      if (etherscanFeeData) {
-        feeData = etherscanFeeData;
-      } else {
-        feeData = await provider.getFeeData();
-        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
-        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
-        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
-      }
-
-      let tx;
-      if (!feeData.maxFeePerGas) {
-        tx = await contract.addStake("10", {value: ethers.utils.parseEther(amount), gasPrice: feeData.gasPrice});
-      } else {
-        tx = await contract.addStake(
-          "10",
-          {
-            value: ethers.utils.parseEther(amount),
-            maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-            type: 2
-          }
-        );
-      }
-      return tx
-    } catch (error) {
-      log?.error(`error while adding stake to verifying paymaster ${error}`);
-      throw new Error(ErrorMessage.FAILED_TO_ADD_STAKE);
     }
   }
 }
