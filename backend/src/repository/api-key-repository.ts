@@ -59,11 +59,4 @@ export class APIKeyRepository {
     const result = await this.sequelize.models.APIKey.findOne({ where: { walletAddress: walletAddress } });
     return result ? result.get() as APIKey : null;
   }
-
-  async updateVpAddresses(apiKey: string, vpAddresses: string, isEp06 = true) {
-    if (isEp06) {
-      return await this.sequelize.models.APIKey.update({verifyingPaymasters: vpAddresses}, {where: {apiKey}});
-    }
-    return await this.sequelize.models.APIKey.update({verifyingPaymastersV2: vpAddresses}, {where: {apiKey}});
-  }
 }
