@@ -14,12 +14,27 @@ import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
 import ERC20PaymasterV07Abi from '../abi/ERC20PaymasterV07Abi.js';
 import ERC20Abi from '../abi/ERC20Abi.js';
 import EtherspotChainlinkOracleAbi from '../abi/EtherspotChainlinkOracleAbi.js';
+const ttl = parseInt(process.env.CACHE_TTL || "5000");
+
+interface TokenPriceAndMetadata {
+  decimals: number;
+  symbol: string;
+  ethPrice: any;
+  gasToken: string
+}
+
+interface TokenPriceAndMetadataCache {
+  data: TokenPriceAndMetadata;
+  expiry: number
+}
+
 
 export class Paymaster {
   feeMarkUp: BigNumber;
   multiTokenMarkUp: number;
   EP7_TOKEN_VGL: string;
   EP7_TOKEN_PGL: string;
+  priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
 
   constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
@@ -208,11 +223,225 @@ export class Paymaster {
     return paymasterAndData;
   }
 
-  async getQuotesMultiToken(userOp: any, entryPoint: string, chainId: number, multiTokenPaymasters: any, tokens_list: string[], oracles: any, 
-    bundlerRpc: string, oracleName: string, nativeOracleAddress: string, log?: FastifyBaseLogger) {
+  private async getEstimateUserOperationGas(
+    provider: providers.JsonRpcProvider,
+    userOp: any,
+    entryPoint: string,
+    paymasterAddress: string,
+    nativeOracleAddress: string,
+    chainLink = false
+  ) {
+    const paymasterContract = new ethers.Contract(paymasterAddress , MultiTokenPaymasterAbi, provider);
+    const nativeOracleContract = new ethers.Contract(nativeOracleAddress, ChainlinkOracleAbi, provider);
+
+    const promises = [
+      provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]),
+      paymasterContract.UNACCOUNTED_COST
+    ];
+
+    if(chainLink) {
+      promises.push(...[
+        nativeOracleContract.latestRoundData(),
+        nativeOracleContract.decimals()
+      ]);
+    }
+
+    return await Promise.allSettled(promises).then((data) => {
+      if (data[0].status !== 'fulfilled') {
+        throw new Error('Failed to estimate gas for user operation ' + data[0].reason);
+      }
+      if (data[1].status !== 'fulfilled') {
+        throw new Error('Failed to get unaccounted cost for paymaster '+ data[1].reason);
+      }
+
+      if(chainLink) {
+        if (data[2].status !== 'fulfilled') {
+          throw new Error('Failed to get latest round data for oracle '+ data[2].reason);
+        }
+        if (data[3].status !== 'fulfilled') {
+          throw new Error('Failed to get decimals for oracle '+ data[3].reason);
+        }
+        return {
+          response: data[0].value,
+          unaccountedCost: data[1].value,
+          latestRoundData: data[2].value,
+          decimals: data[3].value
+        }
+      }
+
+      return {
+        response: data[0].value,
+        unaccountedCost: data[1].value
+      };
+    })
+  }
+
+  private async getPriceFromOrochi(
+    oracleAddress: string,
+    provider: providers.JsonRpcProvider,
+    gasToken: string,
+    chainId: number
+  ) {
+    const cacheKey = `${chainId}-${oracleAddress}-${gasToken}`;
+    const cache = this.priceAndMetadata.get(cacheKey);
+    if(cache && cache.expiry > Date.now()) {
+      return cache.data;
+    }
+
+    const oracleContract = new ethers.Contract(oracleAddress, OrochiOracleAbi, provider);
+    const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider);
+    const promises = [
+      tokenContract.decimals(),
+      tokenContract.symbol(),
+      oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
+    ];
+    
+    return await Promise.allSettled(promises).then((data) => {
+      let ethPrice = "";
+      if(data[0].status !== 'fulfilled') {
+        throw new Error('Failed to get decimals for token '+ data[0].reason);
+      }
+      if(data[1].status !== 'fulfilled') {
+        throw new Error('Failed to get symbol for token '+ data[1].reason);
+      }
+      if(data[2].status !== 'fulfilled') {
+        throw new Error('Failed to get latest data for oracle '+ data[2].reason);
+      }
+      const decimals = Number(data[0].value);
+      const symbol = data[1].value;
+      const ETHprice = data[2].value;
+      // For orochi its one native for one usd so only stable tokens can be used
+      if (decimals < 18)
+        ethPrice = Number(ethers.utils.formatUnits(ETHprice, 18 - decimals)).toFixed(0);
+
+      const priceAndMetadata: TokenPriceAndMetadata = {
+        decimals,
+        symbol,
+        ethPrice,
+        gasToken
+      }
+      this.priceAndMetadata.set(cacheKey, {data: priceAndMetadata, expiry: Date.now() + ttl});
+      return priceAndMetadata;
+    });
+  }
+
+  private async getPriceFromChainlink(
+    oracleAddress: string,
+    provider: providers.JsonRpcProvider,
+    gasToken: string,
+    ethUsdPrice: any,
+    ethUsdPriceDecimal: any,
+    chainId: number
+  ) {
+
+    const cacheKey = `${chainId}-${oracleAddress}-${gasToken}`;
+    const cache = this.priceAndMetadata.get(cacheKey);
+    if(cache && cache.expiry > Date.now()) {
+      return cache.data;
+    }
+
+    const chainlinkContract = new ethers.Contract(oracleAddress, ChainlinkOracleAbi, provider);
+    const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider);
+
+    const promises = [
+      tokenContract.decimals(),
+      tokenContract.symbol(),
+      chainlinkContract.decimals(),
+      chainlinkContract.latestAnswer()
+    ];
+
+    return Promise.allSettled(promises).then((data) => {
+      if(data[0].status !== 'fulfilled') {
+        throw new Error('Failed to get decimals for token '+ data[0].reason);
+      }
+      if(data[1].status !== 'fulfilled') {
+        throw new Error('Failed to get symbol for token '+ data[1].reason);
+      }
+      if(data[2].status !== 'fulfilled') {
+        throw new Error('Failed to get decimals for chainlink '+ data[2].reason);
+      }
+      if(data[3].status !== 'fulfilled') {
+        throw new Error('Failed to get latest price '+ data[3].reason);
+      }
+
+      const decimals = Number(data[0].value);
+      const symbol = data[1].value;
+      const ethPriceDecimal = data[2].value;
+      let ethPrice = data[3].value;
+      ethUsdPrice = ethers.utils.formatUnits(ethUsdPrice, ethUsdPriceDecimal);
+      ethPrice = ethers.utils.formatUnits(ethPrice, ethPriceDecimal);
+      ethUsdPrice = ethers.utils.parseEther(ethUsdPrice);
+      ethPrice = ethers.utils.parseEther(ethPrice);
+      ethPrice = ethers.utils.parseUnits((ethUsdPrice/ethPrice).toFixed(decimals), decimals).toString();
+
+      const priceAndMetadata: TokenPriceAndMetadata = {
+        decimals,
+        symbol,
+        ethPrice,
+        gasToken
+      }
+      this.priceAndMetadata.set(cacheKey, {data: priceAndMetadata, expiry: Date.now() + ttl});
+      return priceAndMetadata;
+    });
+  }
+
+  private async getPriceFromEtherspotChainlink(
+    oracleAddress: string,
+    provider: providers.JsonRpcProvider,
+    gasToken: string,
+    chainId: number
+  ) {
+    const cacheKey = `${chainId}-${oracleAddress}-${gasToken}`;
+    const cache = this.priceAndMetadata.get(cacheKey);
+    if(cache && cache.expiry > Date.now()) {
+      return cache.data;
+    }
+    const ecContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider);
+    const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider);
+
+    const promises = [
+      tokenContract.decimals(),
+      tokenContract.symbol(),
+      ecContract.cachedPrice()
+    ];
+
+    return await Promise.allSettled(promises).then((data) => {
+      if(data[0].status !== 'fulfilled') {
+        throw new Error('Failed to get decimals for token '+ data[0].reason);
+      }
+      if(data[1].status !== 'fulfilled') {
+        throw new Error('Failed to get symbol for token '+ data[1].reason);
+      }
+      if(data[2].status !== 'fulfilled') {
+        throw new Error('Failed to get cached price from Etherspot Chainlink '+ data[2].reason);
+      }
+
+      const priceAndMetadata: TokenPriceAndMetadata = {
+        decimals: Number(data[0].value),
+        symbol: data[1].value,
+        ethPrice: data[2].value,
+        gasToken
+      }
+      this.priceAndMetadata.set(cacheKey, {data: priceAndMetadata, expiry: Date.now() + ttl});
+      return priceAndMetadata;
+    });
+  }
+
+  async getQuotesMultiToken(
+    userOp: any,
+    entryPoint: string,
+    chainId: number,
+    multiTokenPaymasters: any,
+    tokens_list: string[],
+    oracles: any, 
+    bundlerRpc: string,
+    oracleName: string,
+    nativeOracleAddress: string,
+    log?: FastifyBaseLogger
+  ) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const quotes = [], unsupportedTokens = [];
+      const quotes: any[] = [], unsupportedTokens: any[] = [];
       const result = {
         "postOpGas": "0x",
         "etherUSDExchangeRate": "0x",
@@ -226,64 +455,63 @@ export class Paymaster {
           "maxFeePerGas": "0x",
           "maxPriorityFeePerGas": "0x"
         },
-        "quotes": [{}],
-        "unsupportedTokens": [{}]
+        "quotes": [] as any,
+        "unsupportedTokens": [] as any
       }
-      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+      let ETHUSDPrice: any, ETHUSDPriceDecimal;
+      const paymasterKey = Object.keys(multiTokenPaymasters[chainId])[0];
+      let response, unaccountedCost;
+      if (oracleName === "chainlink") {
+        const res = await this.getEstimateUserOperationGas(provider, userOp, entryPoint, multiTokenPaymasters[chainId][paymasterKey], nativeOracleAddress, true);
+        response = res.response;
+        unaccountedCost = res.unaccountedCost;
+        const ETHprice = res.latestRoundData;
+        ETHUSDPrice = ETHprice.answer;
+        ETHUSDPriceDecimal = res.decimals;
+        result.etherUSDExchangeRate = BigNumber.from(ETHprice.answer).toHexString();
+      } else {
+        const result = await this.getEstimateUserOperationGas(provider, userOp, entryPoint, multiTokenPaymasters[chainId][paymasterKey], nativeOracleAddress);
+        response = result.response;
+        unaccountedCost = result.unaccountedCost;
+      }
       result.gasEstimates.preVerificationGas = response.preVerificationGas;
       result.gasEstimates.callGasLimit = response.callGasLimit;
       result.gasEstimates.verificationGasLimit = response.verificationGasLimit;
       result.feeEstimates.maxFeePerGas = response.maxFeePerGas;
       result.feeEstimates.maxPriorityFeePerGas = response.maxPriorityFeePerGas;
-      
-      const paymasterKey = Object.keys(multiTokenPaymasters[chainId])[0];
       result.paymasterAddress = multiTokenPaymasters[chainId][paymasterKey];
-      const paymasterContract = new ethers.Contract(result.paymasterAddress , MultiTokenPaymasterAbi, provider);
-      result.postOpGas = await paymasterContract.UNACCOUNTED_COST;
+      result.postOpGas = unaccountedCost;
 
-      let ETHUSDPrice: any, ETHUSDPriceDecimal;
-      if (oracleName === "chainlink") {
-        const nativeOracleContract = new ethers.Contract(nativeOracleAddress, ChainlinkOracleAbi, provider);
-        const ETHprice = await nativeOracleContract.latestRoundData();
-        ETHUSDPrice = ETHprice.answer;
-        ETHUSDPriceDecimal = await nativeOracleContract.decimals();
-        result.etherUSDExchangeRate = BigNumber.from(ETHprice.answer).toHexString();
-      }
-      for (let i = 0; i < tokens_list.length; i++) {
+      const promises = [];
+      for(let i=0;i<tokens_list.length;i++) {
         const gasToken = tokens_list[i];
-        if (!(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
-          !(oracles[chainId] && oracles[chainId][gasToken]))
-          unsupportedTokens.push({ token: gasToken })
+        if (
+          !(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
+          !(oracles[chainId] && oracles[chainId][gasToken])
+        ) unsupportedTokens.push({ token: gasToken });
         else {
           const oracleAddress = oracles[chainId][gasToken];
-          let ethPrice = "";
-          const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider)
-          const decimals = await tokenContract.decimals();
           if (oracleName === "orochi") {
-            const oracleContract = new ethers.Contract(oracleAddress, OrochiOracleAbi, provider);
-            const ETHprice = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
-            // For orochi its one native for one usd so only stable tokens can be used
-            if (decimals < 18)
-              ethPrice = Number(ethers.utils.formatUnits(ETHprice, 18 - decimals)).toFixed(0);
-          } else if (oracleName === "chainlink") {
-            const chainlinkContract = new ethers.Contract(oracleAddress, ChainlinkOracleAbi, provider);
-            const ETHpriceDecimal = await chainlinkContract.decimals();
-            let ETHprice = await chainlinkContract.latestAnswer();
-            ETHUSDPrice = ethers.utils.formatUnits(ETHUSDPrice, ETHUSDPriceDecimal);
-            ETHprice = ethers.utils.formatUnits(ETHprice, ETHpriceDecimal);
-            ETHUSDPrice = ethers.utils.parseEther(ETHUSDPrice);
-            ETHprice = ethers.utils.parseEther(ETHprice);
-            const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider);
-            const decimals = Number(await tokenContract.decimals());
-            ethPrice = ethers.utils.parseUnits((ETHUSDPrice/ETHprice).toFixed(decimals), decimals).toString()
+            promises.push(this.getPriceFromOrochi(oracleAddress, provider, gasToken, chainId));
+          } else if(oracleName === "chainlink") {
+            promises.push(this.getPriceFromChainlink(oracleAddress, provider, gasToken, ETHUSDPrice, ETHUSDPriceDecimal, chainId));
           } else {
-            const ecContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider);
-            const ETHprice = await ecContract.cachedPrice();
-            ethPrice = ETHprice
+            promises.push(this.getPriceFromEtherspotChainlink(oracleAddress, provider, gasToken, chainId));
           }
+        }
+      }
+
+      await Promise.allSettled(promises).then((data: any) => {
+        for(let i=0;i<data.length;i++) {
+          if(data[i].status !== 'fulfilled'){
+            throw new Error('Failed to fetch price and metadata ' + data[i].reason);
+          }
+
+          const {decimals, symbol, ethPrice, gasToken} = data[i].value;
+          
           if (result.etherUSDExchangeRate === "0x")
             result.etherUSDExchangeRate = BigNumber.from(ethPrice).toHexString();
-          const symbol = await tokenContract.symbol();
+
           quotes.push({
             token: gasToken,
             symbol: symbol,
@@ -292,7 +520,7 @@ export class Paymaster {
             serviceFeePercent: (this.multiTokenMarkUp/10000 - 100)
           })
         }
-      }
+      })
       result.quotes = quotes;
       result.unsupportedTokens = unsupportedTokens;
       return result;
@@ -305,47 +533,54 @@ export class Paymaster {
   }
 
   async signMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string,
-    feeToken: string, oracleAggregator: string, bundlerRpc: string, signer: Wallet, oracleName: string, nativeOracleAddress: string, log?: FastifyBaseLogger) {
+    feeToken: string, oracleAggregator: string, bundlerRpc: string, signer: Wallet, oracleName: string, nativeOracleAddress: string,
+    chainId: number, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
       const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbi, provider);
       let ethPrice = "";
 
       if (oracleName === "orochi") {
-        const oracleContract = new ethers.Contract(oracleAggregator, OrochiOracleAbi, provider);
-        const ETHprice = await oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
-        // For orochi its one native for one usd so only stable tokens can be used
-        const tokenContract = new ethers.Contract(feeToken, ERC20Abi, provider);
-        const decimals = Number(await tokenContract.decimals());
-        if (decimals < 18)
-          ethPrice = Number(ethers.utils.formatUnits(ETHprice, 18 - decimals)).toFixed(0);
+        const data = await this.getPriceFromOrochi(oracleAggregator, provider, feeToken, chainId);
+        ethPrice = data.ethPrice;
       } else if (oracleName === "chainlink") {
         const nativeOracleContract = new ethers.Contract(nativeOracleAddress, ChainlinkOracleAbi, provider);
-        let ETHUSDPrice = await nativeOracleContract.latestAnswer();
-        const chainlinkContract = new ethers.Contract(oracleAggregator, ChainlinkOracleAbi, provider);
-        const ETHUSDPriceDecimal = await nativeOracleContract.decimals();
-        const ETHpriceDecimal = await chainlinkContract.decimals();
-        let ETHprice = await chainlinkContract.latestAnswer();
-        ETHUSDPrice = ethers.utils.formatUnits(ETHUSDPrice, ETHUSDPriceDecimal);
-        ETHprice = ethers.utils.formatUnits(ETHprice, ETHpriceDecimal);
-        ETHUSDPrice = ethers.utils.parseEther(ETHUSDPrice);
-        ETHprice = ethers.utils.parseEther(ETHprice);
-        const tokenContract = new ethers.Contract(feeToken, ERC20Abi, provider);
-        const decimals = Number(await tokenContract.decimals());
-        ethPrice = ethers.utils.parseUnits((ETHUSDPrice/ETHprice).toFixed(decimals), decimals).toString()
+
+        const { ethUsdPrice, ethUsdPriceDecimal } = await Promise.allSettled(
+          [nativeOracleContract.latestAnswer(), nativeOracleContract.decimals()]
+        ).then((data) => {
+          if(data[0].status !== 'fulfilled'){
+            throw new Error('Failed to fetch latest price from native oracle' + data[0].reason);
+          }
+          if(data[1].status !== 'fulfilled'){
+            throw new Error('Failed to fetch decimal from native oracle' + data[1].reason);
+          }
+          return {ethUsdPrice: data[0].value, ethUsdPriceDecimal: data[1].value};
+        })
+
+        const data = await this.getPriceFromChainlink(
+          oracleAggregator,
+          provider,
+          feeToken,
+          ethUsdPrice,
+          ethUsdPriceDecimal,
+          chainId
+        );
+
+        ethPrice = data.ethPrice;
       } else {
         const ecContract = new ethers.Contract(oracleAggregator, EtherspotChainlinkOracleAbi, provider);
         const ETHprice = await ecContract.cachedPrice();
         ethPrice = ETHprice
       }
-      userOp.paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
+      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
 
       if (!userOp.signature) userOp.signature = '0x';
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
       userOp.verificationGasLimit = response.verificationGasLimit;
       userOp.preVerificationGas = response.preVerificationGas;
       userOp.callGasLimit = response.callGasLimit;
-      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
+      userOp.paymasterAndData = paymasterAndData
 
       const returnValue = {
         paymasterAndData,
@@ -353,7 +588,6 @@ export class Paymaster {
         preVerificationGas: response.preVerificationGas,
         callGasLimit: response.callGasLimit,
       }
-
       return returnValue;
     } catch (err: any) {
       if (err.message.includes("Quota exceeded"))
