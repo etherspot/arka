@@ -339,7 +339,7 @@ const paymasterRoutes: FastifyPluginAsync = async (server) => {
                 throw new Error("Oracle is not Defined/Invalid");
               if (networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" && !NativeOracles[chainId])
                 throw new Error("Native Oracle address not set for this chainId")
-              result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], server.log);
+              result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
               break;
             }
             default: {
