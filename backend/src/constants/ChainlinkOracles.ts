@@ -32,3 +32,5 @@ export const NativeOracles: Record<number, string> = {
   2442: "0xd94522a6feF7779f672f4C88eb672da9222f2eAc", // Polygon zkEVM Cardona Testnet
 
 }
+
+export const NativeOracleDecimals = 8;

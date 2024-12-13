@@ -14,7 +14,10 @@ import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
 import ERC20PaymasterV07Abi from '../abi/ERC20PaymasterV07Abi.js';
 import ERC20Abi from '../abi/ERC20Abi.js';
 import EtherspotChainlinkOracleAbi from '../abi/EtherspotChainlinkOracleAbi.js';
-const ttl = parseInt(process.env.CACHE_TTL || "5000");
+import { UnaccountedCost } from '../constants/MultitokenPaymaster.js';
+import { NativeOracleDecimals } from '../constants/ChainlinkOracles.js';
+const ttl = parseInt(process.env.CACHE_TTL || "600000");
+const nativePriceCacheTtl = parseInt(process.env.NATIVE_PRICE_CACHE_TTL || "60000");
 
 interface TokenPriceAndMetadata {
   decimals: number;
@@ -28,6 +31,11 @@ interface TokenPriceAndMetadataCache {
   expiry: number
 }
 
+interface NativeCurrencyPricyCache {
+  data: any;
+  expiry: number;
+}
+
 
 export class Paymaster {
   feeMarkUp: BigNumber;
@@ -35,6 +43,7 @@ export class Paymaster {
   EP7_TOKEN_VGL: string;
   EP7_TOKEN_PGL: string;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
+  nativeCurrencyPrice: Map<string, NativeCurrencyPricyCache> = new Map();
 
   constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
@@ -195,17 +204,50 @@ export class Paymaster {
   async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string,
     ethPrice: string, paymasterContract: Contract, signer: Wallet) {
     const priceMarkup = this.multiTokenMarkUp;
-    // actual signing...
-    // priceSource inputs available 0 - for using external exchange price and 1 - for oracle based price
-    const hash = await paymasterContract.getHash(
-      userOp,
-      0,
-      validUntil,
-      validAfter,
-      feeToken,
-      ethers.constants.AddressZero,
-      ethPrice,
-      priceMarkup,
+
+    const hash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        [
+          "address",
+          "uint256",
+          "bytes32",
+          "bytes32",
+          "uint256",
+          "uint256",
+          "uint256",
+          "uint256",
+          "uint256",
+          "uint256",
+          "address",
+          "uint8",
+          "uint48",
+          "uint48",
+          "address",
+          "address",
+          "uint256",
+          "uint32"
+        ],
+        [
+          userOp.sender,
+          userOp.nonce,
+          ethers.utils.keccak256(userOp.initCode),
+          ethers.utils.keccak256(userOp.callData),
+          userOp.callGasLimit,
+          userOp.verificationGasLimit,
+          userOp.preVerificationGas,
+          userOp.maxFeePerGas,
+          userOp.maxPriorityFeePerGas,
+          80002,
+          paymasterContract.address,
+          0,
+          validUntil,
+          validAfter,
+          feeToken,
+          ethers.constants.AddressZero,
+          ethPrice,
+          priceMarkup
+        ]
+      )
     );
 
     const sig = await signer.signMessage(arrayify(hash));
@@ -227,51 +269,69 @@ export class Paymaster {
     provider: providers.JsonRpcProvider,
     userOp: any,
     entryPoint: string,
-    paymasterAddress: string,
+  ) {
+    return provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+  }
+
+  private async getLatestAnswerAndDecimals(
+    provider: providers.JsonRpcProvider,
     nativeOracleAddress: string,
+    chainId: number
+  ) {
+    const cacheKey = `${chainId}-${nativeOracleAddress}`;
+    const cache = this.nativeCurrencyPrice.get(cacheKey);
+    if(cache && cache.expiry > Date.now()) {
+      return {
+        latestAnswer: cache.data,
+        decimals: NativeOracleDecimals
+      }
+    }
+    const nativeOracleContract = new ethers.Contract(nativeOracleAddress, ChainlinkOracleAbi, provider);
+    return nativeOracleContract.latestAnswer().then((data: any) => {
+      this.nativeCurrencyPrice.set(cacheKey, {data, expiry: Date.now() + nativePriceCacheTtl});
+      return {
+        latestAnswer: data,
+        decimals: NativeOracleDecimals
+      }
+    });
+  }
+
+  private async getEstimateUserOperationGasAndData(
+    provider: providers.JsonRpcProvider,
+    userOp: any,
+    entryPoint: string,
+    nativeOracleAddress: string,
+    chainId: number,
     chainLink = false
   ) {
-    const paymasterContract = new ethers.Contract(paymasterAddress , MultiTokenPaymasterAbi, provider);
-    const nativeOracleContract = new ethers.Contract(nativeOracleAddress, ChainlinkOracleAbi, provider);
-
     const promises = [
-      provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]),
-      paymasterContract.UNACCOUNTED_COST
+      this.getEstimateUserOperationGas(provider, userOp, entryPoint),
     ];
 
     if(chainLink) {
-      promises.push(...[
-        nativeOracleContract.latestRoundData(),
-        nativeOracleContract.decimals()
-      ]);
+      promises.push(this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId));
     }
 
     return await Promise.allSettled(promises).then((data) => {
       if (data[0].status !== 'fulfilled') {
         throw new Error('Failed to estimate gas for user operation ' + data[0].reason);
       }
-      if (data[1].status !== 'fulfilled') {
-        throw new Error('Failed to get unaccounted cost for paymaster '+ data[1].reason);
-      }
 
       if(chainLink) {
-        if (data[2].status !== 'fulfilled') {
-          throw new Error('Failed to get latest round data for oracle '+ data[2].reason);
-        }
-        if (data[3].status !== 'fulfilled') {
-          throw new Error('Failed to get decimals for oracle '+ data[3].reason);
+        if (data[1].status !== 'fulfilled') {
+          throw new Error('Failed to get latest round data for oracle '+ data[1].reason);
         }
         return {
           response: data[0].value,
-          unaccountedCost: data[1].value,
-          latestRoundData: data[2].value,
-          decimals: data[3].value
+          unaccountedCost: UnaccountedCost,
+          latestAnswer: data[1].value.latestAnswer,
+          decimals: data[1].value.decimals
         }
       }
 
       return {
         response: data[0].value,
-        unaccountedCost: data[1].value
+        unaccountedCost: UnaccountedCost
       };
     })
   }
@@ -333,7 +393,6 @@ export class Paymaster {
     ethUsdPriceDecimal: any,
     chainId: number
   ) {
-
     const cacheKey = `${chainId}-${oracleAddress}-${gasToken}`;
     const cache = this.priceAndMetadata.get(cacheKey);
     if(cache && cache.expiry > Date.now()) {
@@ -462,15 +521,21 @@ export class Paymaster {
       const paymasterKey = Object.keys(multiTokenPaymasters[chainId])[0];
       let response, unaccountedCost;
       if (oracleName === "chainlink") {
-        const res = await this.getEstimateUserOperationGas(provider, userOp, entryPoint, multiTokenPaymasters[chainId][paymasterKey], nativeOracleAddress, true);
+        const res = await this.getEstimateUserOperationGasAndData(
+          provider,
+          userOp,
+          entryPoint,
+          nativeOracleAddress,
+          chainId,
+          true
+        );
         response = res.response;
         unaccountedCost = res.unaccountedCost;
-        const ETHprice = res.latestRoundData;
-        ETHUSDPrice = ETHprice.answer;
+        ETHUSDPrice = res.latestAnswer;
         ETHUSDPriceDecimal = res.decimals;
-        result.etherUSDExchangeRate = BigNumber.from(ETHprice.answer).toHexString();
+        result.etherUSDExchangeRate = BigNumber.from(res.latestAnswer).toHexString();
       } else {
-        const result = await this.getEstimateUserOperationGas(provider, userOp, entryPoint, multiTokenPaymasters[chainId][paymasterKey], nativeOracleAddress);
+        const result = await this.getEstimateUserOperationGasAndData(provider, userOp, entryPoint, nativeOracleAddress, chainId);
         response = result.response;
         unaccountedCost = result.unaccountedCost;
       }
@@ -544,26 +609,14 @@ export class Paymaster {
         const data = await this.getPriceFromOrochi(oracleAggregator, provider, feeToken, chainId);
         ethPrice = data.ethPrice;
       } else if (oracleName === "chainlink") {
-        const nativeOracleContract = new ethers.Contract(nativeOracleAddress, ChainlinkOracleAbi, provider);
-
-        const { ethUsdPrice, ethUsdPriceDecimal } = await Promise.allSettled(
-          [nativeOracleContract.latestAnswer(), nativeOracleContract.decimals()]
-        ).then((data) => {
-          if(data[0].status !== 'fulfilled'){
-            throw new Error('Failed to fetch latest price from native oracle' + data[0].reason);
-          }
-          if(data[1].status !== 'fulfilled'){
-            throw new Error('Failed to fetch decimal from native oracle' + data[1].reason);
-          }
-          return {ethUsdPrice: data[0].value, ethUsdPriceDecimal: data[1].value};
-        })
+        const {latestAnswer, decimals} = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
 
         const data = await this.getPriceFromChainlink(
           oracleAggregator,
           provider,
           feeToken,
-          ethUsdPrice,
-          ethUsdPriceDecimal,
+          latestAnswer,
+          decimals,
           chainId
         );
 
