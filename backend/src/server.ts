@@ -28,6 +28,26 @@ import SupportedNetworks from "../config.json" assert { type: "json" };
 
 let server: FastifyInstance;
 
+
+async function registerWithRetry(server: FastifyInstance, plugin: any, retries: number, timeout: number) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+          const registerPromise = server.register(plugin);
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout));
+          await Promise.race([registerPromise, timeoutPromise]);
+          console.log('Plugin registered successfully');
+          return;
+      } catch (error) {
+          if (attempt === retries) {
+              console.error('Failed to register plugin after maximum retries:', error);
+              throw error;
+          } else {
+              console.warn(`Attempt ${attempt} failed. Retrying...`);
+          }
+      }
+  }
+}
+
 const initializeServer = async (): Promise<void> => {
 
   server = fastify({
@@ -70,7 +90,9 @@ const initializeServer = async (): Promise<void> => {
   await server.register(sponsorshipPolicyRoutes);
 
   // Register the sequelizePlugin
-  await server.register(sequelizePlugin);
+  //await server.register(sequelizePlugin);
+
+  await registerWithRetry(server, sequelizePlugin, 3, 5000); // 3 retries with a 5-second timeout
 
   // Synchronize all models
   await server.sequelize.sync();
