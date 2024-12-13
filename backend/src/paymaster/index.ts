@@ -202,7 +202,7 @@ export class Paymaster {
   }
 
   async getPaymasterAndDataForMultiTokenPaymaster(userOp: any, validUntil: string, validAfter: string, feeToken: string,
-    ethPrice: string, paymasterContract: Contract, signer: Wallet) {
+    ethPrice: string, paymasterContract: Contract, signer: Wallet, chainId: number) {
     const priceMarkup = this.multiTokenMarkUp;
 
     const hash = ethers.utils.keccak256(
@@ -237,7 +237,7 @@ export class Paymaster {
           userOp.preVerificationGas,
           userOp.maxFeePerGas,
           userOp.maxPriorityFeePerGas,
-          80002,
+          chainId,
           paymasterContract.address,
           0,
           validUntil,
@@ -626,7 +626,7 @@ export class Paymaster {
         const ETHprice = await ecContract.cachedPrice();
         ethPrice = ETHprice
       }
-      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
+      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
 
       if (!userOp.signature) userOp.signature = '0x';
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
