@@ -32,7 +32,9 @@ const ConfigSchema = Type.Strict(
     DELETE_KEY_RECOVER_WINDOW: Type.Number(),
     KMS_KEY_ID: Type.String() || undefined,
     USE_KMS: Type.Boolean() || false,
-    DEFAULT_BUNDLER_API_KEY: Type.String()
+    DEFAULT_BUNDLER_API_KEY: Type.String(),
+    MULTI_TOKEN_PAYMASTERS: Type.String(),
+    MULTI_TOKEN_ORACLES: Type.String(),
   })
 );
 
@@ -69,7 +71,9 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     DELETE_KEY_RECOVER_WINDOW: process.env.DELETE_KEY_RECOVER_WINDOW,
     KMS_KEY_ID: process.env.KMS_KEY_ID,
     USE_KMS: process.env.USE_KMS,
-    DEFAULT_BUNDLER_API_KEY: process.env.DEFAULT_BUNDLER_API_KEY
+    DEFAULT_BUNDLER_API_KEY: process.env.DEFAULT_BUNDLER_API_KEY,
+    MULTI_TOKEN_PAYMASTERS: process.env.MULTI_TOKEN_PAYMASTERS,
+    MULTI_TOKEN_ORACLES: process.env.MULTI_TOKEN_ORACLES
   }
 
   const valid = validate(envVar);
@@ -102,7 +106,9 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     DELETE_KEY_RECOVER_WINDOW: parseInt(process.env.DELETE_KEY_RECOVER_WINDOW || '7'),
     KMS_KEY_ID: process.env.KMS_KEY_ID ?? '',
     USE_KMS: process.env.USE_KMS === 'true',
-    DEFAULT_BUNDLER_API_KEY: process.env.DEFAULT_BUNDLER_API_KEY ?? ''
+    DEFAULT_BUNDLER_API_KEY: process.env.DEFAULT_BUNDLER_API_KEY ?? '',
+    MULTI_TOKEN_PAYMASTERS: process.env.MULTI_TOKEN_PAYMASTERS ?? '',
+    MULTI_TOKEN_ORACLES: process.env.MULTI_TOKEN_ORACLES ?? '',
   }
 
   server.log.info(config, "config:");

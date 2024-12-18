@@ -3,7 +3,6 @@ import { FastifyPluginAsync } from "fastify";
 import { BigNumber, Wallet, ethers, providers } from "ethers";
 import { gql, request as GLRequest } from "graphql-request";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
-import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
 import ErrorMessage, { generateErrorMessage } from "../constants/ErrorMessage.js";
@@ -13,9 +12,11 @@ import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { SponsorshipPolicy } from "../models/sponsorship-policy.js";
 import { DEFAULT_EP_VERSION, EPVersions, getEPVersion } from "../types/sponsorship-policy-dto.js";
 import { NativeOracles } from "../constants/ChainlinkOracles.js";
+import { PaymasterRoutesOpts } from "../types/arka-config-dto.js";
 
-const paymasterRoutes: FastifyPluginAsync = async (server) => {
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
+const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, options: PaymasterRoutesOpts) => {
+
+  const {paymaster} = options;
 
   const SUPPORTED_ENTRYPOINTS = {
     EPV_06: server.config.EPV_06,

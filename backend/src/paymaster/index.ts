@@ -273,14 +273,16 @@ export class Paymaster {
     return provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
   }
 
-  private async getLatestAnswerAndDecimals(
+  async getLatestAnswerAndDecimals(
     provider: providers.JsonRpcProvider,
     nativeOracleAddress: string,
-    chainId: number
+    chainId: number,
+    useCache = true
   ) {
     const cacheKey = `${chainId}-${nativeOracleAddress}`;
     const cache = this.nativeCurrencyPrice.get(cacheKey);
-    if(cache && cache.expiry > Date.now()) {
+    
+    if(useCache && cache && cache.expiry > Date.now()) {
       return {
         latestAnswer: cache.data,
         decimals: NativeOracleDecimals
@@ -336,15 +338,16 @@ export class Paymaster {
     })
   }
 
-  private async getPriceFromOrochi(
+  async getPriceFromOrochi(
     oracleAddress: string,
     provider: providers.JsonRpcProvider,
     gasToken: string,
-    chainId: number
+    chainId: number,
+    useCache = true
   ) {
     const cacheKey = `${chainId}-${oracleAddress}-${gasToken}`;
     const cache = this.priceAndMetadata.get(cacheKey);
-    if(cache && cache.expiry > Date.now()) {
+    if(useCache && cache && cache.expiry > Date.now()) {
       return cache.data;
     }
 
@@ -385,17 +388,18 @@ export class Paymaster {
     });
   }
 
-  private async getPriceFromChainlink(
+  async getPriceFromChainlink(
     oracleAddress: string,
     provider: providers.JsonRpcProvider,
     gasToken: string,
     ethUsdPrice: any,
     ethUsdPriceDecimal: any,
-    chainId: number
+    chainId: number,
+    useCache = true
   ) {
     const cacheKey = `${chainId}-${oracleAddress}-${gasToken}`;
     const cache = this.priceAndMetadata.get(cacheKey);
-    if(cache && cache.expiry > Date.now()) {
+    if(useCache && cache && cache.expiry > Date.now()) {
       return cache.data;
     }
 
@@ -444,15 +448,16 @@ export class Paymaster {
     });
   }
 
-  private async getPriceFromEtherspotChainlink(
+  async getPriceFromEtherspotChainlink(
     oracleAddress: string,
     provider: providers.JsonRpcProvider,
     gasToken: string,
-    chainId: number
+    chainId: number,
+    useCache = true
   ) {
     const cacheKey = `${chainId}-${oracleAddress}-${gasToken}`;
     const cache = this.priceAndMetadata.get(cacheKey);
-    if(cache && cache.expiry > Date.now()) {
+    if(useCache && cache && cache.expiry > Date.now()) {
       return cache.data;
     }
     const ecContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider);
