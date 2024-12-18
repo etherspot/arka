@@ -12,7 +12,7 @@ import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { SponsorshipPolicy } from "../models/sponsorship-policy.js";
 import { DEFAULT_EP_VERSION, EPVersions, getEPVersion } from "../types/sponsorship-policy-dto.js";
 import { NativeOracles } from "../constants/ChainlinkOracles.js";
-import { PaymasterRoutesOpts } from "../types/arka-config-dto";
+import { PaymasterRoutesOpts } from "../types/arka-config-dto.js";
 
 const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, options: PaymasterRoutesOpts) => {
 
