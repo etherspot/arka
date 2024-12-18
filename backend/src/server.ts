@@ -15,7 +15,6 @@ import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
 import { APIKey } from './models/api-key.js';
 import { APIKeyRepository } from './repository/api-key-repository.js';
-import { ArkaConfig } from './models/arka-config.js';
 import { ArkaConfigRepository } from './repository/arka-config-repository.js';
 import adminRoutes from './routes/admin-routes.js';
 import depositRoutes from './routes/deposit-route.js';
@@ -25,6 +24,8 @@ import pimlicoRoutes from './routes/pimlico-routes.js';
 import whitelistRoutes from './routes/whitelist-routes.js';
 import sponsorshipPolicyRoutes from './routes/sponsorship-policy-routes.js';
 import SupportedNetworks from "../config.json" assert { type: "json" };
+import { Paymaster } from './paymaster/index.js';
+import { NativeOracles } from './constants/ChainlinkOracles.js';
 
 let server: FastifyInstance;
 
@@ -55,7 +56,9 @@ const initializeServer = async (): Promise<void> => {
     logLevel: "warn"
   });
 
-  await server.register(paymasterRoutes);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
+
+  await server.register(paymasterRoutes, {paymaster});
 
   await server.register(adminRoutes);
 
@@ -315,6 +318,102 @@ const initializeServer = async (): Promise<void> => {
                 }
               }
             }
+          }
+        }
+      },
+      {
+        name: 'updateNativeTokenOracleData',
+        cronTime: process.env.NATIVE_ORACLE_UPDATE_CRON_EXP || "*/2 * * * *", // every 2 mins.
+        onTick: async () => {
+          const chainIds = Object.keys(NativeOracles);
+          for(const chainId of chainIds) {
+            const networkConfig = getNetworkConfig(chainId, '', server.config.EPV_06);
+            if(!networkConfig) {
+              continue;
+            }
+            const provider = new ethers.providers.JsonRpcProvider(networkConfig.bundler);
+            paymaster.getLatestAnswerAndDecimals(provider, NativeOracles[+chainId], +chainId, false)
+              .catch((error) => {
+                server.log.error(`Failed to update native oracle price for chain id: ${chainId}, ${error}`);
+              });
+          }
+        }
+      },
+      {
+        name: 'updateTokenOracleData',
+        cronTime: process.env.TOKEN_ORACLE_UPDATE_CRON_EXP || '*/5 * * * *', // every 5 mins.
+        onTick: async () => {
+          let buffer = Buffer.from(server.config.MULTI_TOKEN_PAYMASTERS, 'base64');
+          const multiTokenPaymasters = JSON.parse(buffer.toString());
+
+          buffer = Buffer.from(server.config.MULTI_TOKEN_ORACLES, 'base64');
+          const multiTokenOracles = JSON.parse(buffer.toString());
+
+          const chainIds = Object.keys(multiTokenPaymasters);
+
+          for(const chainId of chainIds) {
+            const networkConfig = getNetworkConfig(chainId, '', server.config.EPV_06);
+            if(!networkConfig) {
+              continue;
+            }
+            const provider = new ethers.providers.JsonRpcProvider(networkConfig.bundler)
+            paymaster.getLatestAnswerAndDecimals(
+              provider,
+              NativeOracles[+chainId],
+              +chainId
+            ).then((data) => {
+                const {latestAnswer, decimals} = data;
+                if(!latestAnswer || !decimals) {
+                  return;
+                }
+                const tokens = Object.keys(multiTokenPaymasters[chainId]);
+                for(const token of tokens) {
+                  if(networkConfig.MultiTokenPaymasterOracleUsed === 'chainlink') {
+                    paymaster.getPriceFromChainlink(
+                      multiTokenOracles[chainId][token],
+                      provider,
+                      token,
+                      latestAnswer,
+                      decimals,
+                      +chainId,
+                      false
+                    ).catch((error) => {
+                      server.log.error(
+                        `Failed to update oracle data for token: ${token}, chain id: ${chainId}, ${error}`
+                      );
+                    });
+                  } else if (networkConfig.MultiTokenPaymasterOracleUsed === 'orochi') {
+                    paymaster.getPriceFromOrochi(
+                      multiTokenOracles[chainId][token],
+                      provider,
+                      token,
+                      +chainId,
+                      false
+                    ).catch((error) => {
+                      server.log.error(
+                        `Failed to update oracle data for token: ${token}, chain id: ${chainId}, ${error}`
+                      );
+                    });
+                  } else {
+                    paymaster.getPriceFromEtherspotChainlink(
+                      multiTokenOracles[chainId][token],
+                      provider,
+                      token,
+                      +chainId,
+                      false
+                    ).catch((error) => {
+                      server.log.error(
+                        `Failed to update oracle data for token: ${token}, chain id: ${chainId}, ${error}`
+                      );
+                    });
+                  }
+                }
+              })
+              .catch((error) => {
+              server.log.error(
+                `Failed to get native prices while updating oracle token data: chain id ${chainId}, ${error}`
+              );
+            });
           }
         }
       }
