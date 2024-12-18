@@ -356,19 +356,20 @@ const initializeServer = async (): Promise<void> => {
             if(!networkConfig) {
               continue;
             }
-            const provider = new ethers.providers.JsonRpcProvider(networkConfig.bundler)
-            paymaster.getLatestAnswerAndDecimals(
-              provider,
-              NativeOracles[+chainId],
-              +chainId
-            ).then((data) => {
-                const {latestAnswer, decimals} = data;
-                if(!latestAnswer || !decimals) {
-                  return;
-                }
-                const tokens = Object.keys(multiTokenPaymasters[chainId]);
-                for(const token of tokens) {
-                  if(networkConfig.MultiTokenPaymasterOracleUsed === 'chainlink') {
+            const provider = new ethers.providers.JsonRpcProvider(networkConfig.bundler);
+
+            if(networkConfig.MultiTokenPaymasterOracleUsed === 'chainlink') {
+              paymaster.getLatestAnswerAndDecimals(
+                provider,
+                NativeOracles[+chainId],
+                +chainId
+              ).then((data) => {
+                  const {latestAnswer, decimals} = data;
+                  if(!latestAnswer || !decimals) {
+                    return;
+                  }
+                  const tokens = Object.keys(multiTokenPaymasters[chainId]);
+                  for(const token of tokens) {
                     paymaster.getPriceFromChainlink(
                       multiTokenOracles[chainId][token],
                       provider,
@@ -382,38 +383,44 @@ const initializeServer = async (): Promise<void> => {
                         `Failed to update oracle data for token: ${token}, chain id: ${chainId}, ${error}`
                       );
                     });
-                  } else if (networkConfig.MultiTokenPaymasterOracleUsed === 'orochi') {
-                    paymaster.getPriceFromOrochi(
-                      multiTokenOracles[chainId][token],
-                      provider,
-                      token,
-                      +chainId,
-                      false
-                    ).catch((error) => {
-                      server.log.error(
-                        `Failed to update oracle data for token: ${token}, chain id: ${chainId}, ${error}`
-                      );
-                    });
-                  } else {
-                    paymaster.getPriceFromEtherspotChainlink(
-                      multiTokenOracles[chainId][token],
-                      provider,
-                      token,
-                      +chainId,
-                      false
-                    ).catch((error) => {
-                      server.log.error(
-                        `Failed to update oracle data for token: ${token}, chain id: ${chainId}, ${error}`
-                      );
-                    });
                   }
-                }
-              })
-              .catch((error) => {
-              server.log.error(
-                `Failed to get native prices while updating oracle token data: chain id ${chainId}, ${error}`
-              );
-            });
+                })
+                .catch((error) => {
+                server.log.error(
+                  `Failed to get native prices while updating oracle token data: chain id ${chainId}, ${error}`
+                );
+              });
+            } else if (networkConfig.MultiTokenPaymasterOracleUsed === 'orochi') {
+              const tokens = Object.keys(multiTokenPaymasters[chainId]);
+              for(const token of tokens) {
+                paymaster.getPriceFromOrochi(
+                  multiTokenOracles[chainId][token],
+                  provider,
+                  token,
+                  +chainId,
+                  false
+                ).catch((error) => {
+                  server.log.error(
+                    `Failed to update oracle data for token: ${token}, chain id: ${chainId}, ${error}`
+                  );
+                });
+              }
+            } else {
+              const tokens = Object.keys(multiTokenPaymasters[chainId]);
+              for(const token of tokens) {
+                paymaster.getPriceFromEtherspotChainlink(
+                  multiTokenOracles[chainId][token],
+                  provider,
+                  token,
+                  +chainId,
+                  false
+                ).catch((error) => {
+                  server.log.error(
+                    `Failed to update oracle data for token: ${token}, chain id: ${chainId}, ${error}`
+                  );
+                });
+              }
+            }
           }
         }
       }
