@@ -14,7 +14,7 @@ import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
 import ERC20PaymasterV07Abi from '../abi/ERC20PaymasterV07Abi.js';
 import ERC20Abi from '../abi/ERC20Abi.js';
 import EtherspotChainlinkOracleAbi from '../abi/EtherspotChainlinkOracleAbi.js';
-import { UnaccountedCost } from '../constants/MultitokenPaymaster.js';
+import { TokenDecimalsAndSymbol, UnaccountedCost } from '../constants/MultitokenPaymaster.js';
 import { NativeOracleDecimals } from '../constants/ChainlinkOracles.js';
 import { CoingeckoTokensRepository } from '../repository/coingecko-token-repository.js';
 import { CoingeckoService } from '../services/coingecko.js';
@@ -278,6 +278,22 @@ export class Paymaster {
     return paymasterAndData;
   }
 
+  private async getTokenDecimals(token: string, chainId: number, provider: providers.JsonRpcProvider) {
+    if(TokenDecimalsAndSymbol[chainId]?.[token]) {
+      return TokenDecimalsAndSymbol[chainId][token]?.decimals;
+    }
+    const tokenContract = new ethers.Contract(token, ERC20Abi, provider);
+    return tokenContract.decimals();
+  }
+
+  private async getTokenSymbol(token: string, chainId: number, provider: providers.JsonRpcProvider) {
+    if(TokenDecimalsAndSymbol[chainId]?.[token]) {
+      return TokenDecimalsAndSymbol[chainId][token]?.symbol;
+    }
+    const tokenContract = new Contract(token, ERC20Abi, provider);
+    return tokenContract.symbol();
+  }
+
   private async getEstimateUserOperationGas(
     provider: providers.JsonRpcProvider,
     userOp: any,
@@ -365,10 +381,9 @@ export class Paymaster {
     }
 
     const oracleContract = new ethers.Contract(oracleAddress, OrochiOracleAbi, provider);
-    const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider);
     const promises = [
-      tokenContract.decimals(),
-      tokenContract.symbol(),
+      this.getTokenDecimals(gasToken, chainId, provider),
+      this.getTokenSymbol(gasToken, chainId, provider),
       oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
     ];
     
@@ -417,11 +432,10 @@ export class Paymaster {
     }
 
     const chainlinkContract = new ethers.Contract(oracleAddress, ChainlinkOracleAbi, provider);
-    const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider);
 
     const promises = [
-      tokenContract.decimals(),
-      tokenContract.symbol(),
+      this.getTokenDecimals(gasToken, chainId, provider),
+      this.getTokenSymbol(gasToken, chainId, provider),
       chainlinkContract.decimals(),
       chainlinkContract.latestAnswer()
     ];
@@ -474,11 +488,10 @@ export class Paymaster {
       return cache.data;
     }
     const ecContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider);
-    const tokenContract = new ethers.Contract(gasToken, ERC20Abi, provider);
 
     const promises = [
-      tokenContract.decimals(),
-      tokenContract.symbol(),
+      this.getTokenDecimals(gasToken, chainId, provider),
+      this.getTokenSymbol(gasToken, chainId, provider),
       ecContract.cachedPrice()
     ];
 
