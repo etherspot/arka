@@ -341,7 +341,7 @@ const initializeServer = async (): Promise<void> => {
       },
       {
         name: 'updateTokenOracleData',
-        cronTime: process.env.TOKEN_ORACLE_UPDATE_CRON_EXP || '*/5 * * * *', // every 5 mins.
+        cronTime: process.env.TOKEN_ORACLE_UPDATE_CRON_EXP || '*/7 * * * *', // every 5 mins.
         onTick: async () => {
           let buffer = Buffer.from(server.config.MULTI_TOKEN_PAYMASTERS, 'base64');
           const multiTokenPaymasters = JSON.parse(buffer.toString());
