@@ -562,7 +562,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         chainId,
         server.log
       );
-      return reply.code(ReturnCode.SUCCESS).send({tx});
+      return reply.code(ReturnCode.SUCCESS).send(tx);
     } catch (error: any) {
       request.log.error(error);
       return reply.code(ReturnCode.FAILURE).send({ error: error.message ?? ErrorMessage.FAILED_TO_PROCESS });

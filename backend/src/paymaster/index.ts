@@ -1066,7 +1066,9 @@ export class Paymaster {
           }
         );
       }
-      return tx
+      return {
+        message: `Successfully staked with transaction Hash ${tx.hash}`
+      };
     } catch (error) {
       log?.error(`error while adding stake to verifying paymaster ${error}`);
       throw new Error(ErrorMessage.FAILED_TO_ADD_STAKE);
