@@ -10,6 +10,7 @@ import { decode } from "../utils/crypto.js";
 import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
 import { APIKey } from "../models/api-key.js";
 import * as EtherspotAbi from "../abi/EtherspotAbi.js";
+import {abi as verifyingPaymasterAbi} from "../abi/VerifyingPaymasterAbi.js";
 
 const metadataRoutes: FastifyPluginAsync = async (server) => {
 
@@ -108,6 +109,13 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
       const sponsorBalance = await paymasterContract.getSponsorBalance(sponsorAddress);
 
+      const verifyingPaymaster = apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId] : undefined;
+      let verifyingPaymasterDeposit;
+      if (verifyingPaymaster) {
+        const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterAbi ,provider);
+        verifyingPaymasterDeposit = await vpContract.getDeposit();
+      }
+
       const chainsSupported: { chainId: number, entryPoint: string }[] = [];
       if (supportedNetworks) {
         const buffer = Buffer.from(supportedNetworks, 'base64');
@@ -131,7 +139,10 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         chainsSupported: chainsSupported,
         tokenPaymasters: tokenPaymasterAddresses,
         multiTokenPaymasters,
-        sponsorDetails: { name: sponsorName, icon: sponsorImage }
+        sponsorDetails: { name: sponsorName, icon: sponsorImage },
+        verifyingPaymaster: { address: verifyingPaymaster, deposit: verifyingPaymasterDeposit },
+        verifyingPaymasters: apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : undefined,
+        verifyingPaymastersV2: apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2) : undefined,
       })
     } catch (err: any) {
       request.log.error(err);
