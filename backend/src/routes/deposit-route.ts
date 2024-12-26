@@ -49,8 +49,10 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 const body: any = request.body;
                 const query: any = request.query;
                 const amount = body.params[0];
-                const chainId = query['chainId'] ?? body.params[1];
-                const api_key = query['apiKey'] ?? body.params[2];
+                const ep = query['useEp'] ?? body.params[1] ?? false;
+                const chainId = query['chainId'] ?? body.params[2];
+                const api_key = query['apiKey'] ?? body.params[3];
+                
                 if (!api_key || typeof(api_key) !== "string")
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 let privateKey = '';
@@ -87,7 +89,18 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
                 let bundlerUrl = networkConfig.bundler;
                 if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-                return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, privateKey, chainId, true, server.log);
+
+                if(ep) {
+                    return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, privateKey, chainId, true, server.log);
+                }
+                const vpAddr = apiKeyEntity.verifyingPaymasters ? 
+                                JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId] :
+                                undefined;
+                if(!vpAddr) {
+                    return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED})
+                }
+
+                return await paymaster.deposit(amount, vpAddr, bundlerUrl, privateKey, chainId, false, server.log);
             } catch (err: any) {
                 request.log.error(err);
                 if (err.name == "ResourceNotFoundException")
