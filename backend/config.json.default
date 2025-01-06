@@ -419,7 +419,7 @@
         "MultiTokenPaymasterOracleUsed": "orochi",
         "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
     },
-        {
+    {
         "chainId": 44787,
         "bundler": "https://testnet-rpc.etherspot.io/v1/44787",
         "contracts": {
