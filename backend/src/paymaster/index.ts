@@ -997,7 +997,7 @@ export class Paymaster {
       throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
   }
-  
+ 
   async deployVp(
     privateKey: string,
     bundlerRpcUrl: string,

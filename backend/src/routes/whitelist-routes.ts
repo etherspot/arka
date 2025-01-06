@@ -152,8 +152,12 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           );
           const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          if (secrets['BUNDLER_API_KEY']) bundlerApiKey = secrets['BUNDLER_API_KEY'];
           privateKey = secrets['PRIVATE_KEY'];
         } else {
+          if (apiKeyEntity.bundlerApiKey) {
+            bundlerApiKey = apiKeyEntity.bundlerApiKey;
+          }
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
         }
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -252,8 +256,10 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           );
           const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+          if (secrets['BUNDLER_API_KEY']) bundlerApiKey = secrets['BUNDLER_API_KEY'];
           privateKey = secrets['PRIVATE_KEY'];
         } else {
+          if (apiKeyEntity.bundlerApiKey) bundlerApiKey = apiKeyEntity.bundlerApiKey;
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
         }
         if (apiKeyEntity.bundlerApiKey) bundlerApiKey = apiKeyEntity.bundlerApiKey;

@@ -56,12 +56,14 @@ const initializeServer = async (): Promise<void> => {
     healthcheckUrl: "/healthcheck",
     logLevel: "warn"
   });
-
+  
   // Register the sequelizePlugin
   await server.register(sequelizePlugin);
 
   // Synchronize all models
   await server.sequelize.sync();
+  
+  server.log.info('registered sequelizePlugin...')
 
   const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize);
 
@@ -78,8 +80,6 @@ const initializeServer = async (): Promise<void> => {
   await server.register(whitelistRoutes);
 
   await server.register(sponsorshipPolicyRoutes);
-
-  server.log.info('registered sequelizePlugin...')
 
   const arkaConfigRepository = new ArkaConfigRepository(server.sequelize);
 
@@ -337,8 +337,6 @@ const initializeServer = async (): Promise<void> => {
         name: 'updateTokenOracleData',
         cronTime: process.env.TOKEN_ORACLE_UPDATE_CRON_EXP || '*/7 * * * *', // every 7 mins.
         onTick: async () => {
-          if (!server.config.MULTI_TOKEN_PAYMASTERS && !server.config.MULTI_TOKEN_ORACLES)
-            return;
           let buffer = Buffer.from(server.config.MULTI_TOKEN_PAYMASTERS, 'base64');
           const multiTokenPaymasters = JSON.parse(buffer.toString());
 
