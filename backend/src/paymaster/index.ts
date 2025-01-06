@@ -16,6 +16,10 @@ import ERC20Abi from '../abi/ERC20Abi.js';
 import EtherspotChainlinkOracleAbi from '../abi/EtherspotChainlinkOracleAbi.js';
 import { UnaccountedCost } from '../constants/MultitokenPaymaster.js';
 import { NativeOracleDecimals } from '../constants/ChainlinkOracles.js';
+import { CoingeckoTokensRepository } from '../repository/coingecko-token-repository.js';
+import { CoingeckoService } from '../services/coingecko.js';
+import { Sequelize } from 'sequelize';
+
 const ttl = parseInt(process.env.CACHE_TTL || "600000");
 const nativePriceCacheTtl = parseInt(process.env.NATIVE_PRICE_CACHE_TTL || "60000");
 
@@ -36,6 +40,11 @@ interface NativeCurrencyPricyCache {
   expiry: number;
 }
 
+interface CoingeckoPriceCache {
+  data: any;
+  expiry: number;
+}
+
 
 export class Paymaster {
   feeMarkUp: BigNumber;
@@ -44,13 +53,17 @@ export class Paymaster {
   EP7_TOKEN_PGL: string;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
   nativeCurrencyPrice: Map<string, NativeCurrencyPricyCache> = new Map();
+  coingeckoPrice: Map<string, CoingeckoPriceCache> = new Map();
+  coingeckoService: CoingeckoService = new CoingeckoService();
+  sequelize: Sequelize;
 
-  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string) {
+  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
     this.EP7_TOKEN_PGL = ep7TokenPGL;
     this.EP7_TOKEN_VGL = ep7TokenVGL;
+    this.sequelize = sequelize;
   }
 
   packUint(high128: BigNumberish, low128: BigNumberish): string {
@@ -550,13 +563,17 @@ export class Paymaster {
       const promises = [];
       for(let i=0;i<tokens_list.length;i++) {
         const gasToken = tokens_list[i];
+        const isCoingeckoAvailable = this.coingeckoPrice.get(`${chainId}-${gasToken}`);
         if (
           !(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
-          !(oracles[chainId] && oracles[chainId][gasToken])
+          !(oracles[chainId] && oracles[chainId][gasToken]) &&
+          !isCoingeckoAvailable
         ) unsupportedTokens.push({ token: gasToken });
         else {
           const oracleAddress = oracles[chainId][gasToken];
-          if (oracleName === "orochi") {
+          if (isCoingeckoAvailable) {
+            promises.push(this.getPriceFromCoingecko(chainId, gasToken, ETHUSDPrice, ETHUSDPriceDecimal))
+          } else if (oracleName === "orochi") {
             promises.push(this.getPriceFromOrochi(oracleAddress, provider, gasToken, chainId));
           } else if(oracleName === "chainlink") {
             promises.push(this.getPriceFromChainlink(oracleAddress, provider, gasToken, ETHUSDPrice, ETHUSDPriceDecimal, chainId));
@@ -605,7 +622,14 @@ export class Paymaster {
       const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbi, provider);
       let ethPrice = "";
 
-      if (oracleName === "orochi") {
+      const isCoingeckoAvailable = this.coingeckoPrice.get(`${chainId}-${feeToken}`);
+
+      if (isCoingeckoAvailable) {
+        const {latestAnswer, decimals} = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
+        const data = await this.getPriceFromCoingecko(chainId, feeToken, latestAnswer, decimals);
+
+        ethPrice = data.ethPrice;
+      } else if (oracleName === "orochi") {
         const data = await this.getPriceFromOrochi(oracleAggregator, provider, feeToken, chainId);
         ethPrice = data.ethPrice;
       } else if (oracleName === "chainlink") {
@@ -953,5 +977,50 @@ export class Paymaster {
       if (err.message.includes('Balance is less than the amount to be deposited')) throw new Error(err.message);
       throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
+  }
+
+  private async getPriceFromCoingecko(chainId: number, tokenAddress: string, ETHUSDPrice: any, ETHUSDPriceDecimal: any): Promise<any> {
+    const cacheKey = `${chainId}-${tokenAddress}`;
+    const cache = this.coingeckoPrice.get(cacheKey);
+
+    const nativePrice = ethers.utils.formatUnits(ETHUSDPrice, ETHUSDPriceDecimal);
+    let ethPrice;
+
+    if(cache && cache.expiry > Date.now()) {
+      const data = cache.data;
+      const tokenData = data[tokenAddress];
+      ethPrice = ethers.utils.parseUnits((Number(nativePrice)/tokenData.price).toFixed(tokenData.decimals), tokenData.decimals)
+      return {
+        ethPrice,
+        ...tokenData
+      }
+    }
+
+    const coingeckoRepo = new CoingeckoTokensRepository(this.sequelize);
+    const records = await coingeckoRepo.findAll();
+    const tokenIds = records.map((record: { coinId: any; }) => record.coinId);
+
+    const data = await this.coingeckoService.fetchPriceByCoinID(tokenIds);
+    const tokenPrices: any = [];
+    records.map(record => {
+      tokenPrices[record.address] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, gasToken: tokenAddress, symbol: record.token }
+    })
+    const tokenData = tokenPrices[tokenAddress];
+    ethPrice = ethers.utils.parseUnits((Number(nativePrice)/tokenData.price).toFixed(tokenData.decimals), tokenData.decimals)
+    this.setPricesFromCoingecko(tokenPrices);
+
+    return {
+      ethPrice,
+      ...tokenData
+    }
+  }
+
+  async setPricesFromCoingecko(coingeckoPrices: any[]) {
+    for(const tokenAddress in coingeckoPrices) {
+      const chainId = coingeckoPrices[tokenAddress].chainId;
+      const cacheKey = `${chainId}-${tokenAddress}`;
+      this.coingeckoPrice.set(cacheKey, {data: coingeckoPrices[tokenAddress], expiry: Date.now() + ttl});
+    }
+    console.log('CronJob Successful', coingeckoPrices);
   }
 }

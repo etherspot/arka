@@ -11,7 +11,7 @@ import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
 
 const depositRoutes: FastifyPluginAsync = async (server) => {
-    const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
+    const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize);
 
     const SUPPORTED_ENTRYPOINTS = {
         EPV_06: server.config.EPV_06,
@@ -54,7 +54,6 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 if (!api_key || typeof(api_key) !== "string")
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 let privateKey = '';
-                let supportedNetworks;
                 let bundlerApiKey = api_key;
                 const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
                 if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -66,17 +65,13 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                     );
                     const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
                     if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-                    if (secrets['BUNDLER_API_KEY']) {
-                        bundlerApiKey = secrets['BUNDLER_API_KEY'];
-                    }
                     privateKey = secrets['PRIVATE_KEY'];
-                    supportedNetworks = secrets['SUPPORTED_NETWORKS'];
                 } else {
                     privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
-                    supportedNetworks = apiKeyEntity.supportedNetworks;
-                    if (apiKeyEntity.bundlerApiKey) {
-                        bundlerApiKey = apiKeyEntity.bundlerApiKey;
-                    }
+                }
+                const supportedNetworks = apiKeyEntity.supportedNetworks;
+                if (apiKeyEntity.bundlerApiKey) {
+                    bundlerApiKey = apiKeyEntity.bundlerApiKey;
                 }
                 if (
                     isNaN(amount) ||
@@ -115,7 +110,6 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 if (!api_key || typeof(api_key) !== "string")
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 let privateKey = '';
-                let supportedNetworks;
                 let bundlerApiKey = api_key;
                 const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
                 if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -127,17 +121,13 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                     );
                     const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
                     if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-                    if (secrets['BUNDLER_API_KEY']) {
-                        bundlerApiKey = secrets['BUNDLER_API_KEY'];
-                    }
                     privateKey = secrets['PRIVATE_KEY'];
-                    supportedNetworks = secrets['SUPPORTED_NETWORKS'];
                 } else {
                     privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
-                    supportedNetworks = apiKeyEntity.supportedNetworks;
-                    if (apiKeyEntity.bundlerApiKey) {
-                        bundlerApiKey = apiKeyEntity.bundlerApiKey;
-                    }
+                }
+                const supportedNetworks = apiKeyEntity.supportedNetworks;
+                if (apiKeyEntity.bundlerApiKey) {
+                    bundlerApiKey = apiKeyEntity.bundlerApiKey;
                 }
                 if (
                     isNaN(amount) ||

@@ -12,6 +12,8 @@ import { WhitelistRepository } from "../repository/whitelist-repository.js";
 import { initializeArkaWhitelistModel } from "../models/whitelist.js";
 import { ContractWhitelistRepository } from "../repository/contract-whitelist-repository.js";
 import { initializeContractWhitelistModel } from "../models/contract-whitelist.js";
+import { CoingeckoTokensRepository } from "../repository/coingecko-token-repository.js";
+import { initializeCoingeckoModel } from "../models/coingecko.js";
 const pg = await import('pg');
 const Client = pg.default.Client;
 
@@ -55,6 +57,7 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     initializeSponsorshipPolicyModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     initializeArkaWhitelistModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     initializeContractWhitelistModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
+    initializeCoingeckoModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     server.log.info('Initialized SponsorshipPolicy model...');
 
     server.log.info('Initialized all models...');
@@ -71,6 +74,8 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     server.decorate('whitelistRepository', whitelistRepository);
     const contractWhitelistRepository: ContractWhitelistRepository = new ContractWhitelistRepository(sequelize);
     server.decorate('contractWhitelistRepository', contractWhitelistRepository);
+    const coingeckoRepo: CoingeckoTokensRepository = new CoingeckoTokensRepository(sequelize);
+    server.decorate('coingeckoRepo', coingeckoRepo);
 
     server.log.info('decorated fastify server with models...');
 

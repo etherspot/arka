@@ -1,3 +1,4 @@
+import { Paymaster } from "../paymaster/index.js";
 
 export interface ArkaConfigUpdateData {
     deployedErc20Paymasters: string;
@@ -11,3 +12,6 @@ export interface ArkaConfigUpdateData {
     coingeckoApiUrl: string;
 }
 
+export interface PaymasterRoutesOpts {
+    paymaster: Paymaster;
+}
