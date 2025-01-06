@@ -27,6 +27,8 @@ import { CoingeckoService } from './services/coingecko.js';
 import { CoingeckoTokensRepository } from './repository/coingecko-token-repository.js';
 import { Paymaster } from './paymaster/index.js';
 import { NativeOracles } from './constants/ChainlinkOracles.js';
+import { CoingeckoService } from './services/coingecko.js';
+import { CoingeckoTokensRepository } from './repository/coingecko-token-repository.js';
 
 let server: FastifyInstance;
 
@@ -217,10 +219,9 @@ const initializeServer = async (): Promise<void> => {
         // as an argument, as opposed to nothing in the node-cron API:
         onTick: async () => {
           try {
-            if (process.env.DEFAULT_API_KEY && process.env.WEBHOOK_URL) {
+            if (process.env.WEBHOOK_URL) {
               let customPaymasters = [], multiTokenPaymasters = [], customPaymastersV2 = [];
               const apiKeyRepository = new APIKeyRepository(server.sequelize);
-              const defaultBundlerKey = process.env.DEFAULT_BUNDLER_KEY;
 
               // checking deposit for epv7 native paymasters on db for all apikeys.
               const apiKeys = await apiKeyRepository.findAll();
@@ -237,8 +238,7 @@ const initializeServer = async (): Promise<void> => {
                     ) {
                       const thresholdValue = network.thresholdValue ?? networkConfig.thresholdValue;
                       const bundler = network.bundler ?? networkConfig.bundler;
-                      const bundlerUrl = `${bundler}?api-key=${defaultBundlerKey}`
-                      checkDeposit(network.contracts.etherspotPaymasterAddress, bundlerUrl, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                      checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
                     }
                   }
                 }
@@ -257,9 +257,8 @@ const initializeServer = async (): Promise<void> => {
                     const networkConfig = getNetworkConfig(chainId, apiKey.supportedNetworks ?? '', server.config.EPV_06);
                     if (networkConfig) {
                       const bundler = networkConfig.bundler;
-                      const bundlerUrl = `${bundler}?api-key=${defaultBundlerKey}`
                       for (const symbol in customPaymasters[chainId]) {
-                        checkDeposit(customPaymasters[chainId][symbol], bundlerUrl, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)
+                        checkDeposit(customPaymasters[chainId][symbol], bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)
                       }
                     }
                   }
@@ -272,9 +271,8 @@ const initializeServer = async (): Promise<void> => {
                     const networkConfig = getNetworkConfig(chainId, apiKey.supportedNetworks ?? '', server.config.EPV_06);
                     if (networkConfig) {
                       const bundler = networkConfig.bundler;
-                      const bundlerUrl = `${bundler}?api-key=${defaultBundlerKey}`
                       for (const symbol in customPaymastersV2[chainId]) {
-                        checkDeposit(customPaymastersV2[chainId][symbol], bundlerUrl, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log);
+                        checkDeposit(customPaymastersV2[chainId][symbol], bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log);
                       }
                     }
                   }
@@ -283,8 +281,7 @@ const initializeServer = async (): Promise<void> => {
 
               // checking deposit for epv6 native paymasters from default config.json.
               for (const network of SupportedNetworks) {
-                const bundlerUrl = `${network.bundler}?api-key=${defaultBundlerKey}`;
-                checkDeposit(network.contracts.etherspotPaymasterAddress, bundlerUrl, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
               }
             }
           } catch (err) {
@@ -311,7 +308,8 @@ const initializeServer = async (): Promise<void> => {
             const data = await coingecko.fetchPriceByCoinID(tokenIds);
             const tokenPrices: any = [];
             records.map(record => {
-              tokenPrices[record.address] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, chainId: record.chainId, gasToken: record.address, symbol: record.token }
+              const address = ethers.utils.getAddress(record.address);
+              tokenPrices[address] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, chainId: record.chainId, gasToken: address, symbol: record.token }
             })
             paymaster.setPricesFromCoingecko(tokenPrices);
           } catch (err) {
@@ -341,6 +339,8 @@ const initializeServer = async (): Promise<void> => {
         name: 'updateTokenOracleData',
         cronTime: process.env.TOKEN_ORACLE_UPDATE_CRON_EXP || '*/7 * * * *', // every 7 mins.
         onTick: async () => {
+          if (!server.config.MULTI_TOKEN_PAYMASTERS && !server.config.MULTI_TOKEN_ORACLES)
+            return;
           let buffer = Buffer.from(server.config.MULTI_TOKEN_PAYMASTERS, 'base64');
           const multiTokenPaymasters = JSON.parse(buffer.toString());
 

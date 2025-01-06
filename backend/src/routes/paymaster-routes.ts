@@ -118,8 +118,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
           }
           privateKey = secrets['PRIVATE_KEY'];
         } else {
-          // privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
-          privateKey = apiKeyEntity.privateKey;
+          privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
         }
 
         if (apiKeyEntity.erc20Paymasters) {
@@ -334,7 +333,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
 
               if (txnMode) {
                 const signerAddress = await signer.getAddress();
-                const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
+                const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint ?? '');
                 if (IndexerData.length >= noOfTxns) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.QUOTA_EXCEEDED })
               }
               const validUntil = context?.validUntil ? new Date(context.validUntil) : date;

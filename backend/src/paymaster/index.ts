@@ -581,7 +581,7 @@ export class Paymaster {
 
       const promises = [];
       for(let i=0;i<tokens_list.length;i++) {
-        const gasToken = tokens_list[i];
+        const gasToken = ethers.utils.getAddress(tokens_list[i]);
         const isCoingeckoAvailable = this.coingeckoPrice.get(`${chainId}-${gasToken}`);
         if (
           !(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
@@ -997,51 +997,6 @@ export class Paymaster {
       throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
   }
-
-  private async getPriceFromCoingecko(chainId: number, tokenAddress: string, ETHUSDPrice: any, ETHUSDPriceDecimal: any): Promise<any> {
-    const cacheKey = `${chainId}-${tokenAddress}`;
-    const cache = this.coingeckoPrice.get(cacheKey);
-
-    const nativePrice = ethers.utils.formatUnits(ETHUSDPrice, ETHUSDPriceDecimal);
-    let ethPrice;
-
-    if(cache && cache.expiry > Date.now()) {
-      const data = cache.data;
-      const tokenData = data[tokenAddress];
-      ethPrice = ethers.utils.parseUnits((Number(nativePrice)/tokenData.price).toFixed(tokenData.decimals), tokenData.decimals)
-      return {
-        ethPrice,
-        ...tokenData
-      }
-    }
-
-    const coingeckoRepo = new CoingeckoTokensRepository(this.sequelize);
-    const records = await coingeckoRepo.findAll();
-    const tokenIds = records.map((record: { coinId: any; }) => record.coinId);
-
-    const data = await this.coingeckoService.fetchPriceByCoinID(tokenIds);
-    const tokenPrices: any = [];
-    records.map(record => {
-      tokenPrices[record.address] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, gasToken: tokenAddress, symbol: record.token }
-    })
-    const tokenData = tokenPrices[tokenAddress];
-    ethPrice = ethers.utils.parseUnits((Number(nativePrice)/tokenData.price).toFixed(tokenData.decimals), tokenData.decimals)
-    this.setPricesFromCoingecko(tokenPrices);
-
-    return {
-      ethPrice,
-      ...tokenData
-    }
-  }
-
-  async setPricesFromCoingecko(coingeckoPrices: any[]) {
-    for(const tokenAddress in coingeckoPrices) {
-      const chainId = coingeckoPrices[tokenAddress].chainId;
-      const cacheKey = `${chainId}-${tokenAddress}`;
-      this.coingeckoPrice.set(cacheKey, {data: coingeckoPrices[tokenAddress], expiry: Date.now() + ttl});
-    }
-    console.log('CronJob Successful', coingeckoPrices);
-  }
   
   async deployVp(
     privateKey: string,
@@ -1140,6 +1095,49 @@ export class Paymaster {
     } catch (error) {
       log?.error(`error while adding stake to verifying paymaster ${error}`);
       throw new Error(ErrorMessage.FAILED_TO_ADD_STAKE);
+    }
+  }
+
+  async getPriceFromCoingecko(chainId: number, tokenAddress: string, ETHUSDPrice: any, ETHUSDPriceDecimal: any): Promise<any> {
+    const cacheKey = `${chainId}-${tokenAddress}`;
+    const cache = this.coingeckoPrice.get(cacheKey);
+
+    const nativePrice = ethers.utils.formatUnits(ETHUSDPrice, ETHUSDPriceDecimal);
+    let ethPrice;
+
+    if(cache && cache.expiry > Date.now()) {
+      const data = cache.data;
+      ethPrice = ethers.utils.parseUnits((Number(nativePrice)/data.price).toFixed(data.decimals), data.decimals)
+      return {
+        ethPrice,
+        ...data
+      }
+    }
+
+    const coingeckoRepo = new CoingeckoTokensRepository(this.sequelize);
+    const records = await coingeckoRepo.findAll();
+    const tokenIds = records.map((record: { coinId: any; }) => record.coinId);
+
+    const data = await this.coingeckoService.fetchPriceByCoinID(tokenIds);
+    const tokenPrices: any = [];
+    records.map(record => {
+      tokenPrices[ethers.utils.getAddress(record.address)] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, gasToken: tokenAddress, symbol: record.token }
+    })
+    const tokenData = tokenPrices[tokenAddress];
+    ethPrice = ethers.utils.parseUnits((Number(nativePrice)/tokenData.price).toFixed(tokenData.decimals), tokenData.decimals)
+    this.setPricesFromCoingecko(tokenPrices);
+
+    return {
+      ethPrice,
+      ...tokenData
+    }
+  }
+
+  async setPricesFromCoingecko(coingeckoPrices: any[]) {
+    for(const tokenAddress in coingeckoPrices) {
+      const chainId = coingeckoPrices[tokenAddress].chainId;
+      const cacheKey = `${chainId}-${ethers.utils.getAddress(tokenAddress)}`;
+      this.coingeckoPrice.set(cacheKey, {data: coingeckoPrices[tokenAddress], expiry: Date.now() + ttl});
     }
   }
 }

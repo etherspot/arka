@@ -58,6 +58,10 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         } else {
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
         }
+        if (apiKeyEntity.bundlerApiKey) {
+          bundlerApiKey = apiKeyEntity.bundlerApiKey;
+        }
+        const supportedNetworks = apiKeyEntity.supportedNetworks;
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (apiKeyEntity.bundlerApiKey) {
           bundlerApiKey = apiKeyEntity.bundlerApiKey;
@@ -256,6 +260,8 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         } else {
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
         }
+        if (apiKeyEntity.bundlerApiKey) bundlerApiKey = apiKeyEntity.bundlerApiKey;
+        const supportedNetworks = apiKeyEntity.supportedNetworks;
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (apiKeyEntity.bundlerApiKey) bundlerApiKey = apiKeyEntity.bundlerApiKey;
         const supportedNetworks = apiKeyEntity.supportedNetworks;
