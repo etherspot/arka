@@ -63,10 +63,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const supportedNetworks = apiKeyEntity.supportedNetworks;
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        if (apiKeyEntity.bundlerApiKey) {
-          bundlerApiKey = apiKeyEntity.bundlerApiKey;
-        }
-        const supportedNetworks = apiKeyEntity.supportedNetworks;
         if (
           !Array.isArray(address) ||
           address.length > 10
@@ -263,8 +259,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (apiKeyEntity.bundlerApiKey) bundlerApiKey = apiKeyEntity.bundlerApiKey;
         const supportedNetworks = apiKeyEntity.supportedNetworks;
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        if (apiKeyEntity.bundlerApiKey) bundlerApiKey = apiKeyEntity.bundlerApiKey;
-        const supportedNetworks = apiKeyEntity.supportedNetworks;
         if (
           !accountAddress ||
           !ethers.utils.isAddress(accountAddress)

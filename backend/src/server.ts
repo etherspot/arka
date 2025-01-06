@@ -27,8 +27,6 @@ import { CoingeckoService } from './services/coingecko.js';
 import { CoingeckoTokensRepository } from './repository/coingecko-token-repository.js';
 import { Paymaster } from './paymaster/index.js';
 import { NativeOracles } from './constants/ChainlinkOracles.js';
-import { CoingeckoService } from './services/coingecko.js';
-import { CoingeckoTokensRepository } from './repository/coingecko-token-repository.js';
 
 let server: FastifyInstance;
 
