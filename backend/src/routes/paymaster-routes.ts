@@ -50,6 +50,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         let epVersion: EPVersions = DEFAULT_EP_VERSION;
         let tokens_list: string[] = [];
         let sponsorDetails = false, estimate = true, tokenQuotes = false;
+        const useVp = query['useVp'] ?? false;
 
         if (body.method) {
           switch (body.method) {
@@ -195,8 +196,12 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
             !paymaster.coingeckoPrice.get(`${chainId}-${gasToken}`)
           ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
 
+          if(useVp && mode.toLowerCase() === 'sponsor') {
+            mode = 'vps';
+          }
+
           switch (mode.toLowerCase()) {
-            case 'eps': {
+            case 'sponsor': {
               const date = new Date();
               const provider = new providers.JsonRpcProvider(bundlerUrl);
               const signer = new Wallet(privateKey, provider)
@@ -304,7 +309,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
               result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
               break;
             }
-            case 'sponsor': {
+            case 'vps': {
               const date = new Date();
               const provider = new providers.JsonRpcProvider(bundlerUrl);
               const signer = new Wallet(privateKey, provider);

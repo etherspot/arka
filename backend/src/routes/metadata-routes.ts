@@ -199,7 +199,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       //get native balance of the sponsor in the EtherSpotPaymaster-contract
       const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
       const sponsorBalance = await paymasterContract.getDeposit();
-      const verifyingPaymaster = apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId] : undefined;
+      const verifyingPaymaster = apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2)[chainId] : undefined;
       let verifyingPaymasterDeposit;
       if (verifyingPaymaster) {
         const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterAbi ,provider);
