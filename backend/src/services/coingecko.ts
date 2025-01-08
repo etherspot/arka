@@ -1,5 +1,5 @@
 import { FastifyBaseLogger } from 'fastify';
-import { TokenPriceAndMetadataCache, SUPPORTED_CHAINIDS } from './interface';
+import { TokenPriceAndMetadataCache, SUPPORTED_CHAINIDS } from './interface.js';
 
 const apiUrl = process.env.COINGECKO_URL || "";
 const apiKey = process.env.COINGECKO_API_KEY || "";
@@ -27,7 +27,7 @@ export class CoingeckoService {
       const data = await fetch(url, options);
       price = await data.json();
     } catch (err) {
-      log?.error(err, '', {
+      log?.error(err, CoingeckoService.LOGGER_CONTEXT, {
         message: 'Failed to fetch native Prices from Coingecko',
         url,
       });

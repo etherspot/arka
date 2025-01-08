@@ -15,11 +15,11 @@ async function up({ context: queryInterface }) {
         },
         "ADDRESS": {
             type: Sequelize.STRING,
-            allowNull: false,
+            allowNull: false
         },
         "CHAIN_ID": {
-            type: Sequelize.INTEGER,
-            allowNull: false,
+            type: Sequelize.BIGINT,
+            allowNull: false
         },
         "COIN_ID": {
             type: Sequelize.STRING,
