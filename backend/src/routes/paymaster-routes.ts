@@ -50,6 +50,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         let epVersion: EPVersions = DEFAULT_EP_VERSION;
         let tokens_list: string[] = [];
         let sponsorDetails = false, estimate = true, tokenQuotes = false;
+        const useVp = query['useVp'] ?? false;
 
         if (body.method) {
           switch (body.method) {
@@ -94,10 +95,6 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         let multiTokenPaymasters = [];
         let multiTokenOracles = [];
         let privateKey = '';
-        let supportedNetworks;
-        let noOfTxns;
-        let txnMode;
-        let indexerEndpoint;
         let sponsorName = '', sponsorImage = '';
         let contractWhitelistMode = false;
         let bundlerApiKey = api_key;
@@ -120,74 +117,42 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
             server.log.info("Invalid Api Key provided")
             return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           }
-          if (secrets['ERC20_PAYMASTERS']) {
-            const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
-            customPaymasters = JSON.parse(buffer.toString());
-          }
-          if (secrets['ERC20_PAYMASTERS_V2']) {
-            const buffer = Buffer.from(secrets['ERC20_PAYMASTERS_V2'], 'base64');
-            customPaymastersV2 = JSON.parse(buffer.toString());
-          }
-          if (secrets['MULTI_TOKEN_PAYMASTERS']) {
-            const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
-            multiTokenPaymasters = JSON.parse(buffer.toString());
-          }
-          if (secrets['MULTI_TOKEN_ORACLES']) {
-            const buffer = Buffer.from(secrets['MULTI_TOKEN_ORACLES'], 'base64');
-            multiTokenOracles = JSON.parse(buffer.toString());
-          }
-          if (secrets['BUNDLER_API_KEY']) {
-            bundlerApiKey = secrets['BUNDLER_API_KEY'];
-          }
-          sponsorName = secrets['SPONSOR_NAME'];
-          sponsorImage = secrets['LOGO_URL'];
           privateKey = secrets['PRIVATE_KEY'];
-          supportedNetworks = secrets['SUPPORTED_NETWORKS'];
-          noOfTxns = secrets['NO_OF_TRANSACTIONS_IN_A_MONTH'] ?? 10;
-          txnMode = secrets['TRANSACTION_LIMIT'] ?? 0;
-          indexerEndpoint = secrets['INDEXER_ENDPOINT'] ?? process.env.DEFAULT_INDEXER_ENDPOINT;
-          contractWhitelistMode = (secrets['CONTRACT_WHITELIST_MODE'] ?? false) == 'true' ? true : false;
         } else {
-
-          //validate api_key
-          if (!api_key) {
-            server.log.error("Invalid Api Key provided")
-            return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-          }
-
-          if (apiKeyEntity.erc20Paymasters) {
-            const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
-            customPaymasters = JSON.parse(buffer.toString());
-          }
-
-          if (apiKeyEntity.erc20PaymastersV2) {
-            const buffer = Buffer.from(apiKeyEntity.erc20PaymastersV2, 'base64');
-            customPaymastersV2 = JSON.parse(buffer.toString());
-          }
-
-          if (apiKeyEntity.multiTokenPaymasters) {
-            const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
-            multiTokenPaymasters = JSON.parse(buffer.toString());
-          }
-
-          if (apiKeyEntity.multiTokenOracles) {
-            const buffer = Buffer.from(apiKeyEntity.multiTokenOracles, 'base64');
-            multiTokenOracles = JSON.parse(buffer.toString());
-          }
-
-          if (apiKeyEntity.bundlerApiKey) {
-            bundlerApiKey = apiKeyEntity.bundlerApiKey;
-          }
-
-          sponsorName = apiKeyEntity.sponsorName ? apiKeyEntity.sponsorName : '';
-          sponsorImage = apiKeyEntity.logoUrl ? apiKeyEntity.logoUrl : '';
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
-          supportedNetworks = apiKeyEntity.supportedNetworks;
-          noOfTxns = apiKeyEntity.noOfTransactionsInAMonth;
-          txnMode = apiKeyEntity.transactionLimit;
-          indexerEndpoint = apiKeyEntity.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT;
-          contractWhitelistMode = apiKeyEntity.contractWhitelistMode ?? false;
         }
+
+        if (apiKeyEntity.erc20Paymasters) {
+          const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
+          customPaymasters = JSON.parse(buffer.toString());
+        }
+
+        if (apiKeyEntity.erc20PaymastersV2) {
+          const buffer = Buffer.from(apiKeyEntity.erc20PaymastersV2, 'base64');
+          customPaymastersV2 = JSON.parse(buffer.toString());
+        }
+
+        if (apiKeyEntity.multiTokenPaymasters) {
+          const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
+          multiTokenPaymasters = JSON.parse(buffer.toString());
+        }
+
+        if (apiKeyEntity.multiTokenOracles) {
+          const buffer = Buffer.from(apiKeyEntity.multiTokenOracles, 'base64');
+          multiTokenOracles = JSON.parse(buffer.toString());
+        }
+
+        if (apiKeyEntity.bundlerApiKey) {
+          bundlerApiKey = apiKeyEntity.bundlerApiKey;
+        }
+
+        sponsorName = apiKeyEntity.sponsorName ? apiKeyEntity.sponsorName : '';
+        sponsorImage = apiKeyEntity.logoUrl ? apiKeyEntity.logoUrl : '';
+        const supportedNetworks = apiKeyEntity.supportedNetworks;
+        const noOfTxns = apiKeyEntity.noOfTransactionsInAMonth ?? 0;
+        const txnMode = apiKeyEntity.transactionLimit;
+        const indexerEndpoint = apiKeyEntity.indexerEndpoint ?? process.env.DEFAULT_INDEXER_ENDPOINT;
+        contractWhitelistMode = apiKeyEntity.contractWhitelistMode ?? false;
 
         if (
           !userOp ||
@@ -227,11 +192,16 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
 
           if (mode.toLowerCase() == 'multitoken' &&
             !(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
-            !(multiTokenOracles[chainId] && multiTokenOracles[chainId][gasToken])
+            !(multiTokenOracles[chainId] && multiTokenOracles[chainId][gasToken]) &&
+            !paymaster.coingeckoPrice.get(`${chainId}-${gasToken}`)
           ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
 
+          if(useVp && mode.toLowerCase() === 'sponsor') {
+            mode = 'vps';
+          }
+
           switch (mode.toLowerCase()) {
-            case 'eps': {
+            case 'sponsor': {
               const date = new Date();
               const provider = new providers.JsonRpcProvider(bundlerUrl);
               const signer = new Wallet(privateKey, provider)
@@ -239,19 +209,15 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
               // get chainid from provider
               const chainId = await provider.getNetwork();
 
-              // get wallet_address from api_key
-              const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
-              if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.API_KEY_NOT_CONFIGURED_IN_DATABASE });
-
               // get sponsorshipPolicy for the user from walletAddress and entrypoint version
-              const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(apiKeyData?.walletAddress, getEPVersion(epVersion));
+              const sponsorshipPolicy: SponsorshipPolicy | null = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndSupportedEPVersion(apiKeyEntity.walletAddress, getEPVersion(epVersion));
               if (!sponsorshipPolicy) {
-                const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
+                const errorMessage: string = generateErrorMessage(ErrorMessage.ACTIVE_SPONSORSHIP_POLICY_NOT_FOUND, { walletAddress: apiKeyEntity.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
                 return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
               }
 
               if (!Object.assign(new SponsorshipPolicy(), sponsorshipPolicy).isApplicable) {
-                const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
+                const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyEntity.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
                 return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
               }
 
@@ -261,7 +227,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
 
               if (txnMode) {
                 const signerAddress = await signer.getAddress();
-                const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
+                const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint ?? '');
                 if (IndexerData.length >= noOfTxns) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.QUOTA_EXCEEDED })
               }
               const validUntil = context?.validUntil ? new Date(context.validUntil) : date;
@@ -343,7 +309,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
               result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
               break;
             }
-            case 'sponsor': {
+            case 'vps': {
               const date = new Date();
               const provider = new providers.JsonRpcProvider(bundlerUrl);
               const signer = new Wallet(privateKey, provider);
@@ -372,7 +338,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
 
               if (txnMode) {
                 const signerAddress = await signer.getAddress();
-                const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint);
+                const IndexerData = await getIndexerData(signerAddress, userOp.sender, date.getMonth(), date.getFullYear(), noOfTxns, indexerEndpoint ?? '');
                 if (IndexerData.length >= noOfTxns) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.QUOTA_EXCEEDED })
               }
               const validUntil = context?.validUntil ? new Date(context.validUntil) : date;
