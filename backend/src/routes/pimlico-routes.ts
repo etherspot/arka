@@ -35,11 +35,11 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
         }
     }
 
-    server.post("/pimlicoAddress",
+    server.post("/tokenPaymasterAddress",
         ResponseSchema,
         async function (request, reply) {
             try {
-                printRequest("/pimlicoAddress", request, server.log);
+                printRequest("/tokenPaymasterAddress", request, server.log);
                 const query: any = request.query;
                 const body: any = request.body;
                 const entryPoint = body.params[0];
@@ -99,7 +99,7 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                     if (!(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken])) return reply.code(ReturnCode.FAILURE).send({ error: "Invalid network/token" })
                     result = { message: PAYMASTER_ADDRESS[chainId][gasToken] }
                 }
-                server.log.info(result, 'PimlicoAddress Response sent: ');
+                server.log.info(result, 'tokenPaymasterAddress Response sent: ');
                 if (body.jsonrpc)
                     return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, message: result.message, error: null })
                 return reply.code(ReturnCode.SUCCESS).send(result);
