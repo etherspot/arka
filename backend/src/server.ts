@@ -13,7 +13,6 @@ import PimlicoAbi from './abi/PimlicoAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
 import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
-import { APIKey } from './models/api-key.js';
 import { APIKeyRepository } from './repository/api-key-repository.js';
 import { ArkaConfigRepository } from './repository/arka-config-repository.js';
 import adminRoutes from './routes/admin-routes.js';
@@ -24,6 +23,8 @@ import pimlicoRoutes from './routes/pimlico-routes.js';
 import whitelistRoutes from './routes/whitelist-routes.js';
 import sponsorshipPolicyRoutes from './routes/sponsorship-policy-routes.js';
 import SupportedNetworks from "../config.json" assert { type: "json" };
+import { CoingeckoService } from './services/coingecko.js';
+import { CoingeckoTokensRepository } from './repository/coingecko-token-repository.js';
 import { Paymaster } from './paymaster/index.js';
 import { NativeOracles } from './constants/ChainlinkOracles.js';
 
@@ -55,10 +56,18 @@ const initializeServer = async (): Promise<void> => {
     healthcheckUrl: "/healthcheck",
     logLevel: "warn"
   });
+  
+  // Register the sequelizePlugin
+  await server.register(sequelizePlugin);
 
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
+  // Synchronize all models
+  await server.sequelize.sync();
+  
+  server.log.info('registered sequelizePlugin...')
 
-  await server.register(paymasterRoutes, {paymaster});
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize);
+
+  await server.register(paymasterRoutes, { paymaster });
 
   await server.register(adminRoutes);
 
@@ -71,14 +80,6 @@ const initializeServer = async (): Promise<void> => {
   await server.register(whitelistRoutes);
 
   await server.register(sponsorshipPolicyRoutes);
-
-  // Register the sequelizePlugin
-  await server.register(sequelizePlugin);
-
-  // Synchronize all models
-  await server.sequelize.sync();
-
-  server.log.info('registered sequelizePlugin...')
 
   const arkaConfigRepository = new ArkaConfigRepository(server.sequelize);
 
@@ -97,7 +98,7 @@ const initializeServer = async (): Promise<void> => {
           let configData: any
           if (process.env.CRON_PRIVATE_KEY) {
             const unsafeMode = process.env.UNSAFE_MODE === "true" ? true : false;
-            if(!unsafeMode) {
+            if (!unsafeMode) {
               const client = new SecretsManagerClient();
               const api_key = process.env.DEFAULT_API_KEY;
               const prefixSecretId = "arka_";
@@ -210,114 +211,107 @@ const initializeServer = async (): Promise<void> => {
         // the rest is from the node-cron API:
         // https://github.com/kelektiv/node-cron#api
         cronTime: '0 * * * *', // Every Hour,
-        name: 'checkTokenPaymasterDeposit',
+        name: 'checkPaymasterDeposit',
 
         // Note: the callbacks (onTick & onComplete) take the server
         // as an argument, as opposed to nothing in the node-cron API:
         onTick: async () => {
-          if (process.env.DEFAULT_API_KEY && process.env.WEBHOOK_URL) {
-            const prefixSecretId = 'arka_';
-            let client: SecretsManagerClient;
-            const unsafeMode: boolean = process.env.UNSAFE_MODE == "true" ? true : false;
-            const api_key = process.env.DEFAULT_API_KEY;
-            let customPaymasters = [], multiTokenPaymasters = [], customPaymastersV2 = [];
-            const apiKeyRepository = new APIKeyRepository(server.sequelize);
+          try {
+            if (process.env.WEBHOOK_URL) {
+              let customPaymasters = [], multiTokenPaymasters = [], customPaymastersV2 = [];
+              const apiKeyRepository = new APIKeyRepository(server.sequelize);
 
-            // checking deposit for epv7 native paymasters on db for all apikeys.
-            const apiKeys = await apiKeyRepository.findAll();
-            let defaultBundlerKey = api_key;
-            
-            for(const apiKey of apiKeys) {
-              if(apiKey.apiKey === api_key) {
-                defaultBundlerKey = apiKey.bundlerApiKey ?? defaultBundlerKey;
-              }
-              if(apiKey.supportedNetworks) {
-                const buffer = Buffer.from(apiKey.supportedNetworks, 'base64');
-                const supportedNetworks = JSON.parse(buffer.toString());
-                for(const network of supportedNetworks) {
-                  const networkConfig = getNetworkConfig(network.chainId, '', server.config.EPV_07);
-                  if(
-                    network.contracts?.etherspotPaymasterAddress &&
-                    networkConfig
-                  ) {
-                    const thresholdValue = network.thresholdValue ?? networkConfig.thresholdValue;
-                    const bundler = network.bundler ?? networkConfig.bundler;
-                    const bundlerUrl = apiKey.bundlerApiKey ? `${bundler}?api-key=${apiKey.bundlerApiKey}` : `${bundler}?api-key=${apiKey.apiKey}`;
-                    checkDeposit(network.contracts.etherspotPaymasterAddress, bundlerUrl, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
+              // checking deposit for epv7 native paymasters on db for all apikeys.
+              const apiKeys = await apiKeyRepository.findAll();
+
+              for (const apiKey of apiKeys) {
+                if (apiKey.supportedNetworks) {
+                  const buffer = Buffer.from(apiKey.supportedNetworks, 'base64');
+                  const supportedNetworks = JSON.parse(buffer.toString());
+                  for (const network of supportedNetworks) {
+                    const networkConfig = getNetworkConfig(network.chainId, '', server.config.EPV_07);
+                    if (
+                      network.contracts?.etherspotPaymasterAddress &&
+                      networkConfig
+                    ) {
+                      const thresholdValue = network.thresholdValue ?? networkConfig.thresholdValue;
+                      const bundler = network.bundler ?? networkConfig.bundler;
+                      checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                    }
+                  }
+                }
+                if (apiKey.erc20Paymasters || apiKey.multiTokenPaymasters) {
+                  // checking deposit for epv6 ERC20_PAYMASTERS and MULTI_TOKEN_PAYMASTERS.
+                  if (apiKey.erc20Paymasters) {
+                    const buffer = Buffer.from(apiKey.erc20Paymasters, 'base64');
+                    customPaymasters = JSON.parse(buffer.toString());
+                  }
+                  if (apiKey.multiTokenPaymasters) {
+                    const buffer = Buffer.from(apiKey.multiTokenPaymasters, 'base64');
+                    multiTokenPaymasters = JSON.parse(buffer.toString());
+                    customPaymasters = customPaymasters.length > 0 ? { ...customPaymasters, ...multiTokenPaymasters } : multiTokenPaymasters;
+                  }
+                  for (const chainId in customPaymasters) {
+                    const networkConfig = getNetworkConfig(chainId, apiKey.supportedNetworks ?? '', server.config.EPV_06);
+                    if (networkConfig) {
+                      const bundler = networkConfig.bundler;
+                      for (const symbol in customPaymasters[chainId]) {
+                        checkDeposit(customPaymasters[chainId][symbol], bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)
+                      }
+                    }
+                  }
+                }
+                if (apiKey.erc20PaymastersV2) {
+                  const buffer = Buffer.from(apiKey.erc20PaymastersV2, 'base64');
+                  customPaymastersV2 = JSON.parse(buffer.toString());
+                  // checking deposit for epv7 ERC20_PAYMASTERS_V2.
+                  for (const chainId in customPaymastersV2) {
+                    const networkConfig = getNetworkConfig(chainId, apiKey.supportedNetworks ?? '', server.config.EPV_06);
+                    if (networkConfig) {
+                      const bundler = networkConfig.bundler;
+                      for (const symbol in customPaymastersV2[chainId]) {
+                        checkDeposit(customPaymastersV2[chainId][symbol], bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log);
+                      }
+                    }
                   }
                 }
               }
-            }
 
-            // checking deposit for epv6 native paymasters from default config.json.
-            for(const network of SupportedNetworks) {
-              const networkConfig = getNetworkConfig(network.chainId, '', server.config.EPV_06);
-              if(networkConfig) {
-                const bundlerUrl = `${network.bundler}?api-key=${defaultBundlerKey}`;
-                checkDeposit(network.contracts.etherspotPaymasterAddress, bundlerUrl, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
+              // checking deposit for epv6 native paymasters from default config.json.
+              for (const network of SupportedNetworks) {
+                checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
               }
             }
+          } catch (err) {
+            server.log.error(err);
+          }
+        }
+      },
+      {
+        // Only these two properties are required,
+        // the rest is from the node-cron API:
+        // https://github.com/kelektiv/node-cron#api
+        cronTime: '*/5 * * * *', // Every 5 Minutes,
+        name: 'cacheCoingeckoPrices',
 
-            if (!unsafeMode) {
-              client = new SecretsManagerClient();
-              const AWSresponse = await client.send(
-                new GetSecretValueCommand({
-                  SecretId: prefixSecretId + api_key,
-                })
-              );
-              client.destroy();
-              const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
-              if (secrets['ERC20_PAYMASTERS']) {
-                const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
-                customPaymasters = JSON.parse(buffer.toString());
-              }
-              if (secrets['MULTI_TOKEN_PAYMASTERS']) {
-                const buffer = Buffer.from(secrets['MULTI_TOKEN_PAYMASTERS'], 'base64');
-                multiTokenPaymasters = JSON.parse(buffer.toString());
-              }
-              if (secrets['ERC20_PAYMASTERS_V2']) {
-                const buffer = Buffer.from(secrets['ERC20_PAYMASTERS_V2'], 'base64');
-                customPaymastersV2 = JSON.parse(buffer.toString());
-              }
-            } else {
-              const apiKeyEntity: APIKey | null = await apiKeyRepository.findOneByApiKey(api_key);
+        // Note: the callbacks (onTick & onComplete) take the server
+        // as an argument, as opposed to nothing in the node-cron API:
+        onTick: async () => {
+          try {
+            const coingeckoRepo = new CoingeckoTokensRepository(server.sequelize);
+            const records = await coingeckoRepo.findAll();
+            const tokenIds = records.map(record => record.coinId);
+            const coingecko = new CoingeckoService();
 
-              if (apiKeyEntity?.erc20Paymasters) {
-                const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
-                customPaymasters = JSON.parse(buffer.toString());
-              }
-              if (apiKeyEntity?.multiTokenPaymasters) {
-                const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
-                multiTokenPaymasters = JSON.parse(buffer.toString());
-              }
-              if (apiKeyEntity?.erc20PaymastersV2) {
-                const buffer = Buffer.from(apiKeyEntity.erc20PaymastersV2, 'base64');
-                customPaymastersV2 = JSON.parse(buffer.toString());
-              }
-            }
-
-            // checking deposit for epv6 ERC20_PAYMASTERS.
-            customPaymasters = { ...customPaymasters, ...multiTokenPaymasters };
-            for (const chainId in customPaymasters) {
-              const networkConfig = getNetworkConfig(chainId, '', server.config.EPV_06);
-              if (networkConfig) {
-                const bundlerUrl = `${networkConfig.bundler}?api-key=${defaultBundlerKey}`;
-                for (const symbol in customPaymasters[chainId]) {
-                  checkDeposit(customPaymasters[chainId][symbol], bundlerUrl, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log)
-                }
-              }
-            }
-
-            // checking deposit for epv7 ERC20_PAYMASTERS_V2.
-            for(const chainId in customPaymastersV2) {
-              const networkConfig = getNetworkConfig(chainId, '', server.config.EPV_07);
-              if(networkConfig) {
-                const bundlerUrl = `${networkConfig.bundler}?api-key=${defaultBundlerKey}`;
-                for(const symbol in customPaymastersV2[chainId]) {
-                  checkDeposit(customPaymastersV2[chainId][symbol], bundlerUrl, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? '0.001', Number(chainId), server.log);
-                }
-              }
-            }
+            const data = await coingecko.fetchPriceByCoinID(tokenIds);
+            const tokenPrices: any = [];
+            records.map(record => {
+              const address = ethers.utils.getAddress(record.address);
+              tokenPrices[address] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, chainId: record.chainId, gasToken: address, symbol: record.token }
+            })
+            paymaster.setPricesFromCoingecko(tokenPrices);
+          } catch (err) {
+            server.log.error(err);
           }
         }
       },
