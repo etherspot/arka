@@ -49,9 +49,11 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                 const api_key = query['apiKey'] ?? body.params[3];
                 if (!api_key || typeof(api_key) !== "string")
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+                const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
+                if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+                const apiKeyEntity: APIKey = apiKeyData as APIKey;
                 let customPaymasters = [];
                 let privateKey = '';
-                let supportedNetworks;
                 if (!unsafeMode) {
                     const AWSresponse = await client.send(
                         new GetSecretValueCommand({
@@ -60,25 +62,15 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                     );
                     const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
                     if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-                    if (secrets['ERC20_PAYMASTERS']) {
-                        const buffer = Buffer.from(secrets['ERC20_PAYMASTERS'], 'base64');
-                        customPaymasters = JSON.parse(buffer.toString());
-                    }
                     privateKey = secrets['PRIVATE_KEY'];
-                    supportedNetworks = secrets['SUPPORTED_NETWORKS'];
                 } else {
-                    const result = await server.apiKeyRepository.findOneByApiKey(api_key);
-                    if (!result) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-                    const apiKeyEntity: APIKey = result as APIKey;
-                    if (apiKeyEntity.erc20Paymasters) {
-                        const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
-                        customPaymasters = JSON.parse(buffer.toString());
-                    }
-
                     privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
-
-                    supportedNetworks = apiKeyEntity.supportedNetworks;
                 }
+                if (apiKeyEntity.erc20Paymasters) {
+                    const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
+                    customPaymasters = JSON.parse(buffer.toString());
+                }
+                const supportedNetworks = apiKeyEntity.supportedNetworks;
                 if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 if (
                     !entryPoint ||
