@@ -67,6 +67,7 @@ export class Paymaster {
     this.EP7_TOKEN_VGL = ep7TokenVGL;
     this.sequelize = sequelize;
     this.MTP_VGL_MARKUP = mtpVglMarkup;
+    this.sequelize = sequelize;
   }
 
   packUint(high128: BigNumberish, low128: BigNumberish): string {
