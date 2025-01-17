@@ -14,7 +14,7 @@ export class WhitelistRepository {
     const result = await this.sequelize.models.ArkaWhitelist.create({
       apiKey: apiKey.apiKey,
       addresses: apiKey.addresses,
-      policyId: apiKey.policyId ?? null
+      policyId: apiKey.policyId ?? null,
     }) as ArkaWhitelist;
 
 

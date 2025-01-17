@@ -13,7 +13,11 @@ export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint: s
   if (supportedNetworks !== '') {
     const buffer = Buffer.from(supportedNetworks, 'base64');
     const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
-    return SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key && entryPoint.includes(chain["entryPoint"]) });
+    const result = SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key && entryPoint.includes(chain["entryPoint"]) });
+    if (!result) {
+      return SupportedNetworks.find((chain) => chain.chainId == key && entryPoint.includes(chain.entryPoint));
+    }
+    return result
   } else
     return SupportedNetworks.find((chain) => chain.chainId == key && entryPoint.includes(chain.entryPoint));
 }
