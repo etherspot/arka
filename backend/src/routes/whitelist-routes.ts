@@ -12,7 +12,7 @@ import { APIKey } from "../models/api-key.js";
 import { ContractWhitelistDto } from "../types/contractWhitelist-dto.js";
 
 const whitelistRoutes: FastifyPluginAsync = async (server) => {
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.config.MTP_VGL_MARKUP);
 
   const SUPPORTED_ENTRYPOINTS = {
     EPV_06: server.config.EPV_06,
