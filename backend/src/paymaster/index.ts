@@ -36,23 +36,23 @@ interface NativeCurrencyPricyCache {
   expiry: number;
 }
 
-import { abi as verifyingPaymasterAbi, byteCode as verifyingPaymasterByteCode } from '../abi/VerifyingPaymasterAbi.js';
-import { abi as verifyingPaymasterV2Abi, byteCode as verifyingPaymasterV2ByteCode } from '../abi/VerifyingPaymasterAbiV2.js';
 
 export class Paymaster {
   feeMarkUp: BigNumber;
   multiTokenMarkUp: number;
+  MTP_VGL_MARKUP: string;
   EP7_TOKEN_VGL: string;
   EP7_TOKEN_PGL: string;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
   nativeCurrencyPrice: Map<string, NativeCurrencyPricyCache> = new Map();
 
-  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string) {
+  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, mtpVglMarkup: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
     this.EP7_TOKEN_PGL = ep7TokenPGL;
     this.EP7_TOKEN_VGL = ep7TokenVGL;
+    this.MTP_VGL_MARKUP = mtpVglMarkup;
   }
 
   packUint(high128: BigNumberish, low128: BigNumberish): string {
@@ -646,22 +646,25 @@ export class Paymaster {
         const ETHprice = await ecContract.cachedPrice();
         ethPrice = ETHprice
       }
-      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
+      let paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
 
-      if (!userOp.signature) userOp.signature = '0x';
-      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
-      userOp.verificationGasLimit = response.verificationGasLimit;
-      userOp.preVerificationGas = response.preVerificationGas;
-      userOp.callGasLimit = response.callGasLimit;
-      userOp.paymasterAndData = paymasterAndData
+       if (!userOp.signature) userOp.signature = '0x';
+       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+       userOp.verificationGasLimit = BigNumber.from(response.verificationGasLimit).add(this.MTP_VGL_MARKUP).toHexString();
+       userOp.preVerificationGas = response.preVerificationGas;
+       userOp.callGasLimit = response.callGasLimit;
+       userOp.paymasterAndData = paymasterAndData
 
-      const returnValue = {
-        paymasterAndData,
-        verificationGasLimit: response.verificationGasLimit,
-        preVerificationGas: response.preVerificationGas,
-        callGasLimit: response.callGasLimit,
-      }
-      return returnValue;
+       // After estimating it with proper paymasterAndData value
+       paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
+
+       const returnValue = {
+         paymasterAndData,
+         verificationGasLimit: userOp.verificationGasLimit,
+         preVerificationGas: userOp.preVerificationGas,
+         callGasLimit: userOp.callGasLimit,
+       }
+       return returnValue;
     } catch (err: any) {
       if (err.message.includes("Quota exceeded"))
         throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
@@ -972,106 +975,6 @@ export class Paymaster {
       if (log) log.error(err, 'deposit');
       if (err.message.includes('Balance is less than the amount to be deposited')) throw new Error(err.message);
       throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
-    }
-  }
-
-  async deployVp(
-    privateKey: string,
-    bundlerRpcUrl: string,
-    epAddr: string,
-    isEp06: boolean,
-    chainId: number,
-    log?: FastifyBaseLogger
-  ) {
-    try {
-      const provider = new providers.JsonRpcProvider(bundlerRpcUrl);
-      const signer = new Wallet(privateKey, provider);
-      
-      let contract;
-      if(isEp06) {
-        contract = new ethers.ContractFactory(verifyingPaymasterAbi, verifyingPaymasterByteCode, signer);
-      } else {
-        contract = new ethers.ContractFactory(verifyingPaymasterV2Abi, verifyingPaymasterV2ByteCode, signer);
-      }
-
-      const etherscanFeeData = await getEtherscanFee(chainId);
-      let feeData;
-      if (etherscanFeeData) {
-        feeData = etherscanFeeData;
-      } else {
-        feeData = await provider.getFeeData();
-        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
-        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
-        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
-      }
-
-      let tx;
-      if (!feeData.maxFeePerGas) {
-        tx = await contract.deploy(epAddr, signer.address, {gasPrice: feeData.gasPrice});
-      } else {
-        tx = await contract.deploy(
-          epAddr,
-          signer.address,
-          {
-            maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-            type: 2
-          }
-        );
-      }
-      await tx.deployed();
-      return { address: tx.address, hash: tx.deployTransaction.hash };
-    } catch (error) {
-      log?.error(`error while deploying verifying paymaster ${error}`);
-      throw new Error(ErrorMessage.FAILED_TO_DEPLOY_VP);
-    }
-  }
-
-  async addStake(
-    privateKey: string,
-    bundlerRpcUrl: string,
-    amount: string,
-    paymasterAddress: string,
-    chainId: number,
-    log?: FastifyBaseLogger
-  ) {
-    try {
-      const provider = new providers.JsonRpcProvider(bundlerRpcUrl);
-      const signer = new Wallet(privateKey, provider);
-
-      const contract = new ethers.Contract(paymasterAddress, verifyingPaymasterAbi, signer);
-
-      const etherscanFeeData = await getEtherscanFee(chainId);
-      let feeData;
-      if (etherscanFeeData) {
-        feeData = etherscanFeeData;
-      } else {
-        feeData = await provider.getFeeData();
-        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
-        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
-        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
-      }
-
-      let tx;
-      if (!feeData.maxFeePerGas) {
-        tx = await contract.addStake("10", {value: ethers.utils.parseEther(amount), gasPrice: feeData.gasPrice});
-      } else {
-        tx = await contract.addStake(
-          "10",
-          {
-            value: ethers.utils.parseEther(amount),
-            maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-            type: 2
-          }
-        );
-      }
-      return {
-        message: `Successfully staked with transaction Hash ${tx.hash}`
-      };
-    } catch (error) {
-      log?.error(`error while adding stake to verifying paymaster ${error}`);
-      throw new Error(ErrorMessage.FAILED_TO_ADD_STAKE);
     }
   }
 }

@@ -56,7 +56,7 @@ const initializeServer = async (): Promise<void> => {
     logLevel: "warn"
   });
 
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.config.MTP_VGL_MARKUP);
 
   await server.register(paymasterRoutes, {paymaster});
 
