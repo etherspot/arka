@@ -35,6 +35,7 @@ const ConfigSchema = Type.Strict(
     DEFAULT_BUNDLER_API_KEY: Type.String(),
     MULTI_TOKEN_PAYMASTERS: Type.String(),
     MULTI_TOKEN_ORACLES: Type.String(),
+    MTP_VGL_MARKUP: Type.String() || '30000',
   })
 );
 
@@ -73,7 +74,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     USE_KMS: process.env.USE_KMS,
     DEFAULT_BUNDLER_API_KEY: process.env.DEFAULT_BUNDLER_API_KEY,
     MULTI_TOKEN_PAYMASTERS: process.env.MULTI_TOKEN_PAYMASTERS,
-    MULTI_TOKEN_ORACLES: process.env.MULTI_TOKEN_ORACLES
+    MULTI_TOKEN_ORACLES: process.env.MULTI_TOKEN_ORACLES,
+    MTP_VGL_MARKUP: process.env.MTP_VGL_MARKUP
   }
 
   const valid = validate(envVar);
@@ -109,6 +111,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     DEFAULT_BUNDLER_API_KEY: process.env.DEFAULT_BUNDLER_API_KEY ?? '',
     MULTI_TOKEN_PAYMASTERS: process.env.MULTI_TOKEN_PAYMASTERS ?? '',
     MULTI_TOKEN_ORACLES: process.env.MULTI_TOKEN_ORACLES ?? '',
+    MTP_VGL_MARKUP: process.env.MTP_VGL_MARKUP ?? '30000'
   }
 
   server.log.info(config, "config:");
