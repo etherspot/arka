@@ -11,7 +11,7 @@ import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
 
 const depositRoutes: FastifyPluginAsync = async (server) => {
-    const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize);
+    const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.config.MTP_VGL_MARKUP, server.sequelize);
 
     const SUPPORTED_ENTRYPOINTS = {
         EPV_06: server.config.EPV_06,

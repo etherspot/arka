@@ -10,7 +10,6 @@ import { decode } from "../utils/crypto.js";
 import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
 import { APIKey } from "../models/api-key.js";
 import * as EtherspotAbi from "../abi/EtherspotAbi.js";
-import {abi as verifyingPaymasterAbi} from "../abi/VerifyingPaymasterAbi.js";
 
 const metadataRoutes: FastifyPluginAsync = async (server) => {
 
@@ -213,10 +212,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         chainsSupported: chainsSupported,
         tokenPaymasters: tokenPaymasterAddresses,
         multiTokenPaymasters,
-        sponsorDetails: { name: sponsorName, icon: sponsorImage },
-        verifyingPaymaster: { address: verifyingPaymaster, deposit: verifyingPaymasterDeposit },
-        verifyingPaymasters: apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : undefined,
-        verifyingPaymastersV2: apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2) : undefined,
+        sponsorDetails: { name: sponsorName, icon: sponsorImage }
       })
     } catch (err: any) {
       request.log.error(err);

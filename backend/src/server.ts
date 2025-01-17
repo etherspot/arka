@@ -65,7 +65,7 @@ const initializeServer = async (): Promise<void> => {
 
   server.log.info('registered sequelizePlugin...')
 
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.config.MTP_VGL_MARKUP, server.sequelize);
 
   await server.register(paymasterRoutes, { paymaster });
 

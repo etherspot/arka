@@ -50,6 +50,7 @@ interface CoingeckoPriceCache {
 export class Paymaster {
   feeMarkUp: BigNumber;
   multiTokenMarkUp: number;
+  MTP_VGL_MARKUP: string;
   EP7_TOKEN_VGL: string;
   EP7_TOKEN_PGL: string;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
@@ -58,13 +59,14 @@ export class Paymaster {
   coingeckoService: CoingeckoService = new CoingeckoService();
   sequelize: Sequelize;
 
-  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize) {
+  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, mtpVglMarkup: string, sequelize: Sequelize) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
     this.EP7_TOKEN_PGL = ep7TokenPGL;
     this.EP7_TOKEN_VGL = ep7TokenVGL;
     this.sequelize = sequelize;
+    this.MTP_VGL_MARKUP = mtpVglMarkup;
   }
 
   packUint(high128: BigNumberish, low128: BigNumberish): string {
@@ -676,7 +678,7 @@ export class Paymaster {
       userOp.paymasterAndData = paymasterAndData
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
       if (BigNumber.from(userOp.verificationGasLimit).lt("45000")) userOp.verificationGasLimit = BigNumber.from("45000").toHexString(); // This is to counter the unaccounted cost(45000)
-      userOp.verificationGasLimit = BigNumber.from(response.verificationGasLimit).add("30000").toHexString(); // This is added just in case the token is proxy
+      userOp.verificationGasLimit = BigNumber.from(response.verificationGasLimit).add(this.MTP_VGL_MARKUP).toHexString(); // This is added just in case the token is proxy
       userOp.preVerificationGas = response.preVerificationGas;
       userOp.callGasLimit = response.callGasLimit;
       paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);

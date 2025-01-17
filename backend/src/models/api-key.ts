@@ -7,8 +7,6 @@ export class APIKey extends Model {
   public supportedNetworks?: string | null;
   public erc20Paymasters?: string | null;
   public erc20PaymastersV2?: string | null;
-  public verifyingPaymasters?: string | null;
-  public verifyingPaymastersV2?: string | null;
   public multiTokenPaymasters?: string | null;
   public multiTokenOracles?: string | null;
   public sponsorName?: string | null;
@@ -55,16 +53,6 @@ export function initializeAPIKeyModel(sequelize: Sequelize, schema: string) {
       type: DataTypes.TEXT,
       allowNull: true,
       field: 'ERC20_PAYMASTERS_V2'
-    },
-    verifyingPaymasters: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      field: 'VERIFYING_PAYMASTERS'
-    },
-    verifyingPaymastersV2: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      field: 'VERIFYING_PAYMASTERS_V2'
     },
     bundlerApiKey: {
       type: DataTypes.TEXT,
