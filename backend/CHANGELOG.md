@@ -1,4 +1,9 @@
 # Changelog
+## [2.0.1] - 2025-01-17
+### Fixes
+- Signing of MTP happens after estimation
+- Updated supportedNetworks to use from default if apiKey specific config is not found
+
 ## [1.8.0] - 2024-12-25
 ### Breaking changes
 - removed `/whitelist/v1`, `/removeWhitelist/v1`, `/checkWhitelist/v1` endpoints.
