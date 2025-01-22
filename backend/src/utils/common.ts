@@ -79,4 +79,3 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
     return null;
   }
 }
-
