@@ -56,7 +56,7 @@ const initializeServer = async (): Promise<void> => {
     healthcheckUrl: "/healthcheck",
     logLevel: "warn"
   });
-  
+
   // Register the sequelizePlugin
   await server.register(sequelizePlugin);
 
