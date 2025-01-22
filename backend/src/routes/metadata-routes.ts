@@ -159,6 +159,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
           server.log.info("Invalid Api Key provided")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         }
+        privateKey = secrets['PRIVATE_KEY'];
       } else {
         privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
       }
