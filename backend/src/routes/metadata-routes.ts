@@ -101,17 +101,9 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         verifyingPaymasterDeposit = await vpContract.getDeposit();
       }
       const chainsSupported: { chainId: number, entryPoint: string }[] = [];
-      if (supportedNetworks) {
-        const buffer = Buffer.from(supportedNetworks, 'base64');
-        const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
-        SUPPORTED_NETWORKS.map((element: { chainId: number, entryPoint: string }) => {
-          chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
-        })
-      } else {
-        SupportedNetworks.map(element => {
-          chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
-        })
-      }
+      SupportedNetworks.map(element => {
+        chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
+      })
       const tokenPaymasterAddresses = {
         ...PAYMASTER_ADDRESS,
         ...customPaymasters,
@@ -207,17 +199,9 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         verifyingPaymasterDeposit = await vpContract.getDeposit();
       }
       const chainsSupported: { chainId: number, entryPoint: string }[] = [];
-      if (supportedNetworks) {
-        const buffer = Buffer.from(supportedNetworks, 'base64');
-        const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
-        SUPPORTED_NETWORKS.map((element: { chainId: number, entryPoint: string }) => {
-          chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
-        })
-      } else {
-        SupportedNetworks.map(element => {
-          chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
-        })
-      }
+      SupportedNetworks.map(element => {
+        chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
+      })
       const tokenPaymasterAddresses = {
         ...PAYMASTER_ADDRESS,
         ...customPaymasters,

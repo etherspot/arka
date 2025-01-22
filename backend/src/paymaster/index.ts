@@ -643,7 +643,8 @@ export class Paymaster {
 
       const isCoingeckoAvailable = this.coingeckoPrice.get(`${chainId}-${feeToken}`);
 
-      if (isCoingeckoAvailable) {
+      if (!oracleAggregator) {
+        if (!isCoingeckoAvailable) throw new Error('Unable to fetch token price. Please try again later.')
         const {latestAnswer, decimals} = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
         const data = await this.getPriceFromCoingecko(chainId, feeToken, latestAnswer, decimals);
 
@@ -669,20 +670,23 @@ export class Paymaster {
         const ETHprice = await ecContract.cachedPrice();
         ethPrice = ETHprice
       }
-      const paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
 
       if (!userOp.signature) userOp.signature = '0x';
+      let paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
+      userOp.paymasterAndData = paymasterAndData
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
-      userOp.verificationGasLimit = response.verificationGasLimit;
+      if (BigNumber.from(userOp.verificationGasLimit).lt("45000")) userOp.verificationGasLimit = BigNumber.from("45000").toHexString(); // This is to counter the unaccounted cost(45000)
+      userOp.verificationGasLimit = BigNumber.from(response.verificationGasLimit).add("30000").toHexString(); // This is added just in case the token is proxy
       userOp.preVerificationGas = response.preVerificationGas;
       userOp.callGasLimit = response.callGasLimit;
+      paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
       userOp.paymasterAndData = paymasterAndData
 
       const returnValue = {
         paymasterAndData,
-        verificationGasLimit: response.verificationGasLimit,
-        preVerificationGas: response.preVerificationGas,
-        callGasLimit: response.callGasLimit,
+        verificationGasLimit: userOp.verificationGasLimit,
+        preVerificationGas: userOp.preVerificationGas,
+        callGasLimit: userOp.callGasLimit,
       }
       return returnValue;
     } catch (err: any) {
