@@ -1,4 +1,8 @@
 # Changelog
+## [2.1.1] - 2025-01-21
+### Bug Fixes
+- Updated from master branch on bug fixes for MTP
+
 ## [2.0.1] - 2025-01-08
 ### New
 - added `/whitelist/v2`, `/removeWhitelist/v2` and `/checkWhitelist/v2` endpoints back.

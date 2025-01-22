@@ -17,22 +17,27 @@ export class CoingeckoService {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async fetchPriceByCoinID(tokens: string[], log?: FastifyBaseLogger): Promise<any> {
-    let price = null;
-    const url = `${apiUrl}/simple/price?ids=${tokens.join(',')}&vs_currencies=usd`;
-    const options = {
-      method: 'GET',
-      headers: {accept: 'application/json', 'x-cg-pro-api-key': apiKey}
-    };
     try {
-      const data = await fetch(url, options);
-      price = await data.json();
+      let price = [];
+      const url = `${apiUrl}/simple/price?ids=${tokens.join(',')}&vs_currencies=usd`;
+      const options = {
+        method: 'GET',
+        headers: { accept: 'application/json', 'x-cg-demo-api-key': apiKey }
+      };
+      try {
+        const data = await fetch(url, options);
+        price = await data.json();
+      } catch (err) {
+        log?.error(err, CoingeckoService.LOGGER_CONTEXT, {
+          message: 'Failed to fetch native Prices from Coingecko',
+          url,
+        });
+      }
+      return price;
     } catch (err) {
-      log?.error(err, CoingeckoService.LOGGER_CONTEXT, {
-        message: 'Failed to fetch native Prices from Coingecko',
-        url,
-      });
+      console.log(err);
+      return [];
     }
-    return price;
   }
 
   isNetworkSupported(chainId: number): boolean {
