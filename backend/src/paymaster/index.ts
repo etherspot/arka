@@ -643,8 +643,6 @@ export class Paymaster {
 
       const isCoingeckoAvailable = this.coingeckoPrice.get(`${chainId}-${feeToken}`);
 
-      console.log('oracleAggregator: ', oracleAggregator, isCoingeckoAvailable, this.coingeckoPrice);
-
       if (!oracleAggregator) {
         if (!isCoingeckoAvailable) throw new Error('Unable to fetch token price. Please try again later.')
         const {latestAnswer, decimals} = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
@@ -1145,6 +1143,5 @@ export class Paymaster {
       const cacheKey = `${chainId}-${ethers.utils.getAddress(tokenAddress)}`;
       this.coingeckoPrice.set(cacheKey, {data: coingeckoPrices[tokenAddress], expiry: Date.now() + ttl});
     }
-    console.log('Coingecko Price Set: ', this.coingeckoPrice);
   }
 }
