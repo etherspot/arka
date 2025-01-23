@@ -22,7 +22,7 @@ export class CoingeckoService {
       const url = `${apiUrl}/simple/price?ids=${tokens.join(',')}&vs_currencies=usd`;
       const options = {
         method: 'GET',
-        headers: { accept: 'application/json', 'x-cg-demo-api-key': apiKey }
+        headers: { accept: 'application/json', 'x-cg-pro-api-key': apiKey }
       };
       try {
         const data = await fetch(url, options);
