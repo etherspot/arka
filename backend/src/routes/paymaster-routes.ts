@@ -284,6 +284,8 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
             case 'multitoken': {
               if (epVersion !== EPVersions.EPV_06)
                 throw new Error('Currently only EPV06 entryPoint address is supported')
+              if (!(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]))
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
               const date = new Date();
               const provider = new providers.JsonRpcProvider(bundlerUrl);
               const signer = new Wallet(privateKey, provider)
@@ -306,7 +308,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 throw new Error("Oracle is not Defined/Invalid");
               if (networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" && !NativeOracles[chainId])
                 throw new Error("Native Oracle address not set for this chainId")
-              result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId][gasToken], bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
+              result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId] ? multiTokenOracles[chainId][gasToken] : '', bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
               break;
             }
             case 'vps': {
