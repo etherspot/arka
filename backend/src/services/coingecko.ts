@@ -35,7 +35,7 @@ export class CoingeckoService {
       }
       return price;
     } catch (err) {
-      console.log(err);
+      log?.error(err);
       return [];
     }
   }

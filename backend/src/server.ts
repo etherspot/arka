@@ -80,7 +80,7 @@ const initializeServer = async (): Promise<void> => {
     const tokenIds = records.map(record => record.coinId);
     const coingecko = new CoingeckoService();
 
-    const data = await coingecko.fetchPriceByCoinID(tokenIds);
+    const data = await coingecko.fetchPriceByCoinID(tokenIds, server.log);
     const tokenPrices: any = [];
     if (Object.keys(data).length > 0) {
       records.map(record => {
