@@ -60,9 +60,6 @@ const initializeServer = async (): Promise<void> => {
   // Register the sequelizePlugin
   await server.register(sequelizePlugin);
 
-  // Register the sequelizePlugin
-  await server.register(sequelizePlugin);
-
   // Synchronize all models
   await server.sequelize.sync();
 
