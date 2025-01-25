@@ -50,6 +50,7 @@ interface CoingeckoPriceCache {
 export class Paymaster {
   feeMarkUp: BigNumber;
   multiTokenMarkUp: number;
+  MTP_VGL_MARKUP: string;
   EP7_TOKEN_VGL: string;
   EP7_TOKEN_PGL: string;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
@@ -58,13 +59,14 @@ export class Paymaster {
   coingeckoService: CoingeckoService = new CoingeckoService();
   sequelize: Sequelize;
 
-  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize) {
+  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize, mtpVglMarkup: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
     this.EP7_TOKEN_PGL = ep7TokenPGL;
     this.EP7_TOKEN_VGL = ep7TokenVGL;
     this.sequelize = sequelize;
+    this.MTP_VGL_MARKUP = mtpVglMarkup;
   }
 
   packUint(high128: BigNumberish, low128: BigNumberish): string {

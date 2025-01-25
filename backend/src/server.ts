@@ -59,13 +59,12 @@ const initializeServer = async (): Promise<void> => {
 
   // Register the sequelizePlugin
   await server.register(sequelizePlugin);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, server.config.MTP_VGL_MARKUP);
 
   // Synchronize all models
   await server.sequelize.sync();
 
   server.log.info('registered sequelizePlugin...')
-
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize);
 
   await server.register(paymasterRoutes, { paymaster });
 
