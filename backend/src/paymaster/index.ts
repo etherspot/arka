@@ -16,6 +16,12 @@ import ERC20Abi from '../abi/ERC20Abi.js';
 import EtherspotChainlinkOracleAbi from '../abi/EtherspotChainlinkOracleAbi.js';
 import { TokenDecimalsAndSymbol, UnaccountedCost } from '../constants/MultitokenPaymaster.js';
 import { NativeOracleDecimals } from '../constants/ChainlinkOracles.js';
+import { CoingeckoTokensRepository } from '../repository/coingecko-token-repository.js';
+import { CoingeckoService } from '../services/coingecko.js';
+import { Sequelize } from 'sequelize';
+import { abi as verifyingPaymasterAbi, byteCode as verifyingPaymasterByteCode } from '../abi/VerifyingPaymasterAbi.js';
+import { abi as verifyingPaymasterV2Abi, byteCode as verifyingPaymasterV2ByteCode } from '../abi/VerifyingPaymasterAbiV2.js';
+
 const ttl = parseInt(process.env.CACHE_TTL || "600000");
 const nativePriceCacheTtl = parseInt(process.env.NATIVE_PRICE_CACHE_TTL || "60000");
 
@@ -36,6 +42,10 @@ interface NativeCurrencyPricyCache {
   expiry: number;
 }
 
+interface CoingeckoPriceCache {
+  data: any;
+  expiry: number;
+}
 
 export class Paymaster {
   feeMarkUp: BigNumber;
@@ -45,13 +55,17 @@ export class Paymaster {
   EP7_TOKEN_PGL: string;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
   nativeCurrencyPrice: Map<string, NativeCurrencyPricyCache> = new Map();
+  coingeckoPrice: Map<string, CoingeckoPriceCache> = new Map();
+  coingeckoService: CoingeckoService = new CoingeckoService();
+  sequelize: Sequelize;
 
-  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, mtpVglMarkup: string) {
+  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize, mtpVglMarkup: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
     this.EP7_TOKEN_PGL = ep7TokenPGL;
     this.EP7_TOKEN_VGL = ep7TokenVGL;
+    this.sequelize = sequelize;
     this.MTP_VGL_MARKUP = mtpVglMarkup;
   }
 
@@ -569,14 +583,18 @@ export class Paymaster {
 
       const promises = [];
       for(let i=0;i<tokens_list.length;i++) {
-        const gasToken = tokens_list[i];
+        const gasToken = ethers.utils.getAddress(tokens_list[i]);
+        const isCoingeckoAvailable = this.coingeckoPrice.get(`${chainId}-${gasToken}`);
         if (
           !(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
-          !(oracles[chainId] && oracles[chainId][gasToken])
+          !(oracles[chainId] && oracles[chainId][gasToken]) &&
+          !isCoingeckoAvailable
         ) unsupportedTokens.push({ token: gasToken });
         else {
           const oracleAddress = oracles[chainId][gasToken];
-          if (oracleName === "orochi") {
+          if (isCoingeckoAvailable) {
+            promises.push(this.getPriceFromCoingecko(chainId, gasToken, ETHUSDPrice, ETHUSDPriceDecimal))
+          } else if (oracleName === "orochi") {
             promises.push(this.getPriceFromOrochi(oracleAddress, provider, gasToken, chainId));
           } else if(oracleName === "chainlink") {
             promises.push(this.getPriceFromChainlink(oracleAddress, provider, gasToken, ETHUSDPrice, ETHUSDPriceDecimal, chainId));
@@ -625,7 +643,15 @@ export class Paymaster {
       const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbi, provider);
       let ethPrice = "";
 
-      if (oracleName === "orochi") {
+      const isCoingeckoAvailable = this.coingeckoPrice.get(`${chainId}-${feeToken}`);
+
+      if (!oracleAggregator) {
+        if (!isCoingeckoAvailable) throw new Error('Unable to fetch token price. Please try again later.')
+        const {latestAnswer, decimals} = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
+        const data = await this.getPriceFromCoingecko(chainId, feeToken, latestAnswer, decimals);
+
+        ethPrice = data.ethPrice;
+      } else if (oracleName === "orochi") {
         const data = await this.getPriceFromOrochi(oracleAggregator, provider, feeToken, chainId);
         ethPrice = data.ethPrice;
       } else if (oracleName === "chainlink") {
@@ -646,25 +672,25 @@ export class Paymaster {
         const ETHprice = await ecContract.cachedPrice();
         ethPrice = ETHprice
       }
+
+      if (!userOp.signature) userOp.signature = '0x';
       let paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
+      userOp.paymasterAndData = paymasterAndData
+      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+      if (BigNumber.from(userOp.verificationGasLimit).lt("45000")) userOp.verificationGasLimit = BigNumber.from("45000").toHexString(); // This is to counter the unaccounted cost(45000)
+      userOp.verificationGasLimit = BigNumber.from(response.verificationGasLimit).add("30000").toHexString(); // This is added just in case the token is proxy
+      userOp.preVerificationGas = response.preVerificationGas;
+      userOp.callGasLimit = response.callGasLimit;
+      paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
+      userOp.paymasterAndData = paymasterAndData
 
-       if (!userOp.signature) userOp.signature = '0x';
-       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
-       userOp.verificationGasLimit = BigNumber.from(response.verificationGasLimit).add(this.MTP_VGL_MARKUP).toHexString();
-       userOp.preVerificationGas = response.preVerificationGas;
-       userOp.callGasLimit = response.callGasLimit;
-       userOp.paymasterAndData = paymasterAndData
-
-       // After estimating it with proper paymasterAndData value
-       paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
-
-       const returnValue = {
-         paymasterAndData,
-         verificationGasLimit: userOp.verificationGasLimit,
-         preVerificationGas: userOp.preVerificationGas,
-         callGasLimit: userOp.callGasLimit,
-       }
-       return returnValue;
+      const returnValue = {
+        paymasterAndData,
+        verificationGasLimit: userOp.verificationGasLimit,
+        preVerificationGas: userOp.preVerificationGas,
+        callGasLimit: userOp.callGasLimit,
+      }
+      return returnValue;
     } catch (err: any) {
       if (err.message.includes("Quota exceeded"))
         throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
@@ -975,6 +1001,149 @@ export class Paymaster {
       if (log) log.error(err, 'deposit');
       if (err.message.includes('Balance is less than the amount to be deposited')) throw new Error(err.message);
       throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
+    }
+  }
+ 
+  async deployVp(
+    privateKey: string,
+    bundlerRpcUrl: string,
+    epAddr: string,
+    isEp06: boolean,
+    chainId: number,
+    log?: FastifyBaseLogger
+  ) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpcUrl);
+      const signer = new Wallet(privateKey, provider);
+      
+      let contract;
+      if(isEp06) {
+        contract = new ethers.ContractFactory(verifyingPaymasterAbi, verifyingPaymasterByteCode, signer);
+      } else {
+        contract = new ethers.ContractFactory(verifyingPaymasterV2Abi, verifyingPaymasterV2ByteCode, signer);
+      }
+
+      const etherscanFeeData = await getEtherscanFee(chainId);
+      let feeData;
+      if (etherscanFeeData) {
+        feeData = etherscanFeeData;
+      } else {
+        feeData = await provider.getFeeData();
+        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
+        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
+        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
+      }
+
+      let tx;
+      if (!feeData.maxFeePerGas) {
+        tx = await contract.deploy(epAddr, signer.address, {gasPrice: feeData.gasPrice});
+      } else {
+        tx = await contract.deploy(
+          epAddr,
+          signer.address,
+          {
+            maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
+            type: 2
+          }
+        );
+      }
+      await tx.deployed();
+      return { address: tx.address, hash: tx.deployTransaction.hash };
+    } catch (error) {
+      log?.error(`error while deploying verifying paymaster ${error}`);
+      throw new Error(ErrorMessage.FAILED_TO_DEPLOY_VP);
+    }
+  }
+
+  async addStake(
+    privateKey: string,
+    bundlerRpcUrl: string,
+    amount: string,
+    paymasterAddress: string,
+    chainId: number,
+    log?: FastifyBaseLogger
+  ) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpcUrl);
+      const signer = new Wallet(privateKey, provider);
+
+      const contract = new ethers.Contract(paymasterAddress, verifyingPaymasterAbi, signer);
+
+      const etherscanFeeData = await getEtherscanFee(chainId);
+      let feeData;
+      if (etherscanFeeData) {
+        feeData = etherscanFeeData;
+      } else {
+        feeData = await provider.getFeeData();
+        feeData.gasPrice = feeData.gasPrice ? feeData.gasPrice.add(this.feeMarkUp) : null;
+        feeData.maxFeePerGas = feeData.maxFeePerGas ? feeData.maxFeePerGas.add(this.feeMarkUp) : null;
+        feeData.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas.add(this.feeMarkUp) : null;
+      }
+
+      let tx;
+      if (!feeData.maxFeePerGas) {
+        tx = await contract.addStake("10", {value: ethers.utils.parseEther(amount), gasPrice: feeData.gasPrice});
+      } else {
+        tx = await contract.addStake(
+          "10",
+          {
+            value: ethers.utils.parseEther(amount),
+            maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
+            type: 2
+          }
+        );
+      }
+      return {
+        message: `Successfully staked with transaction Hash ${tx.hash}`
+      };
+    } catch (error) {
+      log?.error(`error while adding stake to verifying paymaster ${error}`);
+      throw new Error(ErrorMessage.FAILED_TO_ADD_STAKE);
+    }
+  }
+
+  async getPriceFromCoingecko(chainId: number, tokenAddress: string, ETHUSDPrice: any, ETHUSDPriceDecimal: any): Promise<any> {
+    const cacheKey = `${chainId}-${tokenAddress}`;
+    const cache = this.coingeckoPrice.get(cacheKey);
+
+    const nativePrice = ethers.utils.formatUnits(ETHUSDPrice, ETHUSDPriceDecimal);
+    let ethPrice;
+
+    if(cache && cache.expiry > Date.now()) {
+      const data = cache.data;
+      ethPrice = ethers.utils.parseUnits((Number(nativePrice)/data.price).toFixed(data.decimals), data.decimals)
+      return {
+        ethPrice,
+        ...data
+      }
+    }
+
+    const coingeckoRepo = new CoingeckoTokensRepository(this.sequelize);
+    const records = await coingeckoRepo.findAll();
+    const tokenIds = records.map((record: { coinId: any; }) => record.coinId);
+
+    const data = await this.coingeckoService.fetchPriceByCoinID(tokenIds);
+    const tokenPrices: any = [];
+    records.map(record => {
+      tokenPrices[ethers.utils.getAddress(record.address)] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, gasToken: tokenAddress, symbol: record.token }
+    })
+    const tokenData = tokenPrices[tokenAddress];
+    ethPrice = ethers.utils.parseUnits((Number(nativePrice)/tokenData.price).toFixed(tokenData.decimals), tokenData.decimals)
+    this.setPricesFromCoingecko(tokenPrices);
+
+    return {
+      ethPrice,
+      ...tokenData
+    }
+  }
+
+  async setPricesFromCoingecko(coingeckoPrices: any[]) {
+    for(const tokenAddress in coingeckoPrices) {
+      const chainId = coingeckoPrices[tokenAddress].chainId;
+      const cacheKey = `${chainId}-${ethers.utils.getAddress(tokenAddress)}`;
+      this.coingeckoPrice.set(cacheKey, {data: coingeckoPrices[tokenAddress], expiry: Date.now() + ttl});
     }
   }
 }
