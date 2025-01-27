@@ -13,8 +13,12 @@ import { CreateSecretCommand, DeleteSecretCommand, GetSecretValueCommand, Secret
 import EtherspotAbi from "../abi/EtherspotAbi.js";
 import { AuthDto } from "../types/auth-dto.js";
 import { IncomingHttpHeaders } from "http";
+import { EPVersions } from "../types/sponsorship-policy-dto.js";
+import { getNetworkConfig } from "../utils/common.js";
+import { Paymaster } from "../paymaster/index.js";
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, server.config.MTP_VGL_MARKUP);
 
   const prefixSecretId = 'arka_';
 
@@ -24,6 +28,11 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   if (!unsafeMode) {
       client = new SecretsManagerClient();
+  }
+
+  const SUPPORTED_ENTRYPOINTS = {
+    EPV_06: server.config.EPV_06,
+    EPV_07: server.config.EPV_07
   }
 
 
@@ -360,6 +369,205 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
   })
+
+  server.post('/deployVerifyingPaymaster', async (request, reply) => {
+    try {
+      if (!request.body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+
+      const body: any = request.body;
+      const query: any = request.query;
+      const chainId = query['chainId'] ?? body.params?.[1];
+      const apiKey = query['apiKey'] ?? body.params?.[2];
+      const epVersion = body.params?.[0];
+
+      if (!chainId || isNaN(chainId) || !apiKey) {
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      if (!epVersion || (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07)) {
+        return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_EP_VERSION});
+      }
+
+      const isEp06 = epVersion === EPVersions.EPV_06;
+
+      const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(apiKey);
+      if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+
+      let verifyingPaymasters;
+
+      if(isEp06) {
+        verifyingPaymasters = apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : {};
+      } else {
+        verifyingPaymasters = apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2) : {};
+      }
+      if (verifyingPaymasters[chainId]) {
+        return reply.code(ReturnCode.FAILURE).send(
+          {error: `${ErrorMessage.VP_ALREADY_DEPLOYED} at ${verifyingPaymasters[chainId]}`}
+        );
+      }
+
+      let privateKey;
+      let bundlerApiKey = apiKey;
+      let supportedNetworks;
+
+      if (!unsafeMode) {
+        const AWSresponse = await client.send(
+          new GetSecretValueCommand({
+            SecretId: prefixSecretId + apiKey,
+          })
+        );
+        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        if (!secrets['PRIVATE_KEY']) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+        }
+        if (secrets['BUNDLER_API_KEY']) {
+          bundlerApiKey = secrets['BUNDLER_API_KEY'];
+        }
+        privateKey = secrets['PRIVATE_KEY'];
+        supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+      } else {
+        privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
+        supportedNetworks = apiKeyEntity.supportedNetworks;
+        if (apiKeyEntity.bundlerApiKey) {
+          bundlerApiKey = apiKeyEntity.bundlerApiKey;
+        }
+      }
+
+      if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+      }
+      
+      const networkConfig = getNetworkConfig(
+        chainId,
+        supportedNetworks ?? '',
+        isEp06 ? SUPPORTED_ENTRYPOINTS.EPV_06 : SUPPORTED_ENTRYPOINTS.EPV_07
+      );
+      
+      if (!networkConfig) {
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+      }
+      let bundlerUrl = networkConfig.bundler;
+      if (networkConfig.bundler.includes('etherspot.io')) {
+        bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+      }
+
+      const {address, hash} = await paymaster.deployVp(
+        privateKey,
+        bundlerUrl,
+        networkConfig.entryPoint,
+        isEp06,
+        chainId,
+        server.log
+      );
+      verifyingPaymasters[chainId] = address;
+      await server.apiKeyRepository.updateVpAddresses(apiKey, JSON.stringify(verifyingPaymasters), isEp06);
+
+      return reply.code(ReturnCode.SUCCESS).send({verifyingPaymaster: address, txHash: hash});
+    } catch (error: any) {
+      request.log.error(error);
+      return reply.code(ReturnCode.FAILURE).send({ error: error.message ?? ErrorMessage.FAILED_TO_PROCESS });
+    }
+  });
+
+  server.post('/addStake', async (request, reply) => {
+    try {
+      if (!request.body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+
+      const body: any = request.body;
+      const query: any = request.query;
+      const chainId = query['chainId'];
+      const apiKey = query['apiKey'];
+      const epVersion = body.params[0];
+      const amount = body.params[1];
+
+      if (!chainId || isNaN(chainId) || !apiKey) {
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+      }
+
+      if(isNaN(amount)) {
+        return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_AMOUNT_TO_STAKE});
+      }
+
+      if (!epVersion || (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07)) {
+        return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_EP_VERSION});
+      }
+
+      const isEp06 = epVersion === EPVersions.EPV_06;
+
+      const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(apiKey);
+      if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+
+      let verifyingPaymasters;
+
+      if(isEp06) {
+        verifyingPaymasters = apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : {};
+      } else {
+        verifyingPaymasters = apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2) : {};
+      }
+
+      if (!verifyingPaymasters[chainId]) {
+        return reply.code(ReturnCode.FAILURE).send(
+          {error: `${ErrorMessage.VP_NOT_DEPLOYED}`}
+        );
+      }
+
+      let privateKey;
+      let bundlerApiKey = apiKey;
+      let supportedNetworks;
+
+      if (!unsafeMode) {
+        const AWSresponse = await client.send(
+          new GetSecretValueCommand({
+            SecretId: prefixSecretId + apiKey,
+          })
+        );
+        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        if (!secrets['PRIVATE_KEY']) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+        }
+        if (secrets['BUNDLER_API_KEY']) {
+          bundlerApiKey = secrets['BUNDLER_API_KEY'];
+        }
+        privateKey = secrets['PRIVATE_KEY'];
+        supportedNetworks = secrets['SUPPORTED_NETWORKS'];
+      } else {
+        privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
+        supportedNetworks = apiKeyEntity.supportedNetworks;
+        if (apiKeyEntity.bundlerApiKey) {
+          bundlerApiKey = apiKeyEntity.bundlerApiKey;
+        }
+      }
+
+      if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+      }
+      const networkConfig = getNetworkConfig(
+        chainId,
+        supportedNetworks ?? '',
+        isEp06 ? SUPPORTED_ENTRYPOINTS.EPV_06 : SUPPORTED_ENTRYPOINTS.EPV_07
+      );
+      if (!networkConfig) {
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+      }
+      let bundlerUrl = networkConfig.bundler;
+      if (networkConfig.bundler.includes('etherspot.io')) {
+        bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+      }
+
+      const tx = await paymaster.addStake(
+        privateKey,
+        bundlerUrl,
+        amount,
+        verifyingPaymasters[chainId],
+        chainId,
+        server.log
+      );
+      return reply.code(ReturnCode.SUCCESS).send(tx);
+    } catch (error: any) {
+      request.log.error(error);
+      return reply.code(ReturnCode.FAILURE).send({ error: error.message ?? ErrorMessage.FAILED_TO_PROCESS });
+    }
+  });
 };
 
 export default adminRoutes;

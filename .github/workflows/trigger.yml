@@ -1,0 +1,13 @@
+name: Trigger Arka Private
+
+on:
+  push:
+    branches:
+      - "develop"
+
+jobs:
+  build_backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger pipeline
+        run: ${{ secrets.PIPELINE_TRIGGER  }}
