@@ -213,7 +213,10 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         chainsSupported: chainsSupported,
         tokenPaymasters: tokenPaymasterAddresses,
         multiTokenPaymasters,
-        sponsorDetails: { name: sponsorName, icon: sponsorImage }
+        sponsorDetails: { name: sponsorName, icon: sponsorImage },
+        verifyingPaymaster: { address: verifyingPaymaster, deposit: verifyingPaymasterDeposit },
+        verifyingPaymasters: apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : undefined,
+        verifyingPaymastersV2: apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2) : undefined,
       })
     } catch (err: any) {
       request.log.error(err);
