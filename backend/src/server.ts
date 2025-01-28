@@ -27,6 +27,7 @@ import { CoingeckoService } from './services/coingecko.js';
 import { CoingeckoTokensRepository } from './repository/coingecko-token-repository.js';
 import { Paymaster } from './paymaster/index.js';
 import { NativeOracles } from './constants/ChainlinkOracles.js';
+import { MultiTokenPaymaster } from './models/multiTokenPaymaster.js';
 
 let server: FastifyInstance;
 
@@ -305,6 +306,15 @@ const initializeServer = async (): Promise<void> => {
               for (const network of SupportedNetworks) {
                 checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
               }
+
+              // Checking of Deposit on common multi token paymaster if any
+              const result = await server.sequelize.query(`SELECT DISTINCT "PAYMASTER_ADDRESS" as "paymasterAddress" FROM "${process.env.DATABASE_SCHEMA_NAME}".multi_token_paymaster`)
+              const rec = result[0] as MultiTokenPaymaster[];
+              rec.forEach((record: MultiTokenPaymaster) => {
+                const networkConfig = getNetworkConfig(record.chainId, '', server.config.EPV_06);
+                if (networkConfig)
+                  checkDeposit(ethers.utils.getAddress(record.paymasterAddress), networkConfig.bundler, process.env.WEBHOOK_URL ?? '', networkConfig.thresholdValue ?? '0.001', record.chainId, server.log);
+              })
             }
           } catch (err) {
             server.log.error(err);

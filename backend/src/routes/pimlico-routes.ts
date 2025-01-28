@@ -9,6 +9,7 @@ import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
+import { ethers } from "ethers";
 
 const pimlicoRoutes: FastifyPluginAsync = async (server) => {
 
@@ -95,6 +96,42 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                 if (body.jsonrpc)
                     return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, message: result.message, error: null })
                 return reply.code(ReturnCode.SUCCESS).send(result);
+            } catch (err: any) {
+                request.log.error(err);
+                if (err.name == "ResourceNotFoundException")
+                    return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+                return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
+            }
+        }
+    )
+
+    server.post("/getAllCommonERC20PaymasterAddress",
+        ResponseSchema,
+        async function (request, reply) {
+            try {
+                printRequest("/getAllCommonERC20PaymasterAddress", request, server.log);
+                const query: any = request.query;
+                const body: any = request.body;
+                const entryPoint = body.params[0];
+                const api_key = query['apiKey'] ?? body.params[1];
+                if (!api_key || typeof(api_key) !== "string")
+                    return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+                if (!server.config.EPV_06.includes(entryPoint ?? '')) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
+                const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
+                if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+                const multiTokenRec = await server.multiTokenPaymasterRepository.findAll();
+                const result = multiTokenRec.map((record) => {
+                    return {
+                        paymasterAddress: record.paymasterAddress,
+                        gasToken: ethers.utils.getAddress(record.tokenAddress),
+                        chainId: record.chainId,
+                        decimals: record.decimals
+                    }
+                });
+                server.log.info(result, 'getAllCommonERC20PaymasterAddress Response sent: ');
+                if (body.jsonrpc)
+                    return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, message: JSON.stringify(result), error: null })
+                return reply.code(ReturnCode.SUCCESS).send({message: JSON.stringify(result)});
             } catch (err: any) {
                 request.log.error(err);
                 if (err.name == "ResourceNotFoundException")

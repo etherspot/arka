@@ -1,4 +1,7 @@
 # Changelog
+## [3.1.0] - 2025-01-28
+### New
+- Added a separate mode for all the common erc20 paymasters in mind that in future will replace the current erc20 mode
 
 ## [3.0.0] - 2025-01-09
 ### Breaking Changes

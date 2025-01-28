@@ -14,6 +14,9 @@ import { ContractWhitelistRepository } from "../repository/contract-whitelist-re
 import { initializeContractWhitelistModel } from "../models/contract-whitelist.js";
 import { CoingeckoTokensRepository } from "../repository/coingecko-token-repository.js";
 import { initializeCoingeckoModel } from "../models/coingecko.js";
+import { initializeMTPModel } from "../models/multiTokenPaymaster.js";
+import { MultiTokenPaymasterRepository } from "../repository/multi-token-paymaster.js";
+
 const pg = await import('pg');
 const Client = pg.default.Client;
 
@@ -58,6 +61,7 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     initializeArkaWhitelistModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     initializeContractWhitelistModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     initializeCoingeckoModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
+    initializeMTPModel(sequelize, server.config.DATABASE_SCHEMA_NAME);
     server.log.info('Initialized SponsorshipPolicy model...');
 
     server.log.info('Initialized all models...');
@@ -76,6 +80,8 @@ const sequelizePlugin: FastifyPluginAsync = async (server) => {
     server.decorate('contractWhitelistRepository', contractWhitelistRepository);
     const coingeckoRepo: CoingeckoTokensRepository = new CoingeckoTokensRepository(sequelize);
     server.decorate('coingeckoRepo', coingeckoRepo);
+    const multiTokenPaymasterRepository: MultiTokenPaymasterRepository = new MultiTokenPaymasterRepository(sequelize);
+    server.decorate('multiTokenPaymasterRepository', multiTokenPaymasterRepository);
 
     server.log.info('decorated fastify server with models...');
 
@@ -94,6 +100,7 @@ declare module "fastify" {
         sponsorshipPolicyRepository: SponsorshipPolicyRepository;
         whitelistRepository: WhitelistRepository;
         contractWhitelistRepository: ContractWhitelistRepository;
+        multiTokenPaymasterRepository: MultiTokenPaymasterRepository;
     }
 }
 
