@@ -591,9 +591,10 @@ export class Paymaster {
           !isCoingeckoAvailable
         ) unsupportedTokens.push({ token: gasToken });
         else {
-          const oracleAddress = oracles[chainId][gasToken];
-          if (isCoingeckoAvailable) {
-            promises.push(this.getPriceFromCoingecko(chainId, gasToken, ETHUSDPrice, ETHUSDPriceDecimal))
+          let oracleAddress = null;
+          if (oracles[chainId]) oracleAddress = oracles[chainId][gasToken];
+          if (isCoingeckoAvailable || !oracleAddress) {
+            promises.push(this.getPriceFromCoingecko(chainId, gasToken, ETHUSDPrice, ETHUSDPriceDecimal, log))
           } else if (oracleName === "orochi") {
             promises.push(this.getPriceFromOrochi(oracleAddress, provider, gasToken, chainId));
           } else if(oracleName === "chainlink") {
@@ -648,7 +649,7 @@ export class Paymaster {
       if (!oracleAggregator) {
         if (!isCoingeckoAvailable) throw new Error('Unable to fetch token price. Please try again later.')
         const {latestAnswer, decimals} = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
-        const data = await this.getPriceFromCoingecko(chainId, feeToken, latestAnswer, decimals);
+        const data = await this.getPriceFromCoingecko(chainId, feeToken, latestAnswer, decimals, log);
 
         ethPrice = data.ethPrice;
       } else if (oracleName === "orochi") {
@@ -1104,7 +1105,7 @@ export class Paymaster {
     }
   }
 
-  async getPriceFromCoingecko(chainId: number, tokenAddress: string, ETHUSDPrice: any, ETHUSDPriceDecimal: any): Promise<any> {
+  async getPriceFromCoingecko(chainId: number, tokenAddress: string, ETHUSDPrice: any, ETHUSDPriceDecimal: any, log?: FastifyBaseLogger): Promise<any> {
     const cacheKey = `${chainId}-${tokenAddress}`;
     const cache = this.coingeckoPrice.get(cacheKey);
 
@@ -1124,12 +1125,14 @@ export class Paymaster {
     const records = await coingeckoRepo.findAll();
     const tokenIds = records.map((record: { coinId: any; }) => record.coinId);
 
-    const data = await this.coingeckoService.fetchPriceByCoinID(tokenIds);
+    const data = await this.coingeckoService.fetchPriceByCoinID(tokenIds, log);
     const tokenPrices: any = [];
     records.map(record => {
       tokenPrices[ethers.utils.getAddress(record.address)] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, gasToken: tokenAddress, symbol: record.token }
     })
-    const tokenData = tokenPrices[tokenAddress];
+    let tokenData = tokenPrices[tokenAddress];
+    if (!tokenData) tokenData = this.coingeckoPrice.get(cacheKey)?.data;
+    if (!tokenData) throw new Error(ErrorMessage.COINGECKO_PRICE_NOT_FETCHED);
     ethPrice = ethers.utils.parseUnits((Number(nativePrice)/tokenData.price).toFixed(tokenData.decimals), tokenData.decimals)
     this.setPricesFromCoingecko(tokenPrices);
 
