@@ -1132,7 +1132,10 @@ export class Paymaster {
     })
     let tokenData = tokenPrices[tokenAddress];
     if (!tokenData) tokenData = this.coingeckoPrice.get(cacheKey)?.data;
-    if (!tokenData) throw new Error(ErrorMessage.COINGECKO_PRICE_NOT_FETCHED);
+    if (!tokenData) {
+      log?.error('CoingeckoError', 'Price fetch error on tokenAddress: ' + tokenAddress)
+      throw new Error(ErrorMessage.COINGECKO_PRICE_NOT_FETCHED);
+    }
     ethPrice = ethers.utils.parseUnits((Number(nativePrice)/tokenData.price).toFixed(tokenData.decimals), tokenData.decimals)
     this.setPricesFromCoingecko(tokenPrices);
 
