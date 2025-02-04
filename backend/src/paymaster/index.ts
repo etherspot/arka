@@ -282,7 +282,7 @@ export class Paymaster {
   }
 
   private async getTokenDecimals(token: string, chainId: number, provider: providers.JsonRpcProvider) {
-    if(TokenDecimalsAndSymbol[chainId]?.[token]) {
+    if (TokenDecimalsAndSymbol[chainId]?.[token]) {
       return TokenDecimalsAndSymbol[chainId][token]?.decimals;
     }
     const tokenContract = new ethers.Contract(token, ERC20Abi, provider);
@@ -290,7 +290,7 @@ export class Paymaster {
   }
 
   private async getTokenSymbol(token: string, chainId: number, provider: providers.JsonRpcProvider) {
-    if(TokenDecimalsAndSymbol[chainId]?.[token]) {
+    if (TokenDecimalsAndSymbol[chainId]?.[token]) {
       return TokenDecimalsAndSymbol[chainId][token]?.symbol;
     }
     const tokenContract = new Contract(token, ERC20Abi, provider);
@@ -313,8 +313,8 @@ export class Paymaster {
   ) {
     const cacheKey = `${chainId}-${nativeOracleAddress}`;
     const cache = this.nativeCurrencyPrice.get(cacheKey);
-    
-    if(useCache && cache && cache.expiry > Date.now()) {
+
+    if (useCache && cache && cache.expiry > Date.now()) {
       return {
         latestAnswer: cache.data,
         decimals: NativeOracleDecimals
@@ -322,7 +322,7 @@ export class Paymaster {
     }
     const nativeOracleContract = new ethers.Contract(nativeOracleAddress, ChainlinkOracleAbi, provider);
     return nativeOracleContract.latestAnswer().then((data: any) => {
-      this.nativeCurrencyPrice.set(cacheKey, {data, expiry: Date.now() + nativePriceCacheTtl});
+      this.nativeCurrencyPrice.set(cacheKey, { data, expiry: Date.now() + nativePriceCacheTtl });
       return {
         latestAnswer: data,
         decimals: NativeOracleDecimals
@@ -342,7 +342,7 @@ export class Paymaster {
       this.getEstimateUserOperationGas(provider, userOp, entryPoint),
     ];
 
-    if(chainLink) {
+    if (chainLink) {
       promises.push(this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId));
     }
 
@@ -351,9 +351,9 @@ export class Paymaster {
         throw new Error('Failed to estimate gas for user operation ' + data[0].reason);
       }
 
-      if(chainLink) {
+      if (chainLink) {
         if (data[1].status !== 'fulfilled') {
-          throw new Error('Failed to get latest round data for oracle '+ data[1].reason);
+          throw new Error('Failed to get latest round data for oracle ' + data[1].reason);
         }
         return {
           response: data[0].value,
@@ -379,7 +379,7 @@ export class Paymaster {
   ) {
     const cacheKey = `${chainId}-${oracleAddress}-${gasToken}`;
     const cache = this.priceAndMetadata.get(cacheKey);
-    if(useCache && cache && cache.expiry > Date.now()) {
+    if (useCache && cache && cache.expiry > Date.now()) {
       return cache.data;
     }
 
@@ -389,17 +389,17 @@ export class Paymaster {
       this.getTokenSymbol(gasToken, chainId, provider),
       oracleContract.getLatestData(1, ethers.utils.hexlify(ethers.utils.toUtf8Bytes('ETH')).padEnd(42, '0'))
     ];
-    
+
     return await Promise.allSettled(promises).then((data) => {
       let ethPrice = "";
-      if(data[0].status !== 'fulfilled') {
-        throw new Error('Failed to get decimals for token '+ data[0].reason);
+      if (data[0].status !== 'fulfilled') {
+        throw new Error('Failed to get decimals for token ' + data[0].reason);
       }
-      if(data[1].status !== 'fulfilled') {
-        throw new Error('Failed to get symbol for token '+ data[1].reason);
+      if (data[1].status !== 'fulfilled') {
+        throw new Error('Failed to get symbol for token ' + data[1].reason);
       }
-      if(data[2].status !== 'fulfilled') {
-        throw new Error('Failed to get latest data for oracle '+ data[2].reason);
+      if (data[2].status !== 'fulfilled') {
+        throw new Error('Failed to get latest data for oracle ' + data[2].reason);
       }
       const decimals = Number(data[0].value);
       const symbol = data[1].value;
@@ -414,7 +414,7 @@ export class Paymaster {
         ethPrice,
         gasToken
       }
-      this.priceAndMetadata.set(cacheKey, {data: priceAndMetadata, expiry: Date.now() + ttl});
+      this.priceAndMetadata.set(cacheKey, { data: priceAndMetadata, expiry: Date.now() + ttl });
       return priceAndMetadata;
     });
   }
@@ -430,7 +430,7 @@ export class Paymaster {
   ) {
     const cacheKey = `${chainId}-${oracleAddress}-${gasToken}`;
     const cache = this.priceAndMetadata.get(cacheKey);
-    if(useCache && cache && cache.expiry > Date.now()) {
+    if (useCache && cache && cache.expiry > Date.now()) {
       return cache.data;
     }
 
@@ -444,17 +444,17 @@ export class Paymaster {
     ];
 
     return Promise.allSettled(promises).then((data) => {
-      if(data[0].status !== 'fulfilled') {
-        throw new Error('Failed to get decimals for token '+ data[0].reason);
+      if (data[0].status !== 'fulfilled') {
+        throw new Error('Failed to get decimals for token ' + data[0].reason);
       }
-      if(data[1].status !== 'fulfilled') {
-        throw new Error('Failed to get symbol for token '+ data[1].reason);
+      if (data[1].status !== 'fulfilled') {
+        throw new Error('Failed to get symbol for token ' + data[1].reason);
       }
-      if(data[2].status !== 'fulfilled') {
-        throw new Error('Failed to get decimals for chainlink '+ data[2].reason);
+      if (data[2].status !== 'fulfilled') {
+        throw new Error('Failed to get decimals for chainlink ' + data[2].reason);
       }
-      if(data[3].status !== 'fulfilled') {
-        throw new Error('Failed to get latest price '+ data[3].reason);
+      if (data[3].status !== 'fulfilled') {
+        throw new Error('Failed to get latest price ' + data[3].reason);
       }
 
       const decimals = Number(data[0].value);
@@ -465,7 +465,7 @@ export class Paymaster {
       ethPrice = ethers.utils.formatUnits(ethPrice, ethPriceDecimal);
       ethUsdPrice = ethers.utils.parseEther(ethUsdPrice);
       ethPrice = ethers.utils.parseEther(ethPrice);
-      ethPrice = ethers.utils.parseUnits((ethUsdPrice/ethPrice).toFixed(decimals), decimals).toString();
+      ethPrice = ethers.utils.parseUnits((ethUsdPrice / ethPrice).toFixed(decimals), decimals).toString();
 
       const priceAndMetadata: TokenPriceAndMetadata = {
         decimals,
@@ -473,7 +473,7 @@ export class Paymaster {
         ethPrice,
         gasToken
       }
-      this.priceAndMetadata.set(cacheKey, {data: priceAndMetadata, expiry: Date.now() + ttl});
+      this.priceAndMetadata.set(cacheKey, { data: priceAndMetadata, expiry: Date.now() + ttl });
       return priceAndMetadata;
     });
   }
@@ -487,7 +487,7 @@ export class Paymaster {
   ) {
     const cacheKey = `${chainId}-${oracleAddress}-${gasToken}`;
     const cache = this.priceAndMetadata.get(cacheKey);
-    if(useCache && cache && cache.expiry > Date.now()) {
+    if (useCache && cache && cache.expiry > Date.now()) {
       return cache.data;
     }
     const ecContract = new ethers.Contract(oracleAddress, EtherspotChainlinkOracleAbi, provider);
@@ -499,14 +499,14 @@ export class Paymaster {
     ];
 
     return await Promise.allSettled(promises).then((data) => {
-      if(data[0].status !== 'fulfilled') {
-        throw new Error('Failed to get decimals for token '+ data[0].reason);
+      if (data[0].status !== 'fulfilled') {
+        throw new Error('Failed to get decimals for token ' + data[0].reason);
       }
-      if(data[1].status !== 'fulfilled') {
-        throw new Error('Failed to get symbol for token '+ data[1].reason);
+      if (data[1].status !== 'fulfilled') {
+        throw new Error('Failed to get symbol for token ' + data[1].reason);
       }
-      if(data[2].status !== 'fulfilled') {
-        throw new Error('Failed to get cached price from Etherspot Chainlink '+ data[2].reason);
+      if (data[2].status !== 'fulfilled') {
+        throw new Error('Failed to get cached price from Etherspot Chainlink ' + data[2].reason);
       }
 
       const priceAndMetadata: TokenPriceAndMetadata = {
@@ -515,7 +515,7 @@ export class Paymaster {
         ethPrice: data[2].value,
         gasToken
       }
-      this.priceAndMetadata.set(cacheKey, {data: priceAndMetadata, expiry: Date.now() + ttl});
+      this.priceAndMetadata.set(cacheKey, { data: priceAndMetadata, expiry: Date.now() + ttl });
       return priceAndMetadata;
     });
   }
@@ -526,7 +526,7 @@ export class Paymaster {
     chainId: number,
     multiTokenPaymasters: any,
     tokens_list: string[],
-    oracles: any, 
+    oracles: any,
     bundlerRpc: string,
     oracleName: string,
     nativeOracleAddress: string,
@@ -582,7 +582,7 @@ export class Paymaster {
       result.postOpGas = unaccountedCost;
 
       const promises = [];
-      for(let i=0;i<tokens_list.length;i++) {
+      for (let i = 0; i < tokens_list.length; i++) {
         const gasToken = ethers.utils.getAddress(tokens_list[i]);
         const isCoingeckoAvailable = this.coingeckoPrice.get(`${chainId}-${gasToken}`);
         if (
@@ -597,7 +597,7 @@ export class Paymaster {
             promises.push(this.getPriceFromCoingecko(chainId, gasToken, ETHUSDPrice, ETHUSDPriceDecimal, log))
           } else if (oracleName === "orochi") {
             promises.push(this.getPriceFromOrochi(oracleAddress, provider, gasToken, chainId));
-          } else if(oracleName === "chainlink") {
+          } else if (oracleName === "chainlink") {
             promises.push(this.getPriceFromChainlink(oracleAddress, provider, gasToken, ETHUSDPrice, ETHUSDPriceDecimal, chainId));
           } else {
             promises.push(this.getPriceFromEtherspotChainlink(oracleAddress, provider, gasToken, chainId));
@@ -606,13 +606,13 @@ export class Paymaster {
       }
 
       await Promise.allSettled(promises).then((data: any) => {
-        for(let i=0;i<data.length;i++) {
-          if(data[i].status !== 'fulfilled'){
-            throw new Error('Failed to fetch price and metadata ' + data[i].reason);
+        for (let i = 0; i < data.length; i++) {
+          if (data[i].status !== 'fulfilled') {
+            throw new Error('Failed to fetch price and metadata' + data[i].reason);
           }
 
-          const {decimals, symbol, ethPrice, gasToken} = data[i].value;
-          
+          const { decimals, symbol, ethPrice, gasToken } = data[i].value;
+
           if (result.etherUSDExchangeRate === "0x")
             result.etherUSDExchangeRate = BigNumber.from(ethPrice).toHexString();
 
@@ -621,7 +621,7 @@ export class Paymaster {
             symbol: symbol,
             decimals: decimals,
             etherTokenExchangeRate: BigNumber.from(ethPrice).toHexString(),
-            serviceFeePercent: (this.multiTokenMarkUp/10000 - 100)
+            serviceFeePercent: (this.multiTokenMarkUp / 10000 - 100)
           })
         }
       })
@@ -648,7 +648,7 @@ export class Paymaster {
 
       if (!oracleAggregator) {
         if (!isCoingeckoAvailable) throw new Error('Unable to fetch token price. Please try again later.')
-        const {latestAnswer, decimals} = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
+        const { latestAnswer, decimals } = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
         const data = await this.getPriceFromCoingecko(chainId, feeToken, latestAnswer, decimals, log);
 
         ethPrice = data.ethPrice;
@@ -656,7 +656,7 @@ export class Paymaster {
         const data = await this.getPriceFromOrochi(oracleAggregator, provider, feeToken, chainId);
         ethPrice = data.ethPrice;
       } else if (oracleName === "chainlink") {
-        const {latestAnswer, decimals} = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
+        const { latestAnswer, decimals } = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
 
         const data = await this.getPriceFromChainlink(
           oracleAggregator,
@@ -1004,7 +1004,7 @@ export class Paymaster {
       throw new Error(ErrorMessage.ERROR_ON_SUBMITTING_TXN);
     }
   }
- 
+
   async deployVp(
     privateKey: string,
     bundlerRpcUrl: string,
@@ -1016,9 +1016,9 @@ export class Paymaster {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpcUrl);
       const signer = new Wallet(privateKey, provider);
-      
+
       let contract;
-      if(isEp06) {
+      if (isEp06) {
         contract = new ethers.ContractFactory(verifyingPaymasterAbi, verifyingPaymasterByteCode, signer);
       } else {
         contract = new ethers.ContractFactory(verifyingPaymasterV2Abi, verifyingPaymasterV2ByteCode, signer);
@@ -1037,7 +1037,7 @@ export class Paymaster {
 
       let tx;
       if (!feeData.maxFeePerGas) {
-        tx = await contract.deploy(epAddr, signer.address, {gasPrice: feeData.gasPrice});
+        tx = await contract.deploy(epAddr, signer.address, { gasPrice: feeData.gasPrice });
       } else {
         tx = await contract.deploy(
           epAddr,
@@ -1084,7 +1084,7 @@ export class Paymaster {
 
       let tx;
       if (!feeData.maxFeePerGas) {
-        tx = await contract.addStake("10", {value: ethers.utils.parseEther(amount), gasPrice: feeData.gasPrice});
+        tx = await contract.addStake("10", { value: ethers.utils.parseEther(amount), gasPrice: feeData.gasPrice });
       } else {
         tx = await contract.addStake(
           "10",
@@ -1112,44 +1112,59 @@ export class Paymaster {
     const nativePrice = ethers.utils.formatUnits(ETHUSDPrice, ETHUSDPriceDecimal);
     let ethPrice;
 
-    if(cache && cache.expiry > Date.now()) {
+    if (cache && cache.expiry > Date.now()) {
       const data = cache.data;
-      ethPrice = ethers.utils.parseUnits((Number(nativePrice)/data.price).toFixed(data.decimals), data.decimals)
+      ethPrice = ethers.utils.parseUnits((Number(nativePrice) / data.price).toFixed(data.decimals), data.decimals)
       return {
         ethPrice,
         ...data
       }
     }
+    try {
+      const coingeckoRepo = new CoingeckoTokensRepository(this.sequelize);
+      const records = await coingeckoRepo.findAll();
+      const tokenIds = records.map((record: { coinId: any; }) => record.coinId);
 
-    const coingeckoRepo = new CoingeckoTokensRepository(this.sequelize);
-    const records = await coingeckoRepo.findAll();
-    const tokenIds = records.map((record: { coinId: any; }) => record.coinId);
-
-    const data = await this.coingeckoService.fetchPriceByCoinID(tokenIds, log);
-    const tokenPrices: any = [];
-    records.map(record => {
-      tokenPrices[ethers.utils.getAddress(record.address)] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, gasToken: tokenAddress, symbol: record.token }
-    })
-    let tokenData = tokenPrices[tokenAddress];
-    if (!tokenData) tokenData = this.coingeckoPrice.get(cacheKey)?.data;
-    if (!tokenData) {
-      log?.error('CoingeckoError', 'Price fetch error on tokenAddress: ' + tokenAddress)
-      throw new Error(ErrorMessage.COINGECKO_PRICE_NOT_FETCHED);
-    }
-    ethPrice = ethers.utils.parseUnits((Number(nativePrice)/tokenData.price).toFixed(tokenData.decimals), tokenData.decimals)
-    this.setPricesFromCoingecko(tokenPrices);
-
-    return {
-      ethPrice,
-      ...tokenData
+      const data = await this.coingeckoService.fetchPriceByCoinID(tokenIds, log);
+      const tokenPrices: any = [];
+      if (Object.keys(data).length > 0) {
+        records.map(record => {
+          const address = ethers.utils.getAddress(record.address);
+          if (data[record.coinId])
+            tokenPrices[address] = { price: Number(data[record.coinId].usd).toFixed(5), decimals: record.decimals, chainId: record.chainId, gasToken: address, symbol: record.token }
+        })
+      }
+      let tokenData = tokenPrices[tokenAddress];
+      if (!tokenData) {
+        log?.error('Reverting to previously cached price ', 'CoingeckoError')
+        tokenData = this.coingeckoPrice.get(cacheKey)?.data;
+      }
+      if (!tokenData) {
+        log?.error('Price fetch error on tokenAddress: ' + tokenAddress, 'CoingeckoError')
+        throw new Error(ErrorMessage.COINGECKO_PRICE_NOT_FETCHED);
+      }
+      ethPrice = ethers.utils.parseUnits((Number(nativePrice) / tokenData.price).toFixed(tokenData.decimals), tokenData.decimals)
+      this.setPricesFromCoingecko(tokenPrices);
+      return {
+        ethPrice,
+        ...tokenData
+      }
+    } catch (err) {
+      log?.error(err + ' Reverting to previously cached price' + tokenAddress, 'CoingeckoError')
+      const tokenData = this.coingeckoPrice.get(cacheKey)?.data;
+      if (!tokenData) {
+        log?.error('Price fetch error on tokenAddress: ' + tokenAddress, 'CoingeckoError')
+        throw new Error(tokenAddress + ' ' +ErrorMessage.COINGECKO_PRICE_NOT_FETCHED);
+      }
     }
   }
 
   async setPricesFromCoingecko(coingeckoPrices: any[]) {
-    for(const tokenAddress in coingeckoPrices) {
+    for (const tokenAddress in coingeckoPrices) {
       const chainId = coingeckoPrices[tokenAddress].chainId;
       const cacheKey = `${chainId}-${ethers.utils.getAddress(tokenAddress)}`;
-      this.coingeckoPrice.set(cacheKey, {data: coingeckoPrices[tokenAddress], expiry: Date.now() + ttl});
+      if (tokenAddress !== "0xC168E40227E4ebD8C1caE80F7a55a4F0e6D66C97")
+      this.coingeckoPrice.set(cacheKey, { data: coingeckoPrices[tokenAddress], expiry: Date.now() + ttl });
     }
   }
 }
