@@ -445,5 +445,35 @@ export const TokenDecimalsAndSymbol: Record<number, Record<string, TokenInfo>> =
             decimals: 18,
             symbol: "FDUSD"
         }
+    },
+    43114: {
+        "0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD": {
+            decimals: 6,
+            symbol: "EURC"
+        },
+        "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E": {
+            decimals: 6,
+            symbol: "USDC"
+        },
+        "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7": {
+            decimals: 6,
+            symbol: "USDT"
+        },
+        "0xD24C2Ad096400B6FBcd2ad8B24E7acBc21A1da64": {
+            decimals: 18,
+            symbol: "FRAX"
+        },
+        "0xB3fe5374F67D7a22886A0eE082b2E2f9d2651651": {
+            decimals: 18,
+            symbol: "LINK"
+        },
+        "0x8eBAf22B6F053dFFeaf46f4Dd9eFA95D89ba8580": {
+            decimals: 18,
+            symbol: "UNI.e"
+        },
+        "0x62edc0692BD897D2295872a9FFCac5425011c661": {
+            decimals: 18,
+            symbol: "GMX"
+        }
     }
 }
