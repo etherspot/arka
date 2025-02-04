@@ -182,7 +182,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
           if (!networkConfig.MultiTokenPaymasterOracleUsed ||
             !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" || networkConfig.MultiTokenPaymasterOracleUsed == "etherspotChainlink"))
             throw new Error("Oracle is not Defined/Invalid");
-          if (!multiTokenPaymasters[chainId]) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK })
+          if (!multiTokenPaymasters[chainId]) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MULTI_NOT_DEPLOYED + chainId })
           if (networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" && !NativeOracles[chainId])
             throw new Error("Native Oracle address not set for this chainId")
           result = await paymaster.getQuotesMultiToken(userOp, entryPoint, chainId, multiTokenPaymasters, tokens_list, multiTokenOracles, bundlerUrl, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], server.log);
@@ -410,6 +410,28 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
       }
     }
   );
+
+  server.get('/cacheData', async function (request, reply) {
+    try {
+      const coingeckoKeys = paymaster.coingeckoPrice.keys();
+      const nativeOracleKeys = paymaster.nativeCurrencyPrice.keys();
+      const tokenOracleKeys = paymaster.priceAndMetadata.keys();
+      const coingeckoCache: any[] = [], nativeTokenCache: any[] = [], tokenCache: any[] = [];
+      for (const key of coingeckoKeys) {
+        coingeckoCache.push(paymaster.coingeckoPrice.get(key))
+      }
+      for (const key of nativeOracleKeys) {
+        nativeTokenCache.push(paymaster.nativeCurrencyPrice.get(key))
+      }
+      for (const key of tokenOracleKeys) {
+        tokenCache.push(paymaster.priceAndMetadata.get(key))
+      }
+      return reply.code(ReturnCode.SUCCESS).send({coingeckoCache, nativeTokenCache, tokenCache})
+    } catch (err) {
+      request.log.error(err);
+      return reply.code(ReturnCode.FAILURE).send({error: err})
+    }
+  })
 
   async function getIndexerData(sponsor: string, sender: string, month: number, year: number, noOfTxns: number, endpoint: string): Promise<any[]> {
     try {

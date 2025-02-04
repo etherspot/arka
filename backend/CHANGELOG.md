@@ -1,4 +1,8 @@
 # Changelog
+## [3.0.1] - 2025-02-04
+### Fixes
+- Changed error message to more meaningful reply
+- Added API to reflect whats been cached on runtime
 
 ## [3.0.0] - 2025-01-09
 ### Breaking Changes
