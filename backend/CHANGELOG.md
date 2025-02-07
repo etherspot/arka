@@ -3,6 +3,11 @@
 ### New
 - Added a separate mode for all the common erc20 paymasters in mind that in future will replace the current erc20 mode
 
+## [3.0.1] - 2025-02-04
+### Fixes
+- Changed error message to more meaningful reply
+- Added API to reflect whats been cached on runtime
+
 ## [3.0.0] - 2025-01-09
 ### Breaking Changes
 - changed `pimlicoAddress` endpoint name to `tokenPaymasterAddress` the functionality remains the same

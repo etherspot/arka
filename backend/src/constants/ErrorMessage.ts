@@ -53,7 +53,9 @@ export default {
     FAILED_TO_DEPLOY_VP: 'Failed to deploy verifying paymaster',
     FAILED_TO_ADD_STAKE: 'Failed to add stake',
     INVALID_AMOUNT_TO_STAKE: 'Invalid amount to stake',
-    NO_KEY_SET: 'No MTP key set'
+    NO_KEY_SET: 'No MTP key set',
+    MULTI_NOT_DEPLOYED: 'Token Paymaster not deployed on the current chainID: ',
+    COINGECKO_PRICE_NOT_FETCHED: 'Token price not updated, Pls retry.'
 }
 
 export function generateErrorMessage(template: string, values: { [key: string]: string | number }): string {
