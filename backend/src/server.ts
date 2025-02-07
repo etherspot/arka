@@ -308,9 +308,8 @@ const initializeServer = async (): Promise<void> => {
               }
 
               // Checking of Deposit on common multi token paymaster if any
-              const result = await server.sequelize.query(`SELECT DISTINCT "PAYMASTER_ADDRESS" as "paymasterAddress" FROM "${process.env.DATABASE_SCHEMA_NAME}".multi_token_paymaster`)
-              const rec = result[0] as MultiTokenPaymaster[];
-              rec.forEach((record: MultiTokenPaymaster) => {
+              const result = await server.multiTokenPaymasterRepository.getAllDistinctPaymasterAddrWithChainId();
+              result.forEach((record: MultiTokenPaymaster) => {
                 const networkConfig = getNetworkConfig(record.chainId, '', server.config.EPV_06);
                 if (networkConfig)
                   checkDeposit(ethers.utils.getAddress(record.paymasterAddress), networkConfig.bundler, process.env.WEBHOOK_URL ?? '', networkConfig.thresholdValue ?? '0.001', record.chainId, server.log);
