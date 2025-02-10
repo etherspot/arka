@@ -36,16 +36,18 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const body: any = request.body;
         const query: any = request.query;
         let address, policyId, api_key, chainId;
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
         const useVp = query['useVp'] ?? false;
         if(!useVp) {
-          address = body.params[0];
-          chainId = query['chainId'] ?? body.params[1];
-          api_key = query['apiKey'] ?? body.params[2];
+          address = body.params?.[0];
+          chainId = query['chainId'] ?? body.params?.[1];
+          api_key = query['apiKey'] ?? body.params?.[2];
         } else {
-          address = body.params[0];
-          policyId = body.params[1];
-          api_key = query['apiKey'] ?? body.params[2];
+          address = body.params?.[0];
+          policyId = body.params?.[1];
+          api_key = query['apiKey'] ?? body.params?.[2];
         }
+        if (!address || !ethers.utils.isAddress(address)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA })
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
@@ -141,16 +143,18 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const query: any = request.query;
         let address, policyId, api_key, chainId;
         const useVp = query['useVp'] ?? false;
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
         if(!useVp) {
-          address = body.params[0];
-          chainId = query['chainId'] ?? body.params[1];
-          api_key = query['apiKey'] ?? body.params[2];
+          address = body.params?.[0];
+          chainId = query['chainId'] ?? body.params?.[1];
+          api_key = query['apiKey'] ?? body.params?.[2];
         } else {
-          address = body.params[0];
-          policyId = body.params[1];
-          chainId = query['chainId'] ?? body.params[2];
-          api_key = query['apiKey'] ?? body.params[3];
+          address = body.params?.[0];
+          policyId = body.params?.[1];
+          chainId = query['chainId'] ?? body.params?.[2];
+          api_key = query['apiKey'] ?? body.params?.[3];
         }
+        if (!address || !ethers.utils.isAddress(address)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
@@ -250,18 +254,20 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         printRequest("/checkWhitelist", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
         let accountAddress, policyId, api_key, chainId;
         const useVp = query['useVp'] ?? false;
         if(!useVp) {
-          accountAddress = body.params[0];
-          chainId = query['chainId'] ?? body.params[1];
-          api_key = query['apiKey'] ?? body.params[2];
+          accountAddress = body.params?.[0];
+          chainId = query['chainId'] ?? body.params?.[1];
+          api_key = query['apiKey'] ?? body.params?.[2];
         } else {
-          accountAddress = body.params[0];
-          policyId = body.params[1];
-          chainId = query['chainId'] ?? body.params[2];
-          api_key = query['apiKey'] ?? body.params[3];
+          accountAddress = body.params?.[0];
+          policyId = body.params?.[1];
+          chainId = query['chainId'] ?? body.params?.[2];
+          api_key = query['apiKey'] ?? body.params?.[3];
         }
+        if (!accountAddress || !ethers.utils.isAddress(accountAddress)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
@@ -337,8 +343,12 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         printRequest("/whitelist/v2", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
-        const address = body.params[0];
-        const policyId = body.params[1];
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        const address = body.params?.[0];
+        const policyId = body.params?.[1];
+        if (!address || !ethers.utils.isAddress(address)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         const api_key = query['apiKey'] ?? body.params[2];
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -413,10 +423,14 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         printRequest("/removeWhitelist/v2", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
-        const address = body.params[0];
-        const policyId = body.params[1];
-        const chainId = query['chainId'] ?? body.params[2];
-        const api_key = query['apiKey'] ?? body.params[3];
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        const address = body.params?.[0];
+        const policyId = body.params?.[1];
+        const chainId = query['chainId'] ?? body.params?.[2];
+        const api_key = query['apiKey'] ?? body.params?.[3];
+        if (!address || !ethers.utils.isAddress(address)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
@@ -489,10 +503,14 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         printRequest("/checkWhitelist/v2", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
-        const accountAddress = body.params[0];
-        const policyId = body.params[1];
-        const chainId = query['chainId'] ?? body.params[2];
-        const api_key = query['apiKey'] ?? body.params[3];
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        const accountAddress = body.params?.[0];
+        const policyId = body.params?.[1];
+        const chainId = query['chainId'] ?? body.params?.[2];
+        const api_key = query['apiKey'] ?? body.params?.[3];
+        if (!accountAddress || !ethers.utils.isAddress(accountAddress)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
@@ -550,9 +568,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         printRequest("/getAllWhitelist/v2", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
-        const policyId = body.params[0];
-        const chainId = query['chainId'] ?? body.params[1];
-        const api_key = query['apiKey'] ?? body.params[2];
+        const policyId = body?.params?.[0];
+        const chainId = query['chainId'] ?? body?.params?.[1];
+        const api_key = query['apiKey'] ?? body?.params?.[2];
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
