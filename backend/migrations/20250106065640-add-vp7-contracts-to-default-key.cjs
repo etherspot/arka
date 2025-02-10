@@ -25,7 +25,7 @@ async function up({ context: queryInterface }) {
 
 async function down({ context: queryInterface }) {
     await queryInterface.sequelize.query(
-        `UPDATE ${process.env.DATABASE_SCHEMA_NAME}."api_keys" SET "VERIFYING_PAYMASTERS_V2"=${null} WHERE "API_KEYS"='arka_public_key'`
+        `UPDATE ${process.env.DATABASE_SCHEMA_NAME}."api_keys" SET "VERIFYING_PAYMASTERS_V2"=${null} WHERE "API_KEY"='arka_public_key'`
     );
 }
 
