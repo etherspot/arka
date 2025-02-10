@@ -1,4 +1,8 @@
 # Changelog
+## [3.0.2] - 2025-02-10
+### Fixes
+- Checked for undefined values on body params
+
 ## [3.0.1] - 2025-02-04
 ### Fixes
 - Changed error message to more meaningful reply
