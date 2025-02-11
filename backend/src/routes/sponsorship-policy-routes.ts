@@ -240,7 +240,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
     try {
       // parse the request body as JSON
       const sponsorshipPolicyDto: SponsorshipPolicyDto = JSON.parse(JSON.stringify(request.body)) as SponsorshipPolicyDto;
-      if (!sponsorshipPolicyDto) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!sponsorshipPolicyDto) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
 
       // id is to be null 
       if (sponsorshipPolicyDto.id || sponsorshipPolicyDto.id as number > 0 ||
