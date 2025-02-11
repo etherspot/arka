@@ -39,7 +39,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         printRequest("/", request, server.log);
         const query: any = request.query;
         const body: any = request.body;
-        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const userOp = body.params[0];
         const entryPoint = body.params[1];
         let context = body.params[2];

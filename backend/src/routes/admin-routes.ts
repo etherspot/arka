@@ -42,7 +42,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.NOT_AUTHORIZED });
       }
       const body: any = JSON.parse(request.body as string);
-      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
       if (!body.walletAddress) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       if (ethers.utils.getAddress(body.walletAddress) === ethers.utils.getAddress(server.config.ADMIN_WALLET_ADDRESS)) return reply.code(ReturnCode.SUCCESS).send({ error: null, message: "Successfully Logged in" });
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
@@ -75,7 +75,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.NOT_AUTHORIZED });
       }
       const body: ArkaConfigUpdateData = JSON.parse(request.body as string);
-      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
       if (Object.values(body).every(value => value)) {
         try {
           const result = await server.arkaConfigRepository.updateConfig(body);
@@ -102,7 +102,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/saveKey', async function (request, reply) {
     try {
       const body = JSON.parse(request.body as string) as ApiKeyDto;
-      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
       if (!body.apiKey)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
 
@@ -196,7 +196,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.NOT_AUTHORIZED });
       }
       const body = JSON.parse(request.body as string) as ApiKeyDto;
-      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
       if (!body.apiKey)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.apiKey))
@@ -244,7 +244,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
     try {
       const body: any = JSON.parse(request.body as string);
       if (!body)
-        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
       if (!body.apiKey)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*-_&])[A-Za-z\d@$!%*-_&]{8,}$/.test(body.apiKey))
@@ -347,7 +347,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
   server.post('/getSupportedNetworks', async (request, reply) => {
     try {
       const body: any = JSON.parse(request.body as string);
-      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
       if (!body.walletAddress) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       }
@@ -372,7 +372,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.post('/deployVerifyingPaymaster', async (request, reply) => {
     try {
-      if (!request.body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!request.body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
 
       const body: any = request.body;
       const query: any = request.query;
@@ -471,7 +471,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   server.post('/addStake', async (request, reply) => {
     try {
-      if (!request.body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+      if (!request.body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
 
       const body: any = request.body;
       const query: any = request.query;

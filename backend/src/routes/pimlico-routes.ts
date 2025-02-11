@@ -42,7 +42,7 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                 printRequest("/tokenPaymasterAddress", request, server.log);
                 const query: any = request.query;
                 const body: any = request.body;
-                if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+                if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
                 const entryPoint = body.params?.[0];
                 const context = body.params?.[1];
                 const gasToken = context ? context.token : null;

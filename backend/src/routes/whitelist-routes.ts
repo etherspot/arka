@@ -36,7 +36,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const body: any = request.body;
         const query: any = request.query;
         let address, policyId, api_key, chainId;
-        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const useVp = query['useVp'] ?? false;
         if(!useVp) {
           address = body.params?.[0];
@@ -143,7 +143,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const query: any = request.query;
         let address, policyId, api_key, chainId;
         const useVp = query['useVp'] ?? false;
-        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         if(!useVp) {
           address = body.params?.[0];
           chainId = query['chainId'] ?? body.params?.[1];
@@ -254,7 +254,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         printRequest("/checkWhitelist", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
-        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         let accountAddress, policyId, api_key, chainId;
         const useVp = query['useVp'] ?? false;
         if(!useVp) {
@@ -343,7 +343,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         printRequest("/whitelist/v2", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
-        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const address = body.params?.[0];
         const policyId = body.params?.[1];
         if (!address || !ethers.utils.isAddress(address)) {
@@ -423,7 +423,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         printRequest("/removeWhitelist/v2", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
-        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const address = body.params?.[0];
         const policyId = body.params?.[1];
         const chainId = query['chainId'] ?? body.params?.[2];
@@ -503,7 +503,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         printRequest("/checkWhitelist/v2", request, server.log);
         const body: any = request.body;
         const query: any = request.query;
-        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const accountAddress = body.params?.[0];
         const policyId = body.params?.[1];
         const chainId = query['chainId'] ?? body.params?.[2];
