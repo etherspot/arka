@@ -38,6 +38,38 @@ export function getChainIdsFromSupportedNetworks(supportedNetworksForDecode: str
   return decodedSupportedNetworks.map((chain: any) => chain.chainId);
 }
 
+export async function getGasFee(chainId: number, rpcUrl: string, log?: FastifyBaseLogger): Promise<getEtherscanFeeResponse | null> {
+  if(process.env.USE_SKANDHA_FOR_GAS_DATA !== 'false') {
+    return getSkandhaGasFee(rpcUrl, log);
+  }
+  return getEtherscanFee(chainId, log);
+}
+
+export async function getSkandhaGasFee(rpcUrl: string, log?: FastifyBaseLogger): Promise<getEtherscanFeeResponse | null> {
+  try {
+    const body = JSON.stringify({
+      method: "skandha_getGasPrice"
+    });
+    const options = {
+      method: "POST",
+      body,
+    }
+    const feeData = await fetch(rpcUrl, options);
+    const data = (await feeData.json()).result;
+    if(data?.maxFeePerGas && data?.maxPriorityFeePerGas) {
+      return {
+        maxFeePerGas: BigNumber.from(data.maxPriorityFeePerGas),
+        maxPriorityFeePerGas: BigNumber.from(data.maxPriorityFeePerGas),
+        gasPrice: BigNumber.from(data.maxFeePerGas)
+      }
+    }
+    return null;
+  } catch (error) {
+    log?.error(`Error occurred while fetching gas fee from Skandha: ${error}`);
+    return null;
+  }
+}
+
 export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger): Promise<getEtherscanFeeResponse | null> {
   try {
     const etherscanUrlsBase64 = process.env.ETHERSCAN_GAS_ORACLES;
