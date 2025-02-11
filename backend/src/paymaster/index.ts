@@ -7,7 +7,7 @@ import EtherspotAbiV07 from "../abi/EtherspotVerifyingSignerAbi.js";
 import { PimlicoPaymaster } from './pimlico.js';
 import ErrorMessage from '../constants/ErrorMessage.js';
 import { PAYMASTER_ADDRESS } from '../constants/Pimlico.js';
-import { getEtherscanFee } from '../utils/common.js';
+import { getGasFee } from '../utils/common.js';
 import MultiTokenPaymasterAbi from '../abi/MultiTokenPaymasterAbi.js';
 import OrochiOracleAbi from '../abi/OrochiOracleAbi.js';
 import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
@@ -846,7 +846,7 @@ export class Paymaster {
       }
       const encodedData = paymasterContract.interface.encodeFunctionData('addBatchToWhitelist', [address]);
 
-      const etherscanFeeData = await getEtherscanFee(chainId);
+      const etherscanFeeData = await getGasFee(chainId, bundlerRpc, log);
       let feeData;
       if (etherscanFeeData) {
         feeData = etherscanFeeData;
@@ -899,7 +899,7 @@ export class Paymaster {
       }
 
       const encodedData = paymasterContract.interface.encodeFunctionData('removeBatchFromWhitelist', [address]);
-      const etherscanFeeData = await getEtherscanFee(chainId);
+      const etherscanFeeData = await getGasFee(chainId, bundlerRpc, log);
       let feeData;
       if (etherscanFeeData) {
         feeData = etherscanFeeData;
@@ -963,7 +963,7 @@ export class Paymaster {
 
       const encodedData = paymasterContract.interface.encodeFunctionData(isEpv06 ? 'depositFunds' : 'deposit', []);
 
-      const etherscanFeeData = await getEtherscanFee(chainId);
+      const etherscanFeeData = await getGasFee(chainId, bundlerRpc, log);
       let feeData;
       if (etherscanFeeData) {
         feeData = etherscanFeeData;
@@ -1024,7 +1024,7 @@ export class Paymaster {
         contract = new ethers.ContractFactory(verifyingPaymasterV2Abi, verifyingPaymasterV2ByteCode, signer);
       }
 
-      const etherscanFeeData = await getEtherscanFee(chainId);
+      const etherscanFeeData = await getGasFee(chainId, bundlerRpcUrl, log);
       let feeData;
       if (etherscanFeeData) {
         feeData = etherscanFeeData;
@@ -1071,7 +1071,7 @@ export class Paymaster {
 
       const contract = new ethers.Contract(paymasterAddress, verifyingPaymasterAbi, signer);
 
-      const etherscanFeeData = await getEtherscanFee(chainId);
+      const etherscanFeeData = await getGasFee(chainId, bundlerRpcUrl, log);
       let feeData;
       if (etherscanFeeData) {
         feeData = etherscanFeeData;

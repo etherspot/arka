@@ -36,6 +36,7 @@ const ConfigSchema = Type.Strict(
     MULTI_TOKEN_PAYMASTERS: Type.String(),
     MULTI_TOKEN_ORACLES: Type.String(),
     MTP_VGL_MARKUP: Type.String() || '30000',
+    USE_SKANDHA_FOR_GAS_DATA: Type.Boolean() || true
   })
 );
 
@@ -75,7 +76,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     DEFAULT_BUNDLER_API_KEY: process.env.DEFAULT_BUNDLER_API_KEY,
     MULTI_TOKEN_PAYMASTERS: process.env.MULTI_TOKEN_PAYMASTERS,
     MULTI_TOKEN_ORACLES: process.env.MULTI_TOKEN_ORACLES,
-    MTP_VGL_MARKUP: process.env.MTP_VGL_MARKUP
+    MTP_VGL_MARKUP: process.env.MTP_VGL_MARKUP,
+    USE_SKANDHA_FOR_GAS_DATA: process.env.USE_SKANDHA_FOR_GAS_DATA
   }
 
   const valid = validate(envVar);
@@ -111,7 +113,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     DEFAULT_BUNDLER_API_KEY: process.env.DEFAULT_BUNDLER_API_KEY ?? '',
     MULTI_TOKEN_PAYMASTERS: process.env.MULTI_TOKEN_PAYMASTERS ?? '',
     MULTI_TOKEN_ORACLES: process.env.MULTI_TOKEN_ORACLES ?? '',
-    MTP_VGL_MARKUP: process.env.MTP_VGL_MARKUP ?? '30000'
+    MTP_VGL_MARKUP: process.env.MTP_VGL_MARKUP ?? '30000',
+    USE_SKANDHA_FOR_GAS_DATA: process.env.USE_SKANDHA_FOR_GAS_DATA === 'false' ? false : true
   }
 
   server.log.info(config, "config:");
