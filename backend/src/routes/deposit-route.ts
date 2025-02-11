@@ -50,8 +50,8 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 const query: any = request.query;
                 const amount = body.params?.[0];
                 const useVp = query['useVp'] ?? false;
-                const chainId = query['chainId'] ?? body.params[1];
-                const api_key = query['apiKey'] ?? body.params[2];
+                const chainId = query['chainId'] ?? body.params?.[1];
+                const api_key = query['apiKey'] ?? body.params?.[2];
                 
                 if (!api_key || typeof(api_key) !== "string")
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -118,8 +118,8 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 const body: any = request.body;
                 const query: any = request.query;
                 const amount = body.params?.[0];
-                const chainId = query['chainId'] ?? body.params[1];
-                const api_key = query['apiKey'] ?? body.params[2];
+                const chainId = query['chainId'] ?? body.params?.[1];
+                const api_key = query['apiKey'] ?? body.params?.[2];
                 const useVp = query['useVp'] ?? false;
                 if (!api_key || typeof(api_key) !== "string")
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })

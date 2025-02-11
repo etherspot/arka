@@ -477,8 +477,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       const query: any = request.query;
       const chainId = query['chainId'];
       const apiKey = query['apiKey'];
-      const epVersion = body.params[0];
-      const amount = body.params[1];
+      const epVersion = body.params?.[0];
+      const amount = body.params?.[1];
 
       if (!chainId || isNaN(chainId) || !apiKey) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
