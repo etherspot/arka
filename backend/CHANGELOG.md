@@ -1,4 +1,12 @@
 # Changelog
+## [3.0.2] - 2025-02-11
+- Using Skandha for gas data for better transaction inclusion.
+- USE_SKANDHA_FOR_GAS_DATA set this property to false to disable.
+
+## [3.0.1] - 2025-02-04
+### Fixes
+- Changed error message to more meaningful reply
+- Added API to reflect whats been cached on runtime
 
 ## [3.0.0] - 2025-01-09
 ### Breaking Changes
