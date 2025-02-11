@@ -7,7 +7,7 @@ export default {
     API_KEY_NOT_CONFIGURED_IN_DATABASE: 'Api Key not configured in database',
     UNSUPPORTED_NETWORK: 'Unsupported network',
     UNSUPPORTED_NETWORK_TOKEN: 'Unsupported network/token',
-    MISSING_PARAMS: 'Missing parameters in body params',
+    MISSING_PARAMS: 'You have not supplied the required input parameters for this function/endpoint',
     API_KEY_IS_REQUIRED_IN_HEADER: 'Api Key is required in header',
     API_KEY_DOES_NOT_EXIST_FOR_THE_WALLET_ADDRESS: 'Api Key does not exist for the wallet address',
     WALLET_ADDRESS_DOES_NOT_MATCH_FOR_THE_API_KEY: 'Wallet address does not match for the Api Key',
