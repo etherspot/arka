@@ -1,5 +1,5 @@
 # Changelog
-## [3.0.2] - 2025-02-10
+## [3.0.3] - 2025-02-10
 ### Fixes
 - Checked for undefined values on body params
 
