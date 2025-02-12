@@ -394,6 +394,41 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
               }
               break;
             }
+            case 'commonerc20': {
+              if (epVersion !== EPVersions.EPV_06)
+                throw new Error('Currently only EPV06 entryPoint address is supported')
+              const multiTokenRec = await server.multiTokenPaymasterRepository.findOneByChainIdAndTokenAddress(chainId, gasToken)
+              if (multiTokenRec) {
+                const date = new Date();
+                const provider = new providers.JsonRpcProvider(bundlerUrl);
+                const commonPrivateKey = process.env.MTP_PRIVATE_KEY;
+                if (!commonPrivateKey) return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.NO_KEY_SET})
+                const signer = new Wallet(commonPrivateKey, provider)
+                const validUntil = context.validUntil ? new Date(context.validUntil) : date;
+                const validAfter = context.validAfter ? new Date(context.validAfter) : date;
+                const hex = (Number((validUntil.valueOf() / 1000).toFixed(0)) + 600).toString(16);
+                const hex1 = (Number((validAfter.valueOf() / 1000).toFixed(0)) - 60).toString(16);
+                let str = '0x'
+                let str1 = '0x'
+                for (let i = 0; i < 14 - hex.length; i++) {
+                  str += '0';
+                }
+                for (let i = 0; i < 14 - hex1.length; i++) {
+                  str1 += '0';
+                }
+                str += hex;
+                str1 += hex1;
+                if (!networkConfig.MultiTokenPaymasterOracleUsed ||
+                  !(networkConfig.MultiTokenPaymasterOracleUsed == "orochi" || networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" || networkConfig.MultiTokenPaymasterOracleUsed == "etherspotChainlink"))
+                  throw new Error("Oracle is not Defined/Invalid");
+                if (networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" && !NativeOracles[chainId])
+                  throw new Error("Native Oracle address not set for this chainId")
+                result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenRec.paymasterAddress, gasToken, multiTokenRec.oracleAddress ?? '', bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
+              } else {
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_TOKEN })
+              }
+              break;
+            }
             default: {
               return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_MODE });
             }

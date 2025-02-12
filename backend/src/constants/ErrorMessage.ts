@@ -7,6 +7,7 @@ export default {
     API_KEY_NOT_CONFIGURED_IN_DATABASE: 'Api Key not configured in database',
     UNSUPPORTED_NETWORK: 'Unsupported network',
     UNSUPPORTED_NETWORK_TOKEN: 'Unsupported network/token',
+    UNSUPPORTED_TOKEN: 'Unsupported token',
     MISSING_PARAMS: 'You have not supplied the required input parameters for this function/endpoint',
     API_KEY_IS_REQUIRED_IN_HEADER: 'Api Key is required in header',
     API_KEY_DOES_NOT_EXIST_FOR_THE_WALLET_ADDRESS: 'Api Key does not exist for the wallet address',
@@ -52,6 +53,7 @@ export default {
     FAILED_TO_DEPLOY_VP: 'Failed to deploy verifying paymaster',
     FAILED_TO_ADD_STAKE: 'Failed to add stake',
     INVALID_AMOUNT_TO_STAKE: 'Invalid amount to stake',
+    NO_KEY_SET: 'No MTP key set',
     MULTI_NOT_DEPLOYED: 'Token Paymaster not deployed on the current chainID: ',
     COINGECKO_PRICE_NOT_FETCHED: 'Token price not updated, Pls retry.'
 }
