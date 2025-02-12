@@ -39,14 +39,14 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         printRequest("/", request, server.log);
         const query: any = request.query;
         const body: any = request.body;
-        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY });
-        const userOp = body.params[0];
-        const entryPoint = body.params[1];
-        let context = body.params[2];
+        if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
+        const userOp = body.params?.[0];
+        const entryPoint = body.params?.[1];
+        let context = body.params?.[2];
         let gasToken = context?.token ? context.token : null;
         let mode = context?.mode ? String(context.mode) : "sponsor";
-        let chainId = query['chainId'] ?? body.params[3];
-        const api_key = query['apiKey'] ?? body.params[4];
+        let chainId = query['chainId'] ?? body.params?.[3];
+        const api_key = query['apiKey'] ?? body.params?.[4];
         let epVersion: EPVersions = DEFAULT_EP_VERSION;
         let tokens_list: string[] = [];
         let sponsorDetails = false, estimate = true, tokenQuotes = false;
@@ -60,10 +60,14 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
             }
             // eslint-disable-next-line no-fallthrough
             case 'pm_getPaymasterStubData': {
-              chainId = BigNumber.from(body.params[2]).toNumber();
-              context = body.params[3];
-              gasToken = context?.token ? context.token : null;
-              mode = context?.mode ? String(context.mode) : "sponsor";
+              if (body.params && Array.isArray(body.params) && body.params.length >= 3) {
+                chainId = BigNumber.from(body.params[2]).toNumber();
+                context = body.params?.[3] ?? null;
+                gasToken = context?.token ? context.token : null;
+                mode = context?.mode ? String(context.mode) : "sponsor";
+              } else {
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
+              }
               break;
             }
             case 'pm_sponsorUserOperation': {

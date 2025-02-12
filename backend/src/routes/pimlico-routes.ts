@@ -43,11 +43,12 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                 printRequest("/tokenPaymasterAddress", request, server.log);
                 const query: any = request.query;
                 const body: any = request.body;
-                const entryPoint = body.params[0];
-                const context = body.params[1];
+                if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
+                const entryPoint = body.params?.[0];
+                const context = body.params?.[1];
                 const gasToken = context ? context.token : null;
-                const chainId = query['chainId'] ?? body.params[2];
-                const api_key = query['apiKey'] ?? body.params[3];
+                const chainId = query['chainId'] ?? body.params?.[2];
+                const api_key = query['apiKey'] ?? body.params?.[3];
                 if (!api_key || typeof(api_key) !== "string")
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
