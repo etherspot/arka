@@ -53,13 +53,14 @@ export class Paymaster {
   MTP_VGL_MARKUP: string;
   EP7_TOKEN_VGL: string;
   EP7_TOKEN_PGL: string;
+  EP7_PVGL: BigNumber;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
   nativeCurrencyPrice: Map<string, NativeCurrencyPricyCache> = new Map();
   coingeckoPrice: Map<string, CoingeckoPriceCache> = new Map();
   coingeckoService: CoingeckoService = new CoingeckoService();
   sequelize: Sequelize;
 
-  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize, mtpVglMarkup: string) {
+  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize, mtpVglMarkup: string, ep7Pvgl: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
@@ -67,6 +68,7 @@ export class Paymaster {
     this.EP7_TOKEN_VGL = ep7TokenVGL;
     this.sequelize = sequelize;
     this.MTP_VGL_MARKUP = mtpVglMarkup;
+    this.EP7_PVGL = BigNumber.from(ep7Pvgl);
   }
 
   packUint(high128: BigNumberish, low128: BigNumberish): string {
@@ -126,7 +128,7 @@ export class Paymaster {
         accountGasLimits: accountGasLimits,
         preVerificationGas: userOp.preVerificationGas,
         gasFees: gasFees,
-        paymasterAndData: this.packPaymasterData(paymasterAddress, BigNumber.from(30000), "0x1"),
+        paymasterAndData: this.packPaymasterData(paymasterAddress, this.EP7_PVGL, "0x1"),
         signature: userOp.signature
       }
 
@@ -139,7 +141,7 @@ export class Paymaster {
           preVerificationGas: BigNumber.from(packedUserOp.preVerificationGas).toHexString(),
           verificationGasLimit: BigNumber.from(userOp.verificationGasLimit).toHexString(),
           callGasLimit: BigNumber.from(userOp.callGasLimit).toHexString(),
-          paymasterVerificationGasLimit: BigNumber.from(30000).toHexString(),
+          paymasterVerificationGasLimit: this.EP7_PVGL.toHexString(),
           paymasterPostOpGasLimit: "0x1"
         }
       } else {
