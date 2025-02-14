@@ -139,7 +139,7 @@ export class Paymaster {
           preVerificationGas: BigNumber.from(packedUserOp.preVerificationGas).toHexString(),
           verificationGasLimit: BigNumber.from(userOp.verificationGasLimit).toHexString(),
           callGasLimit: BigNumber.from(userOp.callGasLimit).toHexString(),
-          paymasterVerificationGasLimit: BigNumber.from(30000).toString(),
+          paymasterVerificationGasLimit: BigNumber.from(30000).toHexString(),
           paymasterPostOpGasLimit: "0x1"
         }
       } else {
@@ -1163,7 +1163,6 @@ export class Paymaster {
     for (const tokenAddress in coingeckoPrices) {
       const chainId = coingeckoPrices[tokenAddress].chainId;
       const cacheKey = `${chainId}-${ethers.utils.getAddress(tokenAddress)}`;
-      if (tokenAddress !== "0xC168E40227E4ebD8C1caE80F7a55a4F0e6D66C97")
       this.coingeckoPrice.set(cacheKey, { data: coingeckoPrices[tokenAddress], expiry: Date.now() + ttl });
     }
   }
