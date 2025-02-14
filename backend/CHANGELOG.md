@@ -1,4 +1,9 @@
 # Changelog
+## [3.1.1] - 2025-02-14
+### Fixes
+- Fixed return type of paymasterVerificationGasLimit
+- Added paymasterVerificationGasLimit to optional configurable env value and defaults to '30000'
+
 ## [3.1.0] - 2025-01-28
 ### New
 - Added a separate mode for all the common erc20 paymasters in mind that in future will replace the current erc20 mode

@@ -36,7 +36,8 @@ const ConfigSchema = Type.Strict(
     MULTI_TOKEN_PAYMASTERS: Type.String(),
     MULTI_TOKEN_ORACLES: Type.String(),
     MTP_VGL_MARKUP: Type.String() || '30000',
-    USE_SKANDHA_FOR_GAS_DATA: Type.Boolean() || true
+    USE_SKANDHA_FOR_GAS_DATA: Type.Boolean() || true,
+    EP7_PVGL: Type.String(),
   })
 );
 
@@ -77,7 +78,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     MULTI_TOKEN_PAYMASTERS: process.env.MULTI_TOKEN_PAYMASTERS,
     MULTI_TOKEN_ORACLES: process.env.MULTI_TOKEN_ORACLES,
     MTP_VGL_MARKUP: process.env.MTP_VGL_MARKUP,
-    USE_SKANDHA_FOR_GAS_DATA: process.env.USE_SKANDHA_FOR_GAS_DATA
+    USE_SKANDHA_FOR_GAS_DATA: process.env.USE_SKANDHA_FOR_GAS_DATA,
+    EP7_PVGL: process.env.EP7_PVGL ?? '30000',
   }
 
   const valid = validate(envVar);
@@ -114,7 +116,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     MULTI_TOKEN_PAYMASTERS: process.env.MULTI_TOKEN_PAYMASTERS ?? '',
     MULTI_TOKEN_ORACLES: process.env.MULTI_TOKEN_ORACLES ?? '',
     MTP_VGL_MARKUP: process.env.MTP_VGL_MARKUP ?? '30000',
-    USE_SKANDHA_FOR_GAS_DATA: process.env.USE_SKANDHA_FOR_GAS_DATA === 'false' ? false : true
+    USE_SKANDHA_FOR_GAS_DATA: process.env.USE_SKANDHA_FOR_GAS_DATA === 'false' ? false : true,
+    EP7_PVGL: process.env.EP7_PVGL ?? '30000'
   }
 
   server.log.info(config, "config:");
