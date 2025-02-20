@@ -47,7 +47,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           policyId = body.params?.[1];
           api_key = query['apiKey'] ?? body.params?.[2];
         }
-        if (!address || !ethers.utils.isAddress(address)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA })
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
@@ -154,7 +153,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           chainId = query['chainId'] ?? body.params?.[2];
           api_key = query['apiKey'] ?? body.params?.[3];
         }
-        if (!address || !ethers.utils.isAddress(address)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
@@ -346,9 +344,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const address = body.params?.[0];
         const policyId = body.params?.[1];
-        if (!address || !ethers.utils.isAddress(address)) {
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-        }
         const api_key = query['apiKey'] ?? body.params?.[2];
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -428,9 +423,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const policyId = body.params?.[1];
         const chainId = query['chainId'] ?? body.params?.[2];
         const api_key = query['apiKey'] ?? body.params?.[3];
-        if (!address || !ethers.utils.isAddress(address)) {
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-        }
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
