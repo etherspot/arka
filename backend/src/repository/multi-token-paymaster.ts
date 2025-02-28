@@ -39,7 +39,7 @@ export class MultiTokenPaymasterRepository {
 
   async getAllDistinctPaymasterAddrWithChainId(): Promise<MultiTokenPaymaster[]> {
     const result = await this.sequelize.models.MultiTokenPaymaster.findAll({
-      attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('PAYMASTER_ADDRESS')), 'PAYMASTER_ADDRESS'], 'chainId'],
+      attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('PAYMASTER_ADDRESS')), 'paymasterAddress'], 'chainId'],
     });
     return result.map(id => id.get() as MultiTokenPaymaster);
   }

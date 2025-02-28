@@ -1,4 +1,8 @@
 # Changelog
+## [3.1.2] - 2025-02-28
+### Fixes
+- Fixed invalid address error on cronJob
+
 ## [3.1.1] - 2025-02-14
 ### Fixes
 - Fixed return type of paymasterVerificationGasLimit
