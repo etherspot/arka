@@ -1,4 +1,8 @@
 # Changelog
+## [3.1.3] - 2025-03-13
+### Fixes
+- Fixed Verifying Paymaster execution for undeployed wallets
+
 ## [3.1.2] - 2025-02-28
 ### Fixes
 - Fixed invalid address error on cronJob
