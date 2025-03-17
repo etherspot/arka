@@ -112,7 +112,25 @@ export class Paymaster {
       if (!userOp.signature) userOp.signature = '0x';
       if (userOp.factory && userOp.factoryData) userOp.initCode = hexConcat([userOp.factory, userOp.factoryData ?? ''])
       if (!userOp.initCode) userOp.initCode = "0x";
+      const paymasterPostOpGasLimit = BigNumber.from("40000").toHexString();
       if (estimate) {
+        userOp.paymaster = paymasterAddress;
+        userOp.paymasterVerificationGasLimit = this.EP7_PVGL;
+        userOp.paymasterPostOpGasLimit = paymasterPostOpGasLimit;
+        const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
+        const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
+        const packedUserOp = {
+          sender: userOp.sender,
+          nonce: userOp.nonce,
+          initCode: userOp.initCode,
+          callData: userOp.callData,
+          accountGasLimits: accountGasLimits,
+          preVerificationGas: userOp.preVerificationGas,
+          gasFees: gasFees,
+          paymasterAndData: this.packPaymasterData(paymasterAddress, this.EP7_PVGL, paymasterPostOpGasLimit),
+          signature: userOp.signature
+        }
+        userOp.paymasterData = await this.getPaymasterData(packedUserOp, validUntil, validAfter, paymasterContract, signer);
         const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
         userOp.verificationGasLimit = response.verificationGasLimit;
         userOp.callGasLimit = response.callGasLimit;
@@ -128,7 +146,7 @@ export class Paymaster {
         accountGasLimits: accountGasLimits,
         preVerificationGas: userOp.preVerificationGas,
         gasFees: gasFees,
-        paymasterAndData: this.packPaymasterData(paymasterAddress, this.EP7_PVGL, "0x1"),
+        paymasterAndData: this.packPaymasterData(paymasterAddress, this.EP7_PVGL, paymasterPostOpGasLimit),
         signature: userOp.signature
       }
 
@@ -142,7 +160,7 @@ export class Paymaster {
           verificationGasLimit: BigNumber.from(userOp.verificationGasLimit).toHexString(),
           callGasLimit: BigNumber.from(userOp.callGasLimit).toHexString(),
           paymasterVerificationGasLimit: this.EP7_PVGL.toHexString(),
-          paymasterPostOpGasLimit: "0x1"
+          paymasterPostOpGasLimit
         }
       } else {
         returnValue = {
