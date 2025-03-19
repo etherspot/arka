@@ -41,6 +41,7 @@ const initializeServer = async (): Promise<void> => {
         useDefaults: true,
       }
     },
+    caseSensitive: false,
     logger: {
       level: process.env.LOG_LEVEL,
     },

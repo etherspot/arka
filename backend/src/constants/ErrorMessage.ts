@@ -1,4 +1,5 @@
 export default {
+    EMPTY_BODY: 'Body params cannot be empty',
     CONTEXT_NOT_ARRAY: 'Context sent is not an array',
     INVALID_DATA: 'Invalid data provided',
     INVALID_SPONSORSHIP_POLICY: 'Invalid sponsorship policy data',
