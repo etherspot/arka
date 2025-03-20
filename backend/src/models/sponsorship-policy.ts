@@ -148,7 +148,11 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
         globalMaximumUsd: {
             type: DataTypes.DECIMAL(10, 4),  // max 10 digits, 4 of which can be after the decimal point
             allowNull: true,
-            field: 'GLOBAL_MAX_USD'
+            field: 'GLOBAL_MAX_USD',
+            get() {
+                const value = this.getDataValue('globalMaximumUsd');
+                return value ? Number(value) : null;
+            },
         },
         globalMaximumNative: {
             type: DataTypes.DECIMAL(22, 18),  // max 22 digits, 18 of which can be after the decimal point
