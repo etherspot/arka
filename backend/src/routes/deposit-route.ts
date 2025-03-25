@@ -47,6 +47,9 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
             try {
                 printRequest("/deposit", request, server.log);
                 const body: any = request.body;
+                if (!body) {
+                    return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY })
+                }
                 const query: any = request.query;
                 const amount = body.params?.[0];
                 const useVp = query['useVp'] ?? false;
@@ -117,6 +120,9 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
                 printRequest("/deposit/v2", request, server.log);
                 const body: any = request.body;
                 const query: any = request.query;
+                if (!body) {
+                    return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY })
+                }
                 const amount = body.params?.[0];
                 const chainId = query['chainId'] ?? body.params?.[1];
                 const api_key = query['apiKey'] ?? body.params?.[2];
