@@ -1,4 +1,8 @@
 # Changelog
+## [3.1.5] - 2025-03-24
+### Fixes
+- Added all tokens used in multiTokenPaymaster to have decimals in constants rather than fetching from rpc 
+
 ## [3.1.4] - 2025-03-19
 ### Fixes
 - Changed all endpoints to be case-insensitive
