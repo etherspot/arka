@@ -1,4 +1,8 @@
 # Changelog
+## [3.2.0] - 2025-04-01
+### New
+- Added EPV08 Support
+
 ## [3.1.5] - 2025-03-24
 ### Fixes
 - Added all tokens used in multiTokenPaymaster to have decimals in constants rather than fetching from rpc 
