@@ -183,6 +183,72 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
             }
         }
     )
+
+    server.post("/deposit/v3",
+        ResponseSchema,
+        async function (request, reply) {
+            try {
+                printRequest("/deposit/v3", request, server.log);
+                const body: any = request.body;
+                const query: any = request.query;
+                if (!body) {
+                    return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY })
+                }
+                const amount = body.params?.[0];
+                const chainId = query['chainId'] ?? body.params?.[1];
+                const api_key = query['apiKey'] ?? body.params?.[2];
+                if (!api_key || typeof(api_key) !== "string")
+                    return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+                let privateKey = '';
+                let bundlerApiKey = api_key;
+                const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
+                if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+                if (!unsafeMode) {
+                    const AWSresponse = await client.send(
+                        new GetSecretValueCommand({
+                            SecretId: prefixSecretId + api_key,
+                        })
+                    );
+                    const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+                    if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+                    privateKey = secrets['PRIVATE_KEY'];
+                } else {
+                    privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
+                }
+                const supportedNetworks = apiKeyEntity.supportedNetworks;
+                if (apiKeyEntity.bundlerApiKey) {
+                    bundlerApiKey = apiKeyEntity.bundlerApiKey;
+                }
+                if (
+                    isNaN(amount) ||
+                    !chainId ||
+                    isNaN(chainId)
+                ) {
+                    return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+                }
+                if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+                    return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+                }
+                const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_08);
+                if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+                let bundlerUrl = networkConfig.bundler;
+                if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+
+                const vpAddr = apiKeyEntity.verifyingPaymastersV3 ? 
+                                JSON.parse(apiKeyEntity.verifyingPaymastersV3)[chainId] :
+                                undefined;
+                if(!vpAddr) {
+                    return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED})
+                }
+                return await paymaster.deposit(amount, vpAddr, bundlerUrl, privateKey, chainId, false, server.log);
+            } catch (err: any) {
+                request.log.error(err);
+                if (err.name == "ResourceNotFoundException")
+                    return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+                return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS })
+            }
+        }
+    )
 };
 
 export default depositRoutes;
