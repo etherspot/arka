@@ -5,6 +5,7 @@ export class ArkaWhitelist extends Model {
     public apiKey!: string;
     public addresses!: string[];
     public policyId?: number;
+    public epVersion?: string | null = null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -33,6 +34,11 @@ const initializeArkaWhitelistModel = (sequelize: Sequelize, schema: string) => {
           type: DataTypes.INTEGER,
           allowNull: true,
           field: 'POLICY_ID'
+        },
+        epVersion: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          field: 'EP_VERSION',
         },
         createdAt: {
             type: DataTypes.DATE,

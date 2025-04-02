@@ -18,7 +18,8 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
 
   const SUPPORTED_ENTRYPOINTS = {
     EPV_06: server.config.EPV_06,
-    EPV_07: server.config.EPV_07
+    EPV_07: server.config.EPV_07,
+    EPV_08: server.config.EPV_08
   }
 
   let client: SecretsManagerClient;
