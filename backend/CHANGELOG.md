@@ -1,4 +1,8 @@
 # Changelog
+## [3.1.6] - 2025-04-02
+### Fixes
+- Fixed bug in paymaster estimation for multiTokenPaymaster getERC20Quotes API
+
 ## [3.1.5] - 2025-03-24
 ### Fixes
 - Added all tokens used in multiTokenPaymaster to have decimals in constants rather than fetching from rpc 
