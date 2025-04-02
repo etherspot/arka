@@ -20,7 +20,8 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
 
   const SUPPORTED_ENTRYPOINTS = {
     EPV_06: server.config.EPV_06,
-    EPV_07: server.config.EPV_07
+    EPV_07: server.config.EPV_07,
+    EPV_08: server.config.EPV_08
   }
 
   const prefixSecretId = 'arka_';
@@ -88,11 +89,11 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         }
         if (!api_key || typeof (api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        if (!SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint) && !SUPPORTED_ENTRYPOINTS.EPV_07?.includes(entryPoint))
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
-
+        
         if (SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint)) epVersion = EPVersions.EPV_06;
-        else epVersion = EPVersions.EPV_07;
+        else if (SUPPORTED_ENTRYPOINTS.EPV_07?.includes(entryPoint)) epVersion = EPVersions.EPV_07;
+        else if (SUPPORTED_ENTRYPOINTS.EPV_08?.includes(entryPoint)) epVersion = EPVersions.EPV_08;
+        else return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
 
         let customPaymasters = [];
         let customPaymastersV2 = [];
@@ -254,13 +255,26 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
               }
               if (epVersion === EPVersions.EPV_06)
                 result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
-              else {
+              else if (epVersion === EPVersions.EPV_07) {
+                if (!networkConfig.contracts.etherspotPaymasterAddress) {
+                  throw new Error('Please use useVP flag to use your deployed verifying paymaster as global paymaster is not defined');
+                }
                 const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
                 if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
                   const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
                   if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
                 }
                 result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
+              } else {
+                const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
+                if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
+                  const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
+                  const existingEpWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion, sponsorshipPolicy.id);
+                  const existingEpWhitelistRecord2 = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion);
+                  const combinedList = [...(existingWhitelistRecord?.addresses ?? []), ...(existingEpWhitelistRecord?.addresses ?? []), ...(existingEpWhitelistRecord2?.addresses ?? [])];
+                  if (!combinedList.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+                }
+                result = await paymaster.signV08(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
               }
               break;
             }
@@ -369,7 +383,10 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
               const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
               if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
                 const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
-                if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+                const existingEpWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion, sponsorshipPolicy.id);
+                const existingEpWhitelistRecord2 = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion);
+                const combinedList = [...(existingWhitelistRecord?.addresses ?? []), ...(existingEpWhitelistRecord?.addresses ?? []), ...(existingEpWhitelistRecord2?.addresses ?? [])];
+                if (!combinedList.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
               }
 
               if (epVersion === EPVersions.EPV_06) {
@@ -382,7 +399,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 }
                 result = await paymaster.signV06(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
               }
-              else {
+              else if  (epVersion === EPVersions.EPV_07) {
                 if(!apiKeyEntity.verifyingPaymastersV2) {
                   return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
                 }
@@ -391,6 +408,15 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                   return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
                 }
                 result = await paymaster.signV07(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
+              } else {
+                if (!apiKeyEntity.verifyingPaymastersV3) {
+                  return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
+                }
+                const paymasterAddr = JSON.parse(apiKeyEntity.verifyingPaymastersV3)[chainId.chainId];
+                if (!paymasterAddr) {
+                  return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
+                }
+                result = await paymaster.signV08(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
               }
               break;
             }

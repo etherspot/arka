@@ -1,6 +1,7 @@
 import { Sequelize } from 'sequelize';
 import { WhitelistDto } from '../types/whitelist-dto.js';
 import { ArkaWhitelist } from '../models/whitelist.js';
+import { EPVersions } from '../types/sponsorship-policy-dto.js';
 
 export class WhitelistRepository {
   private sequelize: Sequelize;
@@ -14,7 +15,8 @@ export class WhitelistRepository {
     const result = await this.sequelize.models.ArkaWhitelist.create({
       apiKey: apiKey.apiKey,
       addresses: apiKey.addresses,
-      policyId: apiKey.policyId ?? null
+      policyId: apiKey.policyId ?? null,
+      epVersion: apiKey.epVersion ?? null
     }) as ArkaWhitelist;
 
 
@@ -46,6 +48,16 @@ export class WhitelistRepository {
       result = await this.sequelize.models.ArkaWhitelist.findOne({ where: { apiKey: apiKey, policyId: policyId } });
     } else {
       result = await this.sequelize.models.ArkaWhitelist.findOne({ where: { apiKey: apiKey, policyId: null } });
+    }
+    return result ? result.get() as ArkaWhitelist : null;
+  }
+
+  async findOneByApiKeyEPVersionAndPolicyId(apiKey: string, epVersion: EPVersions, policyId?: number): Promise<ArkaWhitelist | null> {
+    let result;
+    if (policyId) {
+      result = await this.sequelize.models.ArkaWhitelist.findOne({ where: { apiKey: apiKey, epVersion: epVersion, policyId: policyId } });
+    } else {
+      result = await this.sequelize.models.ArkaWhitelist.findOne({ where: { apiKey: apiKey, epVersion: epVersion, policyId: null } });
     }
     return result ? result.get() as ArkaWhitelist : null;
   }
