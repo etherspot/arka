@@ -550,6 +550,7 @@ export class Paymaster {
     bundlerRpc: string,
     oracleName: string,
     nativeOracleAddress: string,
+    signer: Wallet,
     log?: FastifyBaseLogger
   ) {
     try {
@@ -574,6 +575,23 @@ export class Paymaster {
       let ETHUSDPrice: any, ETHUSDPriceDecimal;
       const paymasterKey = Object.keys(multiTokenPaymasters[chainId])[0];
       let response, unaccountedCost;
+      const validUntil = new Date();
+      const validAfter = new Date();
+      const hex = (Number((validUntil.valueOf() / 1000).toFixed(0)) + 600).toString(16);
+      const hex1 = (Number((validAfter.valueOf() / 1000).toFixed(0)) - 60).toString(16);
+      let str = '0x'
+      let str1 = '0x'
+      for (let i = 0; i < 14 - hex.length; i++) {
+        str += '0';
+      }
+      for (let i = 0; i < 14 - hex1.length; i++) {
+        str1 += '0';
+      }
+      str += hex;
+      str1 += hex1;
+      const paymasterContract = new ethers.Contract(multiTokenPaymasters[chainId][paymasterKey], MultiTokenPaymasterAbi, provider);
+      // Assuming the token price is 1 USD since this is just used for the gas estimation and the paymasterAndData generated will not be sent on response
+      userOp.paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, str, str1, paymasterKey, '100000000', paymasterContract, signer, chainId);
       if (oracleName === "chainlink") {
         const res = await this.getEstimateUserOperationGasAndData(
           provider,
