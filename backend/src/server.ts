@@ -262,7 +262,9 @@ const initializeServer = async (): Promise<void> => {
                     ) {
                       const thresholdValue = network.thresholdValue ?? networkConfig.thresholdValue;
                       const bundler = network.bundler ?? networkConfig.bundler;
-                      checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                      if (network.contract.etherspotPaymasterAddress) {
+                        checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                      }
                     }
                   }
                 }
@@ -305,7 +307,9 @@ const initializeServer = async (): Promise<void> => {
 
               // checking deposit for epv6 native paymasters from default config.json.
               for (const network of SupportedNetworks) {
-                checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                if (network.contracts?.etherspotPaymasterAddress) {
+                  checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                }
               }
 
               // Checking of Deposit on common multi token paymaster if any
