@@ -54,6 +54,9 @@ export class WhitelistRepository {
 
   async findOneByApiKeyEPVersionAndPolicyId(apiKey: string, epVersion: EPVersions, policyId?: number): Promise<ArkaWhitelist | null> {
     let result;
+    if (!epVersion) {
+      return null;
+    }
     if (policyId) {
       result = await this.sequelize.models.ArkaWhitelist.findOne({ where: { apiKey: apiKey, epVersion: epVersion, policyId: policyId } });
     } else {

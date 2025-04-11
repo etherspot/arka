@@ -18,7 +18,7 @@ import { getNetworkConfig } from "../utils/common.js";
 import { Paymaster } from "../paymaster/index.js";
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL, server.config.EP8_PVGL);
 
   const prefixSecretId = 'arka_';
 
@@ -392,7 +392,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(apiKey);
       if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
 
-      let verifyingPaymasters, supportedEPs;
+      let verifyingPaymasters;
+      let supportedEPs;
 
       if(epVersion === EPVersions.EPV_06) {
         verifyingPaymasters = apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : {};

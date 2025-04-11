@@ -22,7 +22,7 @@ import { Sequelize } from 'sequelize';
 import { abi as verifyingPaymasterAbi, byteCode as verifyingPaymasterByteCode } from '../abi/VerifyingPaymasterAbi.js';
 import { abi as verifyingPaymasterV2Abi, byteCode as verifyingPaymasterV2ByteCode } from '../abi/VerifyingPaymasterAbiV2.js';
 import { abi as verifyingPaymasterV3Abi, byteCode as verifyingPaymasterV3ByteCode } from '../abi/VerifyingPaymasterAbiV3.js';
-import { EPVersions } from 'types/sponsorship-policy-dto.js';
+import { EPVersions } from '../types/sponsorship-policy-dto.js';
 
 const ttl = parseInt(process.env.CACHE_TTL || "600000");
 const nativePriceCacheTtl = parseInt(process.env.NATIVE_PRICE_CACHE_TTL || "60000");
@@ -56,13 +56,14 @@ export class Paymaster {
   EP7_TOKEN_VGL: string;
   EP7_TOKEN_PGL: string;
   EP7_PVGL: BigNumber;
+  EP8_PVGL: BigNumber;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
   nativeCurrencyPrice: Map<string, NativeCurrencyPricyCache> = new Map();
   coingeckoPrice: Map<string, CoingeckoPriceCache> = new Map();
   coingeckoService: CoingeckoService = new CoingeckoService();
   sequelize: Sequelize;
 
-  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize, mtpVglMarkup: string, ep7Pvgl: string) {
+  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize, mtpVglMarkup: string, ep7Pvgl: string, ep8Pvgl: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
@@ -71,6 +72,7 @@ export class Paymaster {
     this.sequelize = sequelize;
     this.MTP_VGL_MARKUP = mtpVglMarkup;
     this.EP7_PVGL = BigNumber.from(ep7Pvgl);
+    this.EP8_PVGL = BigNumber.from(ep8Pvgl);
   }
 
   packUint(high128: BigNumberish, low128: BigNumberish): string {
@@ -184,14 +186,14 @@ export class Paymaster {
     bundlerRpc: string, signer: Wallet, estimate: boolean, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const paymasterContract = new ethers.Contract(paymasterAddress, EtherspotAbiV07, provider);
+      const paymasterContract = new ethers.Contract(paymasterAddress, verifyingPaymasterV3Abi, provider);
       if (!userOp.signature) userOp.signature = '0x';
       if (userOp.factory && userOp.factoryData) userOp.initCode = hexConcat([userOp.factory, userOp.factoryData ?? ''])
       if (!userOp.initCode) userOp.initCode = "0x";
       const paymasterPostOpGasLimit = BigNumber.from("40000").toHexString();
       if (estimate) {
         userOp.paymaster = paymasterAddress;
-        userOp.paymasterVerificationGasLimit = this.EP7_PVGL;
+        userOp.paymasterVerificationGasLimit = this.EP8_PVGL;
         userOp.paymasterPostOpGasLimit = paymasterPostOpGasLimit;
         const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
         const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
@@ -203,7 +205,7 @@ export class Paymaster {
           accountGasLimits: accountGasLimits,
           preVerificationGas: userOp.preVerificationGas,
           gasFees: gasFees,
-          paymasterAndData: this.packPaymasterData(paymasterAddress, this.EP7_PVGL, paymasterPostOpGasLimit),
+          paymasterAndData: this.packPaymasterData(paymasterAddress, this.EP8_PVGL, paymasterPostOpGasLimit),
           signature: userOp.signature
         }
         userOp.paymasterData = await this.getPaymasterData(packedUserOp, validUntil, validAfter, paymasterContract, signer);
@@ -222,7 +224,7 @@ export class Paymaster {
         accountGasLimits: accountGasLimits,
         preVerificationGas: userOp.preVerificationGas,
         gasFees: gasFees,
-        paymasterAndData: this.packPaymasterData(paymasterAddress, this.EP7_PVGL, paymasterPostOpGasLimit),
+        paymasterAndData: this.packPaymasterData(paymasterAddress, this.EP8_PVGL, paymasterPostOpGasLimit),
         signature: userOp.signature
       }
 
@@ -235,7 +237,7 @@ export class Paymaster {
           preVerificationGas: BigNumber.from(packedUserOp.preVerificationGas).toHexString(),
           verificationGasLimit: BigNumber.from(userOp.verificationGasLimit).toHexString(),
           callGasLimit: BigNumber.from(userOp.callGasLimit).toHexString(),
-          paymasterVerificationGasLimit: this.EP7_PVGL.toHexString(),
+          paymasterVerificationGasLimit: this.EP8_PVGL.toHexString(),
           paymasterPostOpGasLimit
         }
       } else {
@@ -250,7 +252,7 @@ export class Paymaster {
       if (err.message.includes("Quota exceeded"))
         throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
       if (log) log.error(err, 'signV08');
-      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
+      throw new Error(`Failed to process request to bundler. Please contact support team RawErrorMsg: ${err.message}`)
     }
   }
 

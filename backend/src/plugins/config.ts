@@ -25,10 +25,10 @@ const ConfigSchema = Type.Strict(
     DATABASE_SCHEMA_NAME: Type.String() || undefined,
     HMAC_SECRET: Type.String({ minLength: 1 }),
     UNSAFE_MODE: Type.Boolean() || undefined,
-    EP7_TOKEN_VGL: Type.String() || '90000',
-    EP7_TOKEN_PGL: Type.String() || '150000',
-    EPV_06: Type.Array(Type.String()) || ['0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'],
-    EPV_07: Type.Array(Type.String()) || ['0x0000000071727De22E5E9d8BAf0edAc6f37da032'],
+    EP7_TOKEN_VGL: Type.String() || undefined,
+    EP7_TOKEN_PGL: Type.String() || undefined,
+    EPV_06: Type.Array(Type.String()),
+    EPV_07: Type.Array(Type.String()),
     EPV_08: Type.Array(Type.String()),
     DELETE_KEY_RECOVER_WINDOW: Type.Number(),
     KMS_KEY_ID: Type.String() || undefined,
@@ -36,9 +36,10 @@ const ConfigSchema = Type.Strict(
     DEFAULT_BUNDLER_API_KEY: Type.String(),
     MULTI_TOKEN_PAYMASTERS: Type.String(),
     MULTI_TOKEN_ORACLES: Type.String(),
-    MTP_VGL_MARKUP: Type.String() || '30000',
+    MTP_VGL_MARKUP: Type.String() || undefined,
     USE_SKANDHA_FOR_GAS_DATA: Type.Boolean() || true,
     EP7_PVGL: Type.String(),
+    EP8_PVGL: Type.String(),
   })
 );
 
@@ -82,6 +83,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     MTP_VGL_MARKUP: process.env.MTP_VGL_MARKUP,
     USE_SKANDHA_FOR_GAS_DATA: process.env.USE_SKANDHA_FOR_GAS_DATA,
     EP7_PVGL: process.env.EP7_PVGL ?? '30000',
+    EP8_PVGL: process.env.EP8_PVGL ?? '30000',
   }
 
   const valid = validate(envVar);
@@ -120,7 +122,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     MULTI_TOKEN_ORACLES: process.env.MULTI_TOKEN_ORACLES ?? '',
     MTP_VGL_MARKUP: process.env.MTP_VGL_MARKUP ?? '30000',
     USE_SKANDHA_FOR_GAS_DATA: process.env.USE_SKANDHA_FOR_GAS_DATA === 'false' ? false : true,
-    EP7_PVGL: process.env.EP7_PVGL ?? '30000'
+    EP7_PVGL: process.env.EP7_PVGL ?? '30000',
+    EP8_PVGL: process.env.EP8_PVGL ?? '30000',
   }
 
   server.log.info(config, "config:");
