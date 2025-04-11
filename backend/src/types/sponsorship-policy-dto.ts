@@ -35,6 +35,7 @@ export interface SponsorshipPolicyDto {
 export enum EPVersions {
     EPV_06 = 'EPV_06',
     EPV_07 = 'EPV_07',
+    EPV_08 = 'EPV_08',
     // Add more versions here as needed
 }
 
@@ -47,6 +48,8 @@ export function getEPVersion(value: string): EPVersions {
             return EPVersions.EPV_06;
         case 'EPV_07':
             return EPVersions.EPV_07;
+        case 'EPV_08':
+            return EPVersions.EPV_08;
         default:
             throw new Error('Unsupported EP version');
     }
@@ -59,6 +62,8 @@ export function getEPVersionString(value: EPVersions): string {
             return 'EPV_06';
         case EPVersions.EPV_07:
             return 'EPV_07';
+        case EPVersions.EPV_08:
+            return 'EPV_08';
         default:
             throw new Error('Unsupported EP version');
     }

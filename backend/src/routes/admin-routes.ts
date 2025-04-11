@@ -18,7 +18,7 @@ import { getNetworkConfig } from "../utils/common.js";
 import { Paymaster } from "../paymaster/index.js";
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL, server.config.EP8_PVGL);
 
   const prefixSecretId = 'arka_';
 
@@ -32,7 +32,8 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   const SUPPORTED_ENTRYPOINTS = {
     EPV_06: server.config.EPV_06,
-    EPV_07: server.config.EPV_07
+    EPV_07: server.config.EPV_07,
+    EPV_08: server.config.EPV_08
   }
 
 
@@ -384,21 +385,25 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
       }
 
-      if (!epVersion || (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07)) {
+      if (!epVersion || (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07 && epVersion !== EPVersions.EPV_08)) {
         return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_EP_VERSION});
       }
-
-      const isEp06 = epVersion === EPVersions.EPV_06;
 
       const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(apiKey);
       if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
 
       let verifyingPaymasters;
+      let supportedEPs;
 
-      if(isEp06) {
+      if(epVersion === EPVersions.EPV_06) {
         verifyingPaymasters = apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : {};
-      } else {
+        supportedEPs = SUPPORTED_ENTRYPOINTS.EPV_06;
+      } else if(epVersion === EPVersions.EPV_07) {
         verifyingPaymasters = apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2) : {};
+        supportedEPs = SUPPORTED_ENTRYPOINTS.EPV_07;
+      } else {
+        verifyingPaymasters = apiKeyEntity.verifyingPaymastersV3 ? JSON.parse(apiKeyEntity.verifyingPaymastersV3) : {};
+        supportedEPs = SUPPORTED_ENTRYPOINTS.EPV_08;
       }
       if (verifyingPaymasters[chainId]) {
         return reply.code(ReturnCode.FAILURE).send(
@@ -440,7 +445,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       const networkConfig = getNetworkConfig(
         chainId,
         supportedNetworks ?? '',
-        isEp06 ? SUPPORTED_ENTRYPOINTS.EPV_06 : SUPPORTED_ENTRYPOINTS.EPV_07
+        supportedEPs
       );
       
       if (!networkConfig) {
@@ -455,12 +460,12 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         privateKey,
         bundlerUrl,
         networkConfig.entryPoint,
-        isEp06,
+        epVersion,
         chainId,
         server.log
       );
       verifyingPaymasters[chainId] = address;
-      await server.apiKeyRepository.updateVpAddresses(apiKey, JSON.stringify(verifyingPaymasters), isEp06);
+      await server.apiKeyRepository.updateVpAddresses(apiKey, JSON.stringify(verifyingPaymasters), epVersion);
 
       return reply.code(ReturnCode.SUCCESS).send({verifyingPaymaster: address, txHash: hash});
     } catch (error: any) {
@@ -488,21 +493,24 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_AMOUNT_TO_STAKE});
       }
 
-      if (!epVersion || (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07)) {
+      if (!epVersion || (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07 && epVersion !== EPVersions.EPV_08)) {
         return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.INVALID_EP_VERSION});
       }
-
-      const isEp06 = epVersion === EPVersions.EPV_06;
 
       const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(apiKey);
       if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
 
-      let verifyingPaymasters;
+      let verifyingPaymasters, supportedEPs;
 
-      if(isEp06) {
+      if(epVersion === EPVersions.EPV_06) {
         verifyingPaymasters = apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : {};
-      } else {
+        supportedEPs = SUPPORTED_ENTRYPOINTS.EPV_06;
+      } else if (epVersion === EPVersions.EPV_07) {
         verifyingPaymasters = apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2) : {};
+        supportedEPs = SUPPORTED_ENTRYPOINTS.EPV_07;
+      } else {
+        verifyingPaymasters = apiKeyEntity.verifyingPaymastersV3 ? JSON.parse(apiKeyEntity.verifyingPaymastersV3) : {};
+        supportedEPs = SUPPORTED_ENTRYPOINTS.EPV_08;
       }
 
       if (!verifyingPaymasters[chainId]) {
@@ -544,7 +552,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       const networkConfig = getNetworkConfig(
         chainId,
         supportedNetworks ?? '',
-        isEp06 ? SUPPORTED_ENTRYPOINTS.EPV_06 : SUPPORTED_ENTRYPOINTS.EPV_07
+        supportedEPs
       );
       if (!networkConfig) {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });

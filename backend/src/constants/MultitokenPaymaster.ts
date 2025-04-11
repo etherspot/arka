@@ -189,7 +189,8 @@ export const TokenDecimalsAndSymbol: Record<number, Record<string, TokenInfo>> =
         '0x4e352cF164E64ADCBad318C3a1e222E9EBa4Ce42': { decimals: 18, symbol: 'MCB' },
         '0x51fC0f6660482Ea73330E414eFd7808811a57Fa2': { decimals: 18, symbol: 'PREMIA' },
         '0xD74f5255D557944cf7Dd0E45FF521520002D5748': { decimals: 18, symbol: 'USDs' },
-        '0x9ed7E4B1BFF939ad473dA5E7a218C771D1569456': { decimals: 6, symbol: 'REUNI' }
+        '0x9ed7E4B1BFF939ad473dA5E7a218C771D1569456': { decimals: 6, symbol: 'REUNI' },
+        '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE': { decimals: 18, symbol: 'ETH' }
     },
     43114: {
         '0x62edc0692BD897D2295872a9FFCac5425011c661': { decimals: 18, symbol: 'GMX' },

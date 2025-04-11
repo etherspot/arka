@@ -1,4 +1,8 @@
 # Changelog
+## [3.2.0] - 2025-04-01
+### New
+- Added EPV08 Support
+
 ## [3.1.6] - 2025-04-02
 ### Fixes
 - Fixed bug in paymaster estimation for multiTokenPaymaster getERC20Quotes API
