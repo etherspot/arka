@@ -255,27 +255,18 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 const contractWhitelistResult = await checkContractWhitelist(userOp.callData, chainId.chainId, signer.address);
                 if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
               }
+              const isWhitelisted = await checkWhitelist(api_key, epVersion, userOp.sender, sponsorshipPolicy.id);
+              if (!isWhitelisted) {
+                throw new Error('This sender address has not been whitelisted yet');
+              }
               if (epVersion === EPVersions.EPV_06)
                 result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
               else if (epVersion === EPVersions.EPV_07) {
                 if (!networkConfig.contracts.etherspotPaymasterAddress) {
                   throw new Error('Please use useVP flag to use your deployed verifying paymaster as global paymaster is not defined');
                 }
-                const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
-                if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                  const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
-                  if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
-                }
                 result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
               } else {
-                const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
-                if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                  const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
-                  const existingEpWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion, sponsorshipPolicy.id);
-                  const existingEpWhitelistRecord2 = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion);
-                  const combinedList = [...(existingWhitelistRecord?.addresses ?? []), ...(existingEpWhitelistRecord?.addresses ?? []), ...(existingEpWhitelistRecord2?.addresses ?? [])];
-                  if (!combinedList.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
-                }
                 result = await paymaster.signV08(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
               }
               break;
@@ -382,13 +373,9 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
               }
 
-              const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
-              if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
-                const existingEpWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion, sponsorshipPolicy.id);
-                const existingEpWhitelistRecord2 = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion);
-                const combinedList = [...(existingWhitelistRecord?.addresses ?? []), ...(existingEpWhitelistRecord?.addresses ?? []), ...(existingEpWhitelistRecord2?.addresses ?? [])];
-                if (!combinedList.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+              const isWhitelisted = await checkWhitelist(api_key, epVersion, userOp.sender, sponsorshipPolicy.id);
+              if (!isWhitelisted) {
+                throw new Error('This sender address has not been whitelisted yet');
               }
 
               if (epVersion === EPVersions.EPV_06) {
@@ -583,6 +570,23 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
       }
     }
     return returnValue;
+  }
+
+  async function checkWhitelist(api_key: string, epVersion: EPVersions, senderAddress: string, policyId: number) {
+    const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
+    if (!globalWhitelistRecord?.addresses.includes(senderAddress)) {
+      const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
+      if (!existingWhitelistRecord?.addresses.includes(senderAddress)) {
+        const existingEpWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion, policyId);
+        if (!existingEpWhitelistRecord?.addresses.includes(senderAddress)) {
+          const existingEpWhitelistRecord2 = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion);
+          if (!existingEpWhitelistRecord2?.addresses.includes(senderAddress)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 };
 
