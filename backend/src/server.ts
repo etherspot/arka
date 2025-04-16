@@ -9,7 +9,7 @@ import fetch from 'node-fetch';
 import sequelizePlugin from './plugins/sequelizePlugin.js';
 import config from './plugins/config.js';
 import EtherspotChainlinkOracleAbi from './abi/EtherspotChainlinkOracleAbi.js';
-import PimlicoAbi from './abi/ERC20PaymasterAbi.js';
+import ERC20PaymasterAbi from './abi/ERC20PaymasterAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
 import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
@@ -162,7 +162,7 @@ const initializeServer = async (): Promise<void> => {
                   const provider = new providers.JsonRpcProvider(networkConfig.bundler);
                   const signer = new ethers.Wallet(process.env.CRON_PRIVATE_KEY ?? '', provider);
                   deployedPaymasters.forEach(async (deployedPaymaster) => {
-                    const paymasterContract = new ethers.Contract(deployedPaymaster, PimlicoAbi, signer)
+                    const paymasterContract = new ethers.Contract(deployedPaymaster, ERC20PaymasterAbi, signer)
                     const pythMainnetChains = configData?.pythMainnetChainIds?.split(',') ?? [];
                     const pythTestnetChains = configData?.pythTestnetChainIds?.split(',') ?? [];
                     if (pythMainnetChains?.includes(chain) || pythTestnetChains?.includes(chain)) {

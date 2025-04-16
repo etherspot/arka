@@ -999,7 +999,7 @@ export class Paymaster {
         message: PAYMASTER_ADDRESS[chainId][gasToken] ?? 'Requested Token Paymaster is not available/deployed',
       }
     } catch (err: any) {
-      if (log) log.error(err, 'pimlicoAddress');
+      if (log) log.error(err, 'ERC20PaymasterAddress');
       throw new Error(err.message)
     }
   }
