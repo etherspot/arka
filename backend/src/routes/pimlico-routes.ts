@@ -126,7 +126,8 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
                         paymasterAddress: record.paymasterAddress,
                         gasToken: ethers.utils.getAddress(record.tokenAddress),
                         chainId: record.chainId,
-                        decimals: record.decimals
+                        decimals: record.decimals,
+                        epVersion: record.epVersion,
                     }
                 });
                 server.log.info(result, 'getAllCommonERC20PaymasterAddress Response sent: ');
