@@ -48,6 +48,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         } else {
           address = body.params?.[0];
           policyId = body.params?.[1];
+          if (policyId && isNaN(policyId)) {
+            return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+          }
           api_key = query['apiKey'] ?? body.params?.[2];
         }
         if (!api_key || typeof(api_key) !== "string")
@@ -153,6 +156,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         } else {
           address = body.params?.[0];
           policyId = body.params?.[1];
+          if (policyId && isNaN(policyId)) {
+            return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+          }
           chainId = query['chainId'] ?? body.params?.[2];
           api_key = query['apiKey'] ?? body.params?.[3];
         }
@@ -265,6 +271,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         } else {
           accountAddress = body.params?.[0];
           policyId = body.params?.[1];
+          if (policyId && isNaN(policyId)) {
+            return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+          }
           chainId = query['chainId'] ?? body.params?.[2];
           api_key = query['apiKey'] ?? body.params?.[3];
         }
@@ -347,6 +356,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const address = body.params?.[0];
         const policyId = body.params?.[1];
+        if (policyId && isNaN(policyId)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         const api_key = query['apiKey'] ?? body.params?.[2];
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -436,6 +448,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const address = body.params?.[0];
         const policyId = body.params?.[1];
+        if (policyId && isNaN(policyId)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         const chainId = query['chainId'] ?? body.params?.[2];
         const api_key = query['apiKey'] ?? body.params?.[3];
         if (!api_key || typeof(api_key) !== "string")
@@ -530,6 +545,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const accountAddress = body.params?.[0];
         const policyId = body.params?.[1];
+        if (policyId && isNaN(policyId)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         const chainId = query['chainId'] ?? body.params?.[2];
         const api_key = query['apiKey'] ?? body.params?.[3];
         if (!accountAddress || !ethers.utils.isAddress(accountAddress)) {
@@ -595,6 +613,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const body: any = request.body;
         const query: any = request.query;
         const policyId = body?.params?.[0];
+        if (policyId && isNaN(policyId)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         const chainId = query['chainId'] ?? body?.params?.[1];
         const api_key = query['apiKey'] ?? body?.params?.[2];
         if (!api_key || typeof(api_key) !== "string")
@@ -633,10 +654,10 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         // EpVersion specific whitelist
         const existingEpWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, EPVersions.EPV_07, policyId);
 
-        if (!existingWhitelistRecord || !existingEpWhitelistRecord) {
+        if (!existingWhitelistRecord && !existingEpWhitelistRecord) {
           throw new Error(ErrorMessage.NO_WHITELIST_FOUND);
         }
-        const result = { addresses: existingWhitelistRecord.addresses.push(...existingEpWhitelistRecord.addresses) }
+        const result = { addresses: [...(existingWhitelistRecord?.addresses || []), ...(existingEpWhitelistRecord?.addresses || [])] }
         server.log.info(result, 'Response sent: ');
         if (body.jsonrpc)
           return reply.code(ReturnCode.SUCCESS).send({ jsonrpc: body.jsonrpc, id: body.id, result, error: null })
@@ -659,6 +680,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const address = body.params?.[0];
         const policyId = body.params?.[1];
+        if (policyId && isNaN(policyId)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         const api_key = query['apiKey'] ?? body.params?.[2];
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -749,6 +773,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const address = body.params?.[0];
         const policyId = body.params?.[1];
+        if (policyId && isNaN(policyId)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         const chainId = query['chainId'] ?? body.params?.[2];
         const api_key = query['apiKey'] ?? body.params?.[3];
         if (!api_key || typeof(api_key) !== "string")
@@ -843,6 +870,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
         const accountAddress = body.params?.[0];
         const policyId = body.params?.[1];
+        if (policyId && isNaN(policyId)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         const chainId = query['chainId'] ?? body.params?.[2];
         const api_key = query['apiKey'] ?? body.params?.[3];
         if (!accountAddress || !ethers.utils.isAddress(accountAddress)) {
@@ -908,6 +938,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const body: any = request.body;
         const query: any = request.query;
         const policyId = body?.params?.[0];
+        if (policyId && isNaN(policyId)) {
+          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        }
         const chainId = query['chainId'] ?? body?.params?.[1];
         const api_key = query['apiKey'] ?? body?.params?.[2];
         if (!api_key || typeof(api_key) !== "string")
@@ -941,9 +974,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_08);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         const existingGlobalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
-        console.log(existingGlobalWhitelistRecord, 'existingGlobalWhitelistRecord')
         const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, EPVersions.EPV_08, policyId);
-        console.log(existingWhitelistRecord, 'existingWhitelistRecord')
         if (!existingWhitelistRecord && !existingGlobalWhitelistRecord) {
           throw new Error(ErrorMessage.NO_WHITELIST_FOUND);
         }
