@@ -7,6 +7,7 @@ export class MultiTokenPaymaster extends Model {
     public paymasterAddress!: string;
     public chainId!: number;
     public decimals!: string;
+    public epVersion!: string;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -49,6 +50,11 @@ const initializeMTPModel = (sequelize: Sequelize, schema: string) => {
           type: DataTypes.INTEGER,
           allowNull: false,
           field: 'DECIMALS'
+        },
+        epVersion: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          field: 'EP_VERSION'
         },
         createdAt: {
             type: DataTypes.DATE,

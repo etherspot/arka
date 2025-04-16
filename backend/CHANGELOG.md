@@ -1,4 +1,8 @@
 # Changelog
+## [3.1.7] - 2025-04-16
+### New
+- Added support for multiTokenPaymaster deployed for EntryPoint v07
+
 ## [3.1.6] - 2025-04-02
 ### Fixes
 - Fixed bug in paymaster estimation for multiTokenPaymaster getERC20Quotes API

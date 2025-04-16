@@ -4,9 +4,9 @@ import { arrayify, BytesLike, defaultAbiCoder, hexConcat, hexZeroPad } from 'eth
 import { FastifyBaseLogger } from 'fastify';
 import EtherspotAbiV06 from '../abi/EtherspotAbi.js';
 import EtherspotAbiV07 from "../abi/EtherspotVerifyingSignerAbi.js";
-import { PimlicoPaymaster } from './pimlico.js';
+import { TokenPaymaster } from './token.js';
 import ErrorMessage from '../constants/ErrorMessage.js';
-import { PAYMASTER_ADDRESS } from '../constants/Pimlico.js';
+import { PAYMASTER_ADDRESS } from '../constants/Token.js';
 import { getGasFee } from '../utils/common.js';
 import MultiTokenPaymasterAbi from '../abi/MultiTokenPaymasterAbi.js';
 import OrochiOracleAbi from '../abi/OrochiOracleAbi.js';
@@ -21,6 +21,7 @@ import { CoingeckoService } from '../services/coingecko.js';
 import { Sequelize } from 'sequelize';
 import { abi as verifyingPaymasterAbi, byteCode as verifyingPaymasterByteCode } from '../abi/VerifyingPaymasterAbi.js';
 import { abi as verifyingPaymasterV2Abi, byteCode as verifyingPaymasterV2ByteCode } from '../abi/VerifyingPaymasterAbiV2.js';
+import MultiTokenPaymasterAbiV2 from '../abi/MultiTokenPaymasterAbiV2.js';
 
 const ttl = parseInt(process.env.CACHE_TTL || "600000");
 const nativePriceCacheTtl = parseInt(process.env.NATIVE_PRICE_CACHE_TTL || "60000");
@@ -54,13 +55,16 @@ export class Paymaster {
   EP7_TOKEN_VGL: string;
   EP7_TOKEN_PGL: string;
   EP7_PVGL: BigNumber;
+  MTP_PVGL: string;
+  MTP_PPGL: string;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
   nativeCurrencyPrice: Map<string, NativeCurrencyPricyCache> = new Map();
   coingeckoPrice: Map<string, CoingeckoPriceCache> = new Map();
   coingeckoService: CoingeckoService = new CoingeckoService();
   sequelize: Sequelize;
 
-  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize, mtpVglMarkup: string, ep7Pvgl: string) {
+  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize, 
+    mtpVglMarkup: string, ep7Pvgl: string, mtpPvgl: string, mtpPpgl: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
@@ -69,6 +73,8 @@ export class Paymaster {
     this.sequelize = sequelize;
     this.MTP_VGL_MARKUP = mtpVglMarkup;
     this.EP7_PVGL = BigNumber.from(ep7Pvgl);
+    this.MTP_PVGL = mtpPvgl;
+    this.MTP_PPGL = mtpPpgl;
   }
 
   packUint(high128: BigNumberish, low128: BigNumberish): string {
@@ -234,6 +240,38 @@ export class Paymaster {
         throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
       if (log) log.error(err, 'signV06');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
+    }
+  }
+
+  async getPaymasterAndDataForMultiTokenPaymasterV07(userOp: any, validUntil: string, validAfter: string, feeToken: string,
+    ethPrice: string, paymasterContract: Contract, signer: Wallet) {
+    try {
+      const priceMarkup = this.multiTokenMarkUp;
+      const hash = await paymasterContract.getHash(
+        userOp,
+        0,
+        validUntil,
+        validAfter,
+        feeToken,
+        ethers.constants.AddressZero,
+        ethPrice,
+        priceMarkup
+      );
+
+      const sig = await signer.signMessage(arrayify(hash));
+
+      const paymasterData = hexConcat([
+        '0x00',
+        defaultAbiCoder.encode(
+          ['uint48', 'uint48', 'address', 'address', 'uint256', 'uint32'],
+          [validUntil, validAfter, feeToken, ethers.constants.AddressZero, ethPrice, priceMarkup]
+        ),
+        sig,
+      ]);
+
+      return paymasterData;
+    } catch (err: any) {
+      throw new Error('Failed ' + err.message)
     }
   }
 
@@ -717,7 +755,7 @@ export class Paymaster {
       userOp.paymasterAndData = paymasterAndData
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
       if (BigNumber.from(userOp.verificationGasLimit).lt("45000")) userOp.verificationGasLimit = BigNumber.from("45000").toHexString(); // This is to counter the unaccounted cost(45000)
-      userOp.verificationGasLimit = BigNumber.from(response.verificationGasLimit).add("30000").toHexString(); // This is added just in case the token is proxy
+      userOp.verificationGasLimit = BigNumber.from(response.verificationGasLimit).add(this.MTP_VGL_MARKUP).toHexString(); // This is added just in case the token is proxy
       userOp.preVerificationGas = response.preVerificationGas;
       userOp.callGasLimit = response.callGasLimit;
       paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
@@ -738,10 +776,105 @@ export class Paymaster {
     }
   }
 
-  async pimlico(userOp: any, bundlerRpc: string, entryPoint: string, PaymasterAddress: string, log?: FastifyBaseLogger) {
+  async signMultiTokenPaymasterV07(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string,
+    feeToken: string, oracleAggregator: string, bundlerRpc: string, signer: Wallet, oracleName: string, nativeOracleAddress: string,
+    chainId: number, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const erc20Paymaster = new PimlicoPaymaster(PaymasterAddress, provider)
+      const paymasterContract = new ethers.Contract(paymasterAddress, MultiTokenPaymasterAbiV2, provider);
+      let ethPrice;
+      const isCoingeckoAvailable = this.coingeckoPrice.get(`${chainId}-${feeToken}`);
+
+      if (!oracleAggregator) {
+        if (!isCoingeckoAvailable) throw new Error('Unable to fetch token price. Please try again later.')
+        const { latestAnswer, decimals } = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
+        const data = await this.getPriceFromCoingecko(chainId, feeToken, latestAnswer, decimals, log);
+
+        ethPrice = data.ethPrice;
+      } else if (oracleName === "orochi") {
+        const data = await this.getPriceFromOrochi(oracleAggregator, provider, feeToken, chainId);
+        ethPrice = data.ethPrice;
+      } else if (oracleName === "chainlink") {
+        const { latestAnswer, decimals } = await this.getLatestAnswerAndDecimals(provider, nativeOracleAddress, chainId);
+
+        const data = await this.getPriceFromChainlink(
+          oracleAggregator,
+          provider,
+          feeToken,
+          latestAnswer,
+          decimals,
+          chainId
+        );
+
+        ethPrice = data.ethPrice;
+      } else {
+        const ecContract = new ethers.Contract(oracleAggregator, EtherspotChainlinkOracleAbi, provider);
+        const ETHprice = await ecContract.cachedPrice();
+        ethPrice = ETHprice
+      }
+      if (!userOp.signature) userOp.signature = '0x';
+      userOp.paymaster = paymasterAddress;
+      userOp.paymasterVerificationGasLimit = BigNumber.from(this.MTP_PVGL).toHexString(); // Paymaster specific gas limit
+      userOp.paymasterPostOpGasLimit = BigNumber.from(this.MTP_PPGL).toHexString(); // Paymaster specific gas limit for token transfer
+      let accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
+      const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
+      let packedUserOp = {
+        sender: userOp.sender,
+        nonce: userOp.nonce,
+        initCode: userOp.initCode ?? "0x",
+        callData: userOp.callData,
+        accountGasLimits: accountGasLimits,
+        preVerificationGas: userOp.preVerificationGas,
+        gasFees: gasFees,
+        paymasterAndData: this.packPaymasterData(paymasterAddress, userOp.paymasterVerificationGasLimit, userOp.paymasterPostOpGasLimit, "0x"),
+        signature: userOp.signature
+      }
+      userOp.paymaster = paymasterAddress;
+      let paymasterData = await this.getPaymasterAndDataForMultiTokenPaymasterV07(packedUserOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
+      userOp.paymasterData = paymasterData
+      userOp.paymasterAndData = this.packPaymasterData(paymasterAddress, userOp.paymasterVerificationGasLimit, userOp.paymasterPostOpGasLimit, paymasterData);
+      const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+      if (BigNumber.from(userOp.verificationGasLimit).lt("45000")) userOp.verificationGasLimit = BigNumber.from("45000").toHexString(); // This is to counter the unaccounted cost(45000)
+      userOp.verificationGasLimit = response.verificationGasLimit;
+      userOp.preVerificationGas = response.preVerificationGas;
+      userOp.callGasLimit = response.callGasLimit;
+      accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit);
+      packedUserOp = {
+        sender: userOp.sender,
+        nonce: userOp.nonce,
+        initCode: userOp.initCode ?? "0x",
+        callData: userOp.callData,
+        accountGasLimits: accountGasLimits,
+        preVerificationGas: userOp.preVerificationGas,
+        gasFees: gasFees,
+        paymasterAndData: this.packPaymasterData(paymasterAddress, userOp.paymasterVerificationGasLimit, userOp.paymasterPostOpGasLimit, paymasterData),
+        signature: userOp.signature
+      }
+      paymasterData = await this.getPaymasterAndDataForMultiTokenPaymasterV07(packedUserOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
+      userOp.paymasterData = paymasterData
+
+      const returnValue = {
+        paymaster: paymasterAddress,
+        paymasterData: paymasterData,
+        preVerificationGas: BigNumber.from(packedUserOp.preVerificationGas).toHexString(),
+        verificationGasLimit: BigNumber.from(userOp.verificationGasLimit).toHexString(),
+        callGasLimit: BigNumber.from(userOp.callGasLimit).toHexString(),
+        paymasterVerificationGasLimit: userOp.paymasterVerificationGasLimit,
+        paymasterPostOpGasLimit: userOp.paymasterPostOpGasLimit,
+      }
+      return returnValue;
+    } catch (err: any) {
+      if (err.message.includes("Quota exceeded"))
+        throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
+      if (log) log.error(err, 'signMultiTokenPaymasterV07');
+      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
+    }
+  }
+
+  async erc20Paymaster(userOp: any, bundlerRpc: string, entryPoint: string, PaymasterAddress: string, log?: FastifyBaseLogger) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const erc20Paymaster = new TokenPaymaster(PaymasterAddress, provider)
       if (!userOp.signature) userOp.signature = '0x';
 
       // The minimum ABI to get the ERC20 Token balance
@@ -785,7 +918,7 @@ export class Paymaster {
       if (err.message.includes("Quota exceeded"))
         throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
       if (err.message.includes('The required token amount')) throw new Error(err.message);
-      if (log) log.error(err, 'pimlico');
+      if (log) log.error(err, 'erc20Paymaster');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg: ' + err.message)
     }
   }
@@ -860,13 +993,13 @@ export class Paymaster {
     }
   }
 
-  async pimlicoAddress(gasToken: string, chainId: number, log?: FastifyBaseLogger) {
+  async erc20PaymasterAddress(gasToken: string, chainId: number, log?: FastifyBaseLogger) {
     try {
       return {
         message: PAYMASTER_ADDRESS[chainId][gasToken] ?? 'Requested Token Paymaster is not available/deployed',
       }
     } catch (err: any) {
-      if (log) log.error(err, 'pimlicoAddress');
+      if (log) log.error(err, 'ERC20PaymasterAddress');
       throw new Error(err.message)
     }
   }
@@ -1192,7 +1325,7 @@ export class Paymaster {
       const tokenData = this.coingeckoPrice.get(cacheKey)?.data;
       if (!tokenData) {
         log?.error('Price fetch error on tokenAddress: ' + tokenAddress, 'CoingeckoError')
-        throw new Error(tokenAddress + ' ' +ErrorMessage.COINGECKO_PRICE_NOT_FETCHED);
+        throw new Error(`${tokenAddress} ${ErrorMessage.COINGECKO_PRICE_NOT_FETCHED}`);
       }
     }
   }

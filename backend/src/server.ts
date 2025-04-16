@@ -9,7 +9,7 @@ import fetch from 'node-fetch';
 import sequelizePlugin from './plugins/sequelizePlugin.js';
 import config from './plugins/config.js';
 import EtherspotChainlinkOracleAbi from './abi/EtherspotChainlinkOracleAbi.js';
-import PimlicoAbi from './abi/PimlicoAbi.js';
+import ERC20PaymasterAbi from './abi/ERC20PaymasterAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
 import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
@@ -19,7 +19,7 @@ import adminRoutes from './routes/admin-routes.js';
 import depositRoutes from './routes/deposit-route.js';
 import metadataRoutes from './routes/metadata-routes.js';
 import paymasterRoutes from './routes/paymaster-routes.js';
-import pimlicoRoutes from './routes/pimlico-routes.js';
+import tokenRoutes from './routes/token-routes.js';
 import whitelistRoutes from './routes/whitelist-routes.js';
 import sponsorshipPolicyRoutes from './routes/sponsorship-policy-routes.js';
 import SupportedNetworks from "../config.json" assert { type: "json" };
@@ -61,7 +61,8 @@ const initializeServer = async (): Promise<void> => {
 
   // Register the sequelizePlugin
   await server.register(sequelizePlugin);
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL);
+  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, 
+    server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL, server.config.MTP_PVGL, server.config.MTP_PPGL);
 
   // Synchronize all models
   await server.sequelize.sync();
@@ -101,7 +102,7 @@ const initializeServer = async (): Promise<void> => {
 
   await server.register(depositRoutes);
 
-  await server.register(pimlicoRoutes);
+  await server.register(tokenRoutes);
 
   await server.register(whitelistRoutes);
 
@@ -161,7 +162,7 @@ const initializeServer = async (): Promise<void> => {
                   const provider = new providers.JsonRpcProvider(networkConfig.bundler);
                   const signer = new ethers.Wallet(process.env.CRON_PRIVATE_KEY ?? '', provider);
                   deployedPaymasters.forEach(async (deployedPaymaster) => {
-                    const paymasterContract = new ethers.Contract(deployedPaymaster, PimlicoAbi, signer)
+                    const paymasterContract = new ethers.Contract(deployedPaymaster, ERC20PaymasterAbi, signer)
                     const pythMainnetChains = configData?.pythMainnetChainIds?.split(',') ?? [];
                     const pythTestnetChains = configData?.pythTestnetChainIds?.split(',') ?? [];
                     if (pythMainnetChains?.includes(chain) || pythTestnetChains?.includes(chain)) {
