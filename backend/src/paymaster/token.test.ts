@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { providers, ethers } from "ethers";
-import { PimlicoPaymaster, getERC20Paymaster } from "./pimlico.js";
+import { TokenPaymaster, getERC20Paymaster } from "./token.js";
 import {
   NATIVE_ASSET,
   ORACLE_ADDRESS,
   TOKEN_ADDRESS,
-} from "../../src/constants/Pimlico.js";
+} from "../constants/Token.js";
 
-describe("PimlicoPaymaster on Mumbai", () => {
+describe("TokenPaymaster on Mumbai", () => {
   const paymasterAddress = "0x32aCDFeA07a614E52403d2c1feB747aa8079A353"; // Mumbai Etherspot Paymaster Address
   const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"; // EntryPoint v0.6 as default
   const bundlerUrl = "https://mumbai-bundler.etherspot.io";
@@ -39,12 +39,12 @@ describe("PimlicoPaymaster on Mumbai", () => {
   };
 
   const provider = new providers.JsonRpcProvider(bundlerUrl);
-  const pimlicoPaymaster = new PimlicoPaymaster(paymasterAddress, provider);
+  const tokenPaymaster = new TokenPaymaster(paymasterAddress, provider);
 
   test.skip("SMOKE: validate the calculateTokenAmount function with valid details", async () => {
     try {
       const calculateTokenAmountResponse =
-        await pimlicoPaymaster.calculateTokenAmount(userOp);
+        await tokenPaymaster.calculateTokenAmount(userOp);
 
       try {
         expect(calculateTokenAmountResponse).toHaveProperty("_hex");
@@ -63,7 +63,7 @@ describe("PimlicoPaymaster on Mumbai", () => {
   test.skip("SMOKE: validate the generatePaymasterAndData function with valid details", async () => {
     try {
       const generatePaymasterAndDataResponse =
-        await pimlicoPaymaster.generatePaymasterAndData(userOp);
+        await tokenPaymaster.generatePaymasterAndData(userOp);
       try {
         expect(generatePaymasterAndDataResponse.length.toString()).toMatch(
           "106"

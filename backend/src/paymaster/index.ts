@@ -4,9 +4,9 @@ import { arrayify, BytesLike, defaultAbiCoder, hexConcat, hexZeroPad } from 'eth
 import { FastifyBaseLogger } from 'fastify';
 import EtherspotAbiV06 from '../abi/EtherspotAbi.js';
 import EtherspotAbiV07 from "../abi/EtherspotVerifyingSignerAbi.js";
-import { PimlicoPaymaster } from './pimlico.js';
+import { TokenPaymaster } from './token.js';
 import ErrorMessage from '../constants/ErrorMessage.js';
-import { PAYMASTER_ADDRESS } from '../constants/Pimlico.js';
+import { PAYMASTER_ADDRESS } from '../constants/Token.js';
 import { getGasFee } from '../utils/common.js';
 import MultiTokenPaymasterAbi from '../abi/MultiTokenPaymasterAbi.js';
 import OrochiOracleAbi from '../abi/OrochiOracleAbi.js';
@@ -871,10 +871,10 @@ export class Paymaster {
     }
   }
 
-  async pimlico(userOp: any, bundlerRpc: string, entryPoint: string, PaymasterAddress: string, log?: FastifyBaseLogger) {
+  async erc20Paymaster(userOp: any, bundlerRpc: string, entryPoint: string, PaymasterAddress: string, log?: FastifyBaseLogger) {
     try {
       const provider = new providers.JsonRpcProvider(bundlerRpc);
-      const erc20Paymaster = new PimlicoPaymaster(PaymasterAddress, provider)
+      const erc20Paymaster = new TokenPaymaster(PaymasterAddress, provider)
       if (!userOp.signature) userOp.signature = '0x';
 
       // The minimum ABI to get the ERC20 Token balance
@@ -918,7 +918,7 @@ export class Paymaster {
       if (err.message.includes("Quota exceeded"))
         throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
       if (err.message.includes('The required token amount')) throw new Error(err.message);
-      if (log) log.error(err, 'pimlico');
+      if (log) log.error(err, 'erc20Paymaster');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg: ' + err.message)
     }
   }
@@ -993,7 +993,7 @@ export class Paymaster {
     }
   }
 
-  async pimlicoAddress(gasToken: string, chainId: number, log?: FastifyBaseLogger) {
+  async erc20PaymasterAddress(gasToken: string, chainId: number, log?: FastifyBaseLogger) {
     try {
       return {
         message: PAYMASTER_ADDRESS[chainId][gasToken] ?? 'Requested Token Paymaster is not available/deployed',

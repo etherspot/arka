@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ethers, providers, Wallet } from "ethers";
 import { Paymaster } from "./index.js";
-import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
+import { PAYMASTER_ADDRESS } from "../constants/Token.js";
 import MultiTokenPaymasterAbi from "../abi/MultiTokenPaymasterAbi.js";
 
 describe("Validate the Arka Paymaster on Sepolia", () => {

@@ -3,7 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync } from "fastify";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
-import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
+import { PAYMASTER_ADDRESS } from "../constants/Token.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
@@ -11,7 +11,7 @@ import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
 import { ethers } from "ethers";
 
-const pimlicoRoutes: FastifyPluginAsync = async (server) => {
+const tokenRoutes: FastifyPluginAsync = async (server) => {
 
     const prefixSecretId = 'arka_';
 
@@ -145,4 +145,4 @@ const pimlicoRoutes: FastifyPluginAsync = async (server) => {
 
 };
 
-export default pimlicoRoutes;
+export default tokenRoutes;

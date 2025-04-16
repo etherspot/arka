@@ -9,7 +9,7 @@ import fetch from 'node-fetch';
 import sequelizePlugin from './plugins/sequelizePlugin.js';
 import config from './plugins/config.js';
 import EtherspotChainlinkOracleAbi from './abi/EtherspotChainlinkOracleAbi.js';
-import PimlicoAbi from './abi/PimlicoAbi.js';
+import PimlicoAbi from './abi/ERC20PaymasterAbi.js';
 import PythOracleAbi from './abi/PythOracleAbi.js';
 import { getNetworkConfig } from './utils/common.js';
 import { checkDeposit } from './utils/monitorTokenPaymaster.js';
@@ -19,7 +19,7 @@ import adminRoutes from './routes/admin-routes.js';
 import depositRoutes from './routes/deposit-route.js';
 import metadataRoutes from './routes/metadata-routes.js';
 import paymasterRoutes from './routes/paymaster-routes.js';
-import pimlicoRoutes from './routes/pimlico-routes.js';
+import tokenRoutes from './routes/token-routes.js';
 import whitelistRoutes from './routes/whitelist-routes.js';
 import sponsorshipPolicyRoutes from './routes/sponsorship-policy-routes.js';
 import SupportedNetworks from "../config.json" assert { type: "json" };
@@ -102,7 +102,7 @@ const initializeServer = async (): Promise<void> => {
 
   await server.register(depositRoutes);
 
-  await server.register(pimlicoRoutes);
+  await server.register(tokenRoutes);
 
   await server.register(whitelistRoutes);
 

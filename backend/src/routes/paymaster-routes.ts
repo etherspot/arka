@@ -4,7 +4,7 @@ import { BigNumber, Wallet, ethers, providers } from "ethers";
 import { gql, request as GLRequest } from "graphql-request";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
-import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
+import { PAYMASTER_ADDRESS } from "../constants/Token.js";
 import ErrorMessage, { generateErrorMessage } from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
@@ -275,7 +275,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 let paymasterAddress: string;
                 if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
                 else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
-                result = await paymaster.pimlico(userOp, bundlerUrl, entryPoint, paymasterAddress, server.log);
+                result = await paymaster.erc20Paymaster(userOp, bundlerUrl, entryPoint, paymasterAddress, server.log);
               } else if (epVersion === EPVersions.EPV_07) {
                 if (
                   !(customPaymastersV2[chainId] && customPaymastersV2[chainId][gasToken])

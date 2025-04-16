@@ -7,7 +7,7 @@ import { getNetworkConfig, printRequest } from "../utils/common.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import { decode } from "../utils/crypto.js";
-import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
+import { PAYMASTER_ADDRESS } from "../constants/Token.js";
 import { APIKey } from "../models/api-key.js";
 import * as EtherspotAbi from "../abi/EtherspotAbi.js";
 import {abi as verifyingPaymasterAbi} from "../abi/VerifyingPaymasterAbi.js";
