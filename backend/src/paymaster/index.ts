@@ -1325,7 +1325,7 @@ export class Paymaster {
       const tokenData = this.coingeckoPrice.get(cacheKey)?.data;
       if (!tokenData) {
         log?.error('Price fetch error on tokenAddress: ' + tokenAddress, 'CoingeckoError')
-        throw new Error(tokenAddress + ' ' + ErrorMessage.COINGECKO_PRICE_NOT_FETCHED);
+        throw new Error(`${tokenAddress} ${ErrorMessage.COINGECKO_PRICE_NOT_FETCHED}`);
       }
     }
   }
