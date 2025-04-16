@@ -755,7 +755,7 @@ export class Paymaster {
       userOp.paymasterAndData = paymasterAndData
       const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
       if (BigNumber.from(userOp.verificationGasLimit).lt("45000")) userOp.verificationGasLimit = BigNumber.from("45000").toHexString(); // This is to counter the unaccounted cost(45000)
-      userOp.verificationGasLimit = BigNumber.from(response.verificationGasLimit).add("30000").toHexString(); // This is added just in case the token is proxy
+      userOp.verificationGasLimit = BigNumber.from(response.verificationGasLimit).add(this.MTP_VGL_MARKUP).toHexString(); // This is added just in case the token is proxy
       userOp.preVerificationGas = response.preVerificationGas;
       userOp.callGasLimit = response.callGasLimit;
       paymasterAndData = await this.getPaymasterAndDataForMultiTokenPaymaster(userOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer, chainId);
