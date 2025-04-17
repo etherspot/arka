@@ -12,7 +12,8 @@ import { APIKey } from "../models/api-key.js";
 import { EPVersions } from "../types/sponsorship-policy-dto.js";
 
 const depositRoutes: FastifyPluginAsync = async (server) => {
-    const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL, server.config.EP8_PVGL);
+    const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, 
+        server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL, server.config.MTP_PVGL, server.config.MTP_PPGL, server.config.EP8_PVGL);
 
     const SUPPORTED_ENTRYPOINTS = {
         EPV_06: server.config.EPV_06,

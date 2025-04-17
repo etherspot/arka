@@ -1,5 +1,6 @@
 import { Sequelize } from 'sequelize';
 import { MultiTokenPaymaster } from '../models/multiTokenPaymaster.js';
+import { EPVersions } from '../types/sponsorship-policy-dto.js';
 
 export class MultiTokenPaymasterRepository {
   private sequelize: Sequelize;
@@ -13,10 +14,10 @@ export class MultiTokenPaymasterRepository {
     return result.map(id => id.get() as MultiTokenPaymaster);
   }
 
-  async findOneByChainIdAndTokenAddress(chainId: number, tokenAddress: string): Promise<MultiTokenPaymaster | null> {
+  async findOneByChainIdEPVersionAndTokenAddress(chainId: number, tokenAddress: string, epVersion: EPVersions): Promise<MultiTokenPaymaster | null> {
     const result = await this.sequelize.models.MultiTokenPaymaster.findOne({
       where: {
-        chainId: chainId, tokenAddress: tokenAddress
+        chainId: chainId, tokenAddress: tokenAddress, epVersion: epVersion
       }
     }) as MultiTokenPaymaster;
 

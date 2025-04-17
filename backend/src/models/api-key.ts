@@ -11,6 +11,7 @@ export class APIKey extends Model {
   public verifyingPaymastersV2?: string | null;
   public verifyingPaymastersV3?: string | null;
   public multiTokenPaymasters?: string | null;
+  public multiTokenPaymastersV2?: string | null;
   public multiTokenOracles?: string | null;
   public sponsorName?: string | null;
   public logoUrl?: string | null;
@@ -82,6 +83,11 @@ export function initializeAPIKeyModel(sequelize: Sequelize, schema: string) {
       type: DataTypes.TEXT,
       allowNull: true,
       field: 'MULTI_TOKEN_PAYMASTERS'
+    },
+    multiTokenPaymastersV2: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'MULTI_TOKEN_PAYMASTERS_V2'
     },
     multiTokenOracles: {
       type: DataTypes.TEXT,

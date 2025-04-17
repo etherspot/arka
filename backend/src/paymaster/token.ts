@@ -1,8 +1,8 @@
 import { Contract, BigNumber, providers, utils, Signer, ethers } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts"
 import { NotPromise } from "@account-abstraction/utils"
-import abi from "../abi/PimlicoAbi.js";
-import { NATIVE_ASSET, ORACLE_ADDRESS, TOKEN_ADDRESS, bytecode } from "../constants/Pimlico.js";
+import abi from "../abi/ERC20PaymasterAbi.js";
+import { NATIVE_ASSET, ORACLE_ADDRESS, TOKEN_ADDRESS, bytecode } from "../constants/Token.js";
 
 export interface ERC20PaymasterBuildOptions {
     entrypoint?: string
@@ -14,7 +14,7 @@ export interface ERC20PaymasterBuildOptions {
     deployer?: Signer
 }
 
-export class PimlicoPaymaster {
+export class TokenPaymaster {
     private contract: Contract;
     tokenAddress: Promise<string>;
     paymasterAddress: string;
@@ -52,7 +52,6 @@ export class PimlicoPaymaster {
 
         /**
          * Don't know why but the below calculation is for tokens with 6 decimals such as USDC, USDT
-         * Pimlico default paymasters uses only USDC
          * After long testing the below code is neglected for tokens with 18 decimals
          */
         if (ethers.utils.parseUnits('1', 6).eq(tokenDecimals)) {
@@ -190,7 +189,7 @@ export async function getERC20Paymaster(
     erc20: string,
     entryPoint: string,
     options?: Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">
-): Promise<PimlicoPaymaster> {
+): Promise<TokenPaymaster> {
     let parsedOptions: Required<Omit<Omit<ERC20PaymasterBuildOptions, "nativeAsset">, "deployer">>
     const chainId = (await provider.getNetwork()).chainId
     if (options === undefined) {
@@ -199,7 +198,7 @@ export async function getERC20Paymaster(
             nativeAssetOracle: ORACLE_ADDRESS[chainId][NATIVE_ASSET[chainId]],
             tokenAddress: TOKEN_ADDRESS[chainId][erc20],
             tokenOracle: ORACLE_ADDRESS[chainId][erc20],
-            owner: "0x4337000c2828F5260d8921fD25829F606b9E8680" // pimlico address
+            owner: "0x4337000c2828F5260d8921fD25829F606b9E8680"
         }
     } else {
         parsedOptions = await validatePaymasterOptions(provider, erc20, options)
@@ -208,5 +207,5 @@ export async function getERC20Paymaster(
     if ((await provider.getCode(address)).length <= 2) {
         throw new Error(`ERC20Paymaster not deployed at ${address}`)
     }
-    return new PimlicoPaymaster(address, provider)
+    return new TokenPaymaster(address, provider)
 }

@@ -40,6 +40,8 @@ const ConfigSchema = Type.Strict(
     USE_SKANDHA_FOR_GAS_DATA: Type.Boolean() || true,
     EP7_PVGL: Type.String(),
     EP8_PVGL: Type.String(),
+    MTP_PVGL: Type.String() || undefined,
+    MTP_PPGL: Type.String() || undefined,
   })
 );
 
@@ -84,6 +86,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     USE_SKANDHA_FOR_GAS_DATA: process.env.USE_SKANDHA_FOR_GAS_DATA,
     EP7_PVGL: process.env.EP7_PVGL ?? '30000',
     EP8_PVGL: process.env.EP8_PVGL ?? '30000',
+    MTP_PVGL: process.env.MTP_PVGL ?? '50000',
+    MTP_PPGL: process.env.MTP_PPGL ?? '70000',
   }
 
   const valid = validate(envVar);
@@ -124,6 +128,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     USE_SKANDHA_FOR_GAS_DATA: process.env.USE_SKANDHA_FOR_GAS_DATA === 'false' ? false : true,
     EP7_PVGL: process.env.EP7_PVGL ?? '30000',
     EP8_PVGL: process.env.EP8_PVGL ?? '30000',
+    MTP_PVGL: process.env.MTP_PVGL ?? '50000',
+    MTP_PPGL: process.env.MTP_PPGL ?? '70000',
   }
 
   server.log.info(config, "config:");
