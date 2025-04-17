@@ -20,7 +20,8 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
 
   const SUPPORTED_ENTRYPOINTS = {
     EPV_06: server.config.EPV_06,
-    EPV_07: server.config.EPV_07
+    EPV_07: server.config.EPV_07,
+    EPV_08: server.config.EPV_08
   }
 
   const prefixSecretId = 'arka_';
@@ -88,11 +89,11 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         }
         if (!api_key || typeof (api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        if (!SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint) && !SUPPORTED_ENTRYPOINTS.EPV_07?.includes(entryPoint))
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
-
+        
         if (SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint)) epVersion = EPVersions.EPV_06;
-        else epVersion = EPVersions.EPV_07;
+        else if (SUPPORTED_ENTRYPOINTS.EPV_07?.includes(entryPoint)) epVersion = EPVersions.EPV_07;
+        else if (SUPPORTED_ENTRYPOINTS.EPV_08?.includes(entryPoint)) epVersion = EPVersions.EPV_08;
+        else return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
 
         let customPaymasters = [];
         let customPaymastersV2 = [];
@@ -254,15 +255,19 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 const contractWhitelistResult = await checkContractWhitelist(userOp.callData, chainId.chainId, signer.address);
                 if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
               }
+              const isWhitelisted = await checkWhitelist(api_key, epVersion, userOp.sender, sponsorshipPolicy.id);
+              if (!isWhitelisted) {
+                throw new Error('This sender address has not been whitelisted yet');
+              }
               if (epVersion === EPVersions.EPV_06)
                 result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
-              else {
-                const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
-                if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                  const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
-                  if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+              else if (epVersion === EPVersions.EPV_07) {
+                if (!networkConfig.contracts.etherspotPaymasterAddress) {
+                  throw new Error('Please use useVP flag to use your deployed verifying paymaster as global paymaster is not defined');
                 }
                 result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
+              } else {
+                result = await paymaster.signV08(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
               }
               break;
             }
@@ -380,10 +385,9 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
               }
 
-              const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
-              if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
-                if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+              const isWhitelisted = await checkWhitelist(api_key, epVersion, userOp.sender, sponsorshipPolicy.id);
+              if (!isWhitelisted) {
+                throw new Error('This sender address has not been whitelisted yet');
               }
 
               if (epVersion === EPVersions.EPV_06) {
@@ -396,15 +400,24 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 }
                 result = await paymaster.signV06(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
               }
-              else {
-                if (!apiKeyEntity.verifyingPaymastersV2) {
-                  return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.VP_NOT_DEPLOYED });
+              else if  (epVersion === EPVersions.EPV_07) {
+                if(!apiKeyEntity.verifyingPaymastersV2) {
+                  return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
                 }
                 const paymasterAddr = JSON.parse(apiKeyEntity.verifyingPaymastersV2)[chainId.chainId];
                 if (!paymasterAddr) {
                   return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.VP_NOT_DEPLOYED });
                 }
                 result = await paymaster.signV07(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
+              } else {
+                if (!apiKeyEntity.verifyingPaymastersV3) {
+                  return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
+                }
+                const paymasterAddr = JSON.parse(apiKeyEntity.verifyingPaymastersV3)[chainId.chainId];
+                if (!paymasterAddr) {
+                  return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
+                }
+                result = await paymaster.signV08(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
               }
               break;
             }
@@ -573,6 +586,23 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
       }
     }
     return returnValue;
+  }
+
+  async function checkWhitelist(api_key: string, epVersion: EPVersions, senderAddress: string, policyId: number) {
+    const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
+    if (!globalWhitelistRecord?.addresses.includes(senderAddress)) {
+      const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
+      if (!existingWhitelistRecord?.addresses.includes(senderAddress)) {
+        const existingEpWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion, policyId);
+        if (!existingEpWhitelistRecord?.addresses.includes(senderAddress)) {
+          const existingEpWhitelistRecord2 = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion);
+          if (!existingEpWhitelistRecord2?.addresses.includes(senderAddress)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 };
 

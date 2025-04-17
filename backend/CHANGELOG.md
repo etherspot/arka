@@ -1,4 +1,8 @@
 # Changelog
+## [4.0.0] - 2025-04-01
+### New
+- Added EPV08 Support
+
 ## [3.1.7] - 2025-04-16
 ### New
 - Added support for multiTokenPaymaster deployed for EntryPoint v07

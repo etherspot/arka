@@ -21,6 +21,8 @@ import { CoingeckoService } from '../services/coingecko.js';
 import { Sequelize } from 'sequelize';
 import { abi as verifyingPaymasterAbi, byteCode as verifyingPaymasterByteCode } from '../abi/VerifyingPaymasterAbi.js';
 import { abi as verifyingPaymasterV2Abi, byteCode as verifyingPaymasterV2ByteCode } from '../abi/VerifyingPaymasterAbiV2.js';
+import { abi as verifyingPaymasterV3Abi, byteCode as verifyingPaymasterV3ByteCode } from '../abi/VerifyingPaymasterAbiV3.js';
+import { EPVersions } from '../types/sponsorship-policy-dto.js';
 import MultiTokenPaymasterAbiV2 from '../abi/MultiTokenPaymasterAbiV2.js';
 
 const ttl = parseInt(process.env.CACHE_TTL || "600000");
@@ -55,6 +57,7 @@ export class Paymaster {
   EP7_TOKEN_VGL: string;
   EP7_TOKEN_PGL: string;
   EP7_PVGL: BigNumber;
+  EP8_PVGL: BigNumber;
   MTP_PVGL: string;
   MTP_PPGL: string;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
@@ -64,7 +67,7 @@ export class Paymaster {
   sequelize: Sequelize;
 
   constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize, 
-    mtpVglMarkup: string, ep7Pvgl: string, mtpPvgl: string, mtpPpgl: string) {
+    mtpVglMarkup: string, ep7Pvgl: string, mtpPvgl: string, mtpPpgl: string, ep8Pvgl: string) {
     this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
     if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
     else this.multiTokenMarkUp = Number(multiTokenMarkUp);
@@ -73,6 +76,7 @@ export class Paymaster {
     this.sequelize = sequelize;
     this.MTP_VGL_MARKUP = mtpVglMarkup;
     this.EP7_PVGL = BigNumber.from(ep7Pvgl);
+    this.EP8_PVGL = BigNumber.from(ep8Pvgl);
     this.MTP_PVGL = mtpPvgl;
     this.MTP_PPGL = mtpPpgl;
   }
@@ -181,6 +185,80 @@ export class Paymaster {
         throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
       if (log) log.error(err, 'signV07');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
+    }
+  }
+
+  async signV08(userOp: any, validUntil: string, validAfter: string, entryPoint: string, paymasterAddress: string,
+    bundlerRpc: string, signer: Wallet, estimate: boolean, log?: FastifyBaseLogger) {
+    try {
+      const provider = new providers.JsonRpcProvider(bundlerRpc);
+      const paymasterContract = new ethers.Contract(paymasterAddress, verifyingPaymasterV3Abi, provider);
+      if (!userOp.signature) userOp.signature = '0x';
+      if (userOp.factory && userOp.factoryData) userOp.initCode = hexConcat([userOp.factory, userOp.factoryData ?? ''])
+      if (!userOp.initCode) userOp.initCode = "0x";
+      const paymasterPostOpGasLimit = BigNumber.from("40000").toHexString();
+      if (estimate) {
+        userOp.paymaster = paymasterAddress;
+        userOp.paymasterVerificationGasLimit = this.EP8_PVGL;
+        userOp.paymasterPostOpGasLimit = paymasterPostOpGasLimit;
+        const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
+        const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
+        const packedUserOp = {
+          sender: userOp.sender,
+          nonce: userOp.nonce,
+          initCode: userOp.initCode,
+          callData: userOp.callData,
+          accountGasLimits: accountGasLimits,
+          preVerificationGas: userOp.preVerificationGas,
+          gasFees: gasFees,
+          paymasterAndData: this.packPaymasterData(paymasterAddress, this.EP8_PVGL, paymasterPostOpGasLimit),
+          signature: userOp.signature
+        }
+        userOp.paymasterData = await this.getPaymasterData(packedUserOp, validUntil, validAfter, paymasterContract, signer);
+        const response = await provider.send('eth_estimateUserOperationGas', [userOp, entryPoint]);
+        userOp.verificationGasLimit = response.verificationGasLimit;
+        userOp.callGasLimit = response.callGasLimit;
+        userOp.preVerificationGas = response.preVerificationGas;
+      }
+      const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
+      const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
+      const packedUserOp = {
+        sender: userOp.sender,
+        nonce: userOp.nonce,
+        initCode: userOp.initCode,
+        callData: userOp.callData,
+        accountGasLimits: accountGasLimits,
+        preVerificationGas: userOp.preVerificationGas,
+        gasFees: gasFees,
+        paymasterAndData: this.packPaymasterData(paymasterAddress, this.EP8_PVGL, paymasterPostOpGasLimit),
+        signature: userOp.signature
+      }
+
+      const paymasterData = await this.getPaymasterData(packedUserOp, validUntil, validAfter, paymasterContract, signer);
+      let returnValue;
+      if (estimate) {
+        returnValue = {
+          paymaster: paymasterAddress,
+          paymasterData: paymasterData,
+          preVerificationGas: BigNumber.from(packedUserOp.preVerificationGas).toHexString(),
+          verificationGasLimit: BigNumber.from(userOp.verificationGasLimit).toHexString(),
+          callGasLimit: BigNumber.from(userOp.callGasLimit).toHexString(),
+          paymasterVerificationGasLimit: this.EP8_PVGL.toHexString(),
+          paymasterPostOpGasLimit
+        }
+      } else {
+        returnValue = {
+          paymaster: paymasterAddress,
+          paymasterData: paymasterData,
+        }
+      }
+
+      return returnValue;
+    } catch (err: any) {
+      if (err.message.includes("Quota exceeded"))
+        throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
+      if (log) log.error(err, 'signV08');
+      throw new Error(`Failed to process request to bundler. Please contact support team RawErrorMsg: ${err.message}`)
     }
   }
 
@@ -812,6 +890,7 @@ export class Paymaster {
         const ETHprice = await ecContract.cachedPrice();
         ethPrice = ETHprice
       }
+      if (userOp.factory && userOp.factoryData) userOp.initCode = hexConcat([userOp.factory, userOp.factoryData ?? ''])
       if (!userOp.signature) userOp.signature = '0x';
       userOp.paymaster = paymasterAddress;
       userOp.paymasterVerificationGasLimit = BigNumber.from(this.MTP_PVGL).toHexString(); // Paymaster specific gas limit
@@ -1180,7 +1259,7 @@ export class Paymaster {
     privateKey: string,
     bundlerRpcUrl: string,
     epAddr: string,
-    isEp06: boolean,
+    epVersion: EPVersions,
     chainId: number,
     log?: FastifyBaseLogger
   ) {
@@ -1189,10 +1268,12 @@ export class Paymaster {
       const signer = new Wallet(privateKey, provider);
 
       let contract;
-      if (isEp06) {
+      if (epVersion === EPVersions.EPV_06) {
         contract = new ethers.ContractFactory(verifyingPaymasterAbi, verifyingPaymasterByteCode, signer);
-      } else {
+      } else if (epVersion === EPVersions.EPV_07) {
         contract = new ethers.ContractFactory(verifyingPaymasterV2Abi, verifyingPaymasterV2ByteCode, signer);
+      } else {
+        contract = new ethers.ContractFactory(verifyingPaymasterV3Abi, verifyingPaymasterV3ByteCode, signer);
       }
 
       const etherscanFeeData = await getGasFee(chainId, bundlerRpcUrl, log);

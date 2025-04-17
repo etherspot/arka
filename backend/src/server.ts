@@ -62,7 +62,7 @@ const initializeServer = async (): Promise<void> => {
   // Register the sequelizePlugin
   await server.register(sequelizePlugin);
   const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, 
-    server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL, server.config.MTP_PVGL, server.config.MTP_PPGL);
+    server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL, server.config.MTP_PVGL, server.config.MTP_PPGL, server.config.EP8_PVGL);
 
   // Synchronize all models
   await server.sequelize.sync();
@@ -263,7 +263,9 @@ const initializeServer = async (): Promise<void> => {
                     ) {
                       const thresholdValue = network.thresholdValue ?? networkConfig.thresholdValue;
                       const bundler = network.bundler ?? networkConfig.bundler;
-                      checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                      if (network.contracts?.etherspotPaymasterAddress) {
+                        checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                      }
                     }
                   }
                 }
@@ -306,7 +308,9 @@ const initializeServer = async (): Promise<void> => {
 
               // checking deposit for epv6 native paymasters from default config.json.
               for (const network of SupportedNetworks) {
-                checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                if (network.contracts?.etherspotPaymasterAddress) {
+                  checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? '0.001', Number(network.chainId), server.log);
+                }
               }
 
               // Checking of Deposit on common multi token paymaster if any
