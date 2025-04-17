@@ -56,7 +56,8 @@ export default {
     INVALID_AMOUNT_TO_STAKE: 'Invalid amount to stake',
     NO_KEY_SET: 'No MTP key set',
     MULTI_NOT_DEPLOYED: 'Token Paymaster not deployed on the current chainID: ',
-    COINGECKO_PRICE_NOT_FETCHED: 'Token price not updated, Pls retry.'
+    COINGECKO_PRICE_NOT_FETCHED: 'Token price not updated, Pls retry.',
+    MTP_EP_SUPPORT: 'Currently only EPV06 & EPV07 entryPoint addresses are supported',
 }
 
 export function generateErrorMessage(template: string, values: { [key: string]: string | number }): string {
