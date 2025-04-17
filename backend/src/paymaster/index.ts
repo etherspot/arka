@@ -890,6 +890,7 @@ export class Paymaster {
         const ETHprice = await ecContract.cachedPrice();
         ethPrice = ETHprice
       }
+      if (userOp.factory && userOp.factoryData) userOp.initCode = hexConcat([userOp.factory, userOp.factoryData ?? ''])
       if (!userOp.signature) userOp.signature = '0x';
       userOp.paymaster = paymasterAddress;
       userOp.paymasterVerificationGasLimit = BigNumber.from(this.MTP_PVGL).toHexString(); // Paymaster specific gas limit
