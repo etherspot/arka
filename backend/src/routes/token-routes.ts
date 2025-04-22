@@ -113,11 +113,9 @@ const tokenRoutes: FastifyPluginAsync = async (server) => {
                 printRequest("/getAllCommonERC20PaymasterAddress", request, server.log);
                 const query: any = request.query;
                 const body: any = request.body;
-                const entryPoint = body.params[0];
-                const api_key = query['apiKey'] ?? body.params[1];
+                const api_key = query['apiKey'] ?? body.params[0];
                 if (!api_key || typeof(api_key) !== "string")
                     return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-                if (!server.config.EPV_06.includes(entryPoint ?? '')) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
                 const apiKeyData = await server.apiKeyRepository.findOneByApiKey(api_key);
                 if (!apiKeyData) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
                 const multiTokenRec = await server.multiTokenPaymasterRepository.findAll();

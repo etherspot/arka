@@ -1,4 +1,8 @@
 # Changelog
+## [4.0.1] - 2025-04-22
+### Fixes
+- Removed 'entryPoint' params from `getAllCommonERC20PaymasterAddress`
+
 ## [4.0.0] - 2025-04-01
 ### New
 - Added EPV08 Support
