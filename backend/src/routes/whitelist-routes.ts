@@ -10,7 +10,7 @@ import { decode } from "../utils/crypto.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
 import { ContractWhitelistDto } from "../types/contractWhitelist-dto.js";
-import { EPVersions } from "types/sponsorship-policy-dto.js";
+import { EPVersions } from "../types/sponsorship-policy-dto.js";
 
 const whitelistRoutes: FastifyPluginAsync = async (server) => {
   const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, 
