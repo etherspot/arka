@@ -1,6 +1,7 @@
 import { Sequelize } from 'sequelize';
 import { APIKey } from '../models/api-key.js';
 import { ApiKeyDto } from '../types/apikey-dto.js';
+import { EPVersions } from '../types/sponsorship-policy-dto.js';
 
 export class APIKeyRepository {
   private sequelize: Sequelize;
@@ -60,10 +61,15 @@ export class APIKeyRepository {
     return result ? result.get() as APIKey : null;
   }
 
-  async updateVpAddresses(apiKey: string, vpAddresses: string, isEp06 = true) {
-    if (isEp06) {
-      return await this.sequelize.models.APIKey.update({verifyingPaymasters: vpAddresses}, {where: {apiKey}});
+  async updateVpAddresses(apiKey: string, vpAddresses: string, epVersion: EPVersions = EPVersions.EPV_06) {
+    if (epVersion === EPVersions.EPV_06) {
+      return await this.sequelize.models.APIKey.update({ verifyingPaymasters: vpAddresses }, { where: { apiKey } });
+    } else if (epVersion === EPVersions.EPV_07) {
+      return await this.sequelize.models.APIKey.update({ verifyingPaymastersV2: vpAddresses }, { where: { apiKey } });
+    } else if (epVersion === EPVersions.EPV_08) {
+      return await this.sequelize.models.APIKey.update({ verifyingPaymastersV3: vpAddresses }, { where: { apiKey } });
+    } else {
+      throw new Error(`Unsupported EP version: ${epVersion}`);
     }
-    return await this.sequelize.models.APIKey.update({verifyingPaymastersV2: vpAddresses}, {where: {apiKey}});
   }
 }

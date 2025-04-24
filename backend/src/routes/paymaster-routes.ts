@@ -4,7 +4,7 @@ import { BigNumber, Wallet, ethers, providers } from "ethers";
 import { gql, request as GLRequest } from "graphql-request";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
-import { PAYMASTER_ADDRESS } from "../constants/Pimlico.js";
+import { PAYMASTER_ADDRESS } from "../constants/Token.js";
 import ErrorMessage, { generateErrorMessage } from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
@@ -16,11 +16,12 @@ import { PaymasterRoutesOpts } from "../types/arka-config-dto.js";
 
 const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, options: PaymasterRoutesOpts) => {
 
-  const {paymaster} = options;
+  const { paymaster } = options;
 
   const SUPPORTED_ENTRYPOINTS = {
     EPV_06: server.config.EPV_06,
-    EPV_07: server.config.EPV_07
+    EPV_07: server.config.EPV_07,
+    EPV_08: server.config.EPV_08
   }
 
   const prefixSecretId = 'arka_';
@@ -88,11 +89,11 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         }
         if (!api_key || typeof (api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        if (!SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint) && !SUPPORTED_ENTRYPOINTS.EPV_07?.includes(entryPoint))
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
-
+        
         if (SUPPORTED_ENTRYPOINTS.EPV_06?.includes(entryPoint)) epVersion = EPVersions.EPV_06;
-        else epVersion = EPVersions.EPV_07;
+        else if (SUPPORTED_ENTRYPOINTS.EPV_07?.includes(entryPoint)) epVersion = EPVersions.EPV_07;
+        else if (SUPPORTED_ENTRYPOINTS.EPV_08?.includes(entryPoint)) epVersion = EPVersions.EPV_08;
+        else return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_ENTRYPOINT })
 
         let customPaymasters = [];
         let customPaymastersV2 = [];
@@ -102,6 +103,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         let sponsorName = '', sponsorImage = '';
         let contractWhitelistMode = false;
         let bundlerApiKey = api_key;
+        let multiTokenPaymastersV2 = [];
 
         const apiKeyEntity = await server.apiKeyRepository.findOneByApiKey(api_key);
 
@@ -139,6 +141,11 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         if (apiKeyEntity.multiTokenPaymasters) {
           const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
           multiTokenPaymasters = JSON.parse(buffer.toString());
+        }
+
+        if (apiKeyEntity.multiTokenPaymastersV2) {
+          const buffer = Buffer.from(apiKeyEntity.multiTokenPaymastersV2, 'base64');
+          multiTokenPaymastersV2 = JSON.parse(buffer.toString());
         }
 
         if (apiKeyEntity.multiTokenOracles) {
@@ -196,13 +203,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         else {
           if (gasToken && ethers.utils.isAddress(gasToken)) gasToken = ethers.utils.getAddress(gasToken)
 
-          if (mode.toLowerCase() == 'multitoken' &&
-            !(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]) &&
-            !(multiTokenOracles[chainId] && multiTokenOracles[chainId][gasToken]) &&
-            !paymaster.coingeckoPrice.get(`${chainId}-${gasToken}`)
-          ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
-
-          if(useVp && mode.toLowerCase() === 'sponsor') {
+          if (useVp && mode.toLowerCase() === 'sponsor') {
             mode = 'vps';
           }
 
@@ -254,15 +255,22 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 const contractWhitelistResult = await checkContractWhitelist(userOp.callData, chainId.chainId, signer.address);
                 if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
               }
+              const isWhitelisted = await checkWhitelist(api_key, epVersion, userOp.sender, sponsorshipPolicy.id);
+              if (!isWhitelisted) {
+                throw new Error('This sender address has not been whitelisted yet');
+              }
               if (epVersion === EPVersions.EPV_06)
                 result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
-              else {
-                const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
-                if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                  const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
-                  if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+              else if (epVersion === EPVersions.EPV_07) {
+                if (!networkConfig.contracts.etherspotPaymasterAddress) {
+                  throw new Error('Please use useVP flag to use your deployed verifying paymaster as global paymaster is not defined');
                 }
                 result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
+              } else {
+                if (!networkConfig.contracts.etherspotPaymasterAddress) {
+                  throw new Error('Please use useVP flag to use your deployed verifying paymaster as global paymaster is not defined');
+                }
+                result = await paymaster.signV08(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
               }
               break;
             }
@@ -275,7 +283,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 let paymasterAddress: string;
                 if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
                 else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
-                result = await paymaster.pimlico(userOp, bundlerUrl, entryPoint, paymasterAddress, server.log);
+                result = await paymaster.erc20Paymaster(userOp, bundlerUrl, entryPoint, paymasterAddress, server.log);
               } else if (epVersion === EPVersions.EPV_07) {
                 if (
                   !(customPaymastersV2[chainId] && customPaymastersV2[chainId][gasToken])
@@ -288,9 +296,17 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
               break;
             }
             case 'multitoken': {
-              if (epVersion !== EPVersions.EPV_06)
-                throw new Error('Currently only EPV06 entryPoint address is supported')
-              if (!(multiTokenPaymasters[chainId] && multiTokenPaymasters[chainId][gasToken]))
+              if (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07)
+                throw new Error(ErrorMessage.MTP_EP_SUPPORT)
+              let paymasterAddress: string;
+              if (epVersion === EPVersions.EPV_06) {
+                paymasterAddress = multiTokenPaymasters[chainId]?.[gasToken];
+              } else {
+                paymasterAddress = multiTokenPaymastersV2[chainId]?.[gasToken];
+              }
+              if (!paymasterAddress) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
+              if (!(multiTokenOracles[chainId] && multiTokenOracles[chainId][gasToken]) &&
+                !paymaster.coingeckoPrice.get(`${chainId}-${gasToken}`))
                 return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
               const date = new Date();
               const provider = new providers.JsonRpcProvider(bundlerUrl);
@@ -314,7 +330,11 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 throw new Error("Oracle is not Defined/Invalid");
               if (networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" && !NativeOracles[chainId])
                 throw new Error("Native Oracle address not set for this chainId")
-              result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenPaymasters[chainId][gasToken], gasToken, multiTokenOracles[chainId] ? multiTokenOracles[chainId][gasToken] : '', bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
+              if (epVersion == EPVersions.EPV_06) {
+                result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, paymasterAddress, gasToken, multiTokenOracles[chainId] ? multiTokenOracles[chainId][gasToken] : '', bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
+              } else {
+                result = await paymaster.signMultiTokenPaymasterV07(userOp, str, str1, entryPoint, paymasterAddress, gasToken, multiTokenOracles[chainId] ? multiTokenOracles[chainId][gasToken] : '', bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
+              }
               break;
             }
             case 'vps': {
@@ -339,7 +359,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 const errorMessage: string = generateErrorMessage(ErrorMessage.NO_ACTIVE_SPONSORSHIP_POLICY_FOR_CURRENT_TIME, { walletAddress: apiKeyData?.walletAddress, epVersion: epVersion, chainId: chainId.chainId });
                 return reply.code(ReturnCode.FAILURE).send({ error: errorMessage });
               }
-              
+
               // get supported networks from sponsorshipPolicy
               const supportedNetworks: number[] | undefined | null = sponsorshipPolicy.enabledChains;
               if (!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
@@ -368,43 +388,51 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
               }
 
-              const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
-              if (!globalWhitelistRecord?.addresses.includes(userOp.sender)) {
-                const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, sponsorshipPolicy.id);
-                if (!existingWhitelistRecord?.addresses.includes(userOp.sender)) throw new Error('This sender address has not been whitelisted yet');
+              const isWhitelisted = await checkWhitelist(api_key, epVersion, userOp.sender, sponsorshipPolicy.id);
+              if (!isWhitelisted) {
+                throw new Error('This sender address has not been whitelisted yet');
               }
 
               if (epVersion === EPVersions.EPV_06) {
-                if(!apiKeyEntity.verifyingPaymasters) {
-                  return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
+                if (!apiKeyEntity.verifyingPaymasters) {
+                  return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.VP_NOT_DEPLOYED });
                 }
                 const paymasterAddr = JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId.chainId];
-                if(!paymasterAddr) {
-                  return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
+                if (!paymasterAddr) {
+                  return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.VP_NOT_DEPLOYED });
                 }
                 result = await paymaster.signV06(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
               }
-              else {
+              else if  (epVersion === EPVersions.EPV_07) {
                 if(!apiKeyEntity.verifyingPaymastersV2) {
                   return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
                 }
                 const paymasterAddr = JSON.parse(apiKeyEntity.verifyingPaymastersV2)[chainId.chainId];
-                if(!paymasterAddr) {
-                  return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
+                if (!paymasterAddr) {
+                  return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.VP_NOT_DEPLOYED });
                 }
                 result = await paymaster.signV07(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
+              } else {
+                if (!apiKeyEntity.verifyingPaymastersV3) {
+                  return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
+                }
+                const paymasterAddr = JSON.parse(apiKeyEntity.verifyingPaymastersV3)[chainId.chainId];
+                if (!paymasterAddr) {
+                  return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED});
+                }
+                result = await paymaster.signV08(userOp, str, str1, entryPoint, paymasterAddr, bundlerUrl, signer, estimate, server.log);
               }
               break;
             }
             case 'commonerc20': {
-              if (epVersion !== EPVersions.EPV_06)
-                throw new Error('Currently only EPV06 entryPoint address is supported')
-              const multiTokenRec = await server.multiTokenPaymasterRepository.findOneByChainIdAndTokenAddress(chainId, gasToken)
+              if (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07)
+                throw new Error(ErrorMessage.MTP_EP_SUPPORT)
+              const multiTokenRec = await server.multiTokenPaymasterRepository.findOneByChainIdEPVersionAndTokenAddress(chainId, gasToken, epVersion)
               if (multiTokenRec) {
                 const date = new Date();
                 const provider = new providers.JsonRpcProvider(bundlerUrl);
                 const commonPrivateKey = process.env.MTP_PRIVATE_KEY;
-                if (!commonPrivateKey) return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.NO_KEY_SET})
+                if (!commonPrivateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_KEY_SET })
                 const signer = new Wallet(commonPrivateKey, provider)
                 const validUntil = context.validUntil ? new Date(context.validUntil) : date;
                 const validAfter = context.validAfter ? new Date(context.validAfter) : date;
@@ -425,7 +453,11 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                   throw new Error("Oracle is not Defined/Invalid");
                 if (networkConfig.MultiTokenPaymasterOracleUsed == "chainlink" && !NativeOracles[chainId])
                   throw new Error("Native Oracle address not set for this chainId")
-                result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenRec.paymasterAddress, gasToken, multiTokenRec.oracleAddress ?? '', bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
+                if (epVersion == EPVersions.EPV_06) {
+                  result = await paymaster.signMultiTokenPaymaster(userOp, str, str1, entryPoint, multiTokenRec.paymasterAddress, gasToken, multiTokenRec.oracleAddress ?? '', bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
+                } else {
+                  result = await paymaster.signMultiTokenPaymasterV07(userOp, str, str1, entryPoint, multiTokenRec.paymasterAddress, gasToken, multiTokenRec.oracleAddress ?? '', bundlerUrl, signer, networkConfig.MultiTokenPaymasterOracleUsed, NativeOracles[chainId], chainId, server.log);
+                }
               } else {
                 return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_TOKEN })
               }
@@ -467,10 +499,10 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
       for (const key of tokenOracleKeys) {
         tokenCache.push(paymaster.priceAndMetadata.get(key))
       }
-      return reply.code(ReturnCode.SUCCESS).send({coingeckoCache, nativeTokenCache, tokenCache})
+      return reply.code(ReturnCode.SUCCESS).send({ coingeckoCache, nativeTokenCache, tokenCache })
     } catch (err) {
       request.log.error(err);
-      return reply.code(ReturnCode.FAILURE).send({error: err})
+      return reply.code(ReturnCode.FAILURE).send({ error: err })
     }
   })
 
@@ -557,6 +589,23 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
       }
     }
     return returnValue;
+  }
+
+  async function checkWhitelist(api_key: string, epVersion: EPVersions, senderAddress: string, policyId: number) {
+    const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
+    if (!globalWhitelistRecord?.addresses?.includes(senderAddress)) {
+      const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
+      if (!existingWhitelistRecord?.addresses?.includes(senderAddress)) {
+        const existingEpWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion, policyId);
+        if (!existingEpWhitelistRecord?.addresses?.includes(senderAddress)) {
+          const existingEpWhitelistRecord2 = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion);
+          if (!existingEpWhitelistRecord2?.addresses?.includes(senderAddress)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 };
 

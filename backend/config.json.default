@@ -468,5 +468,15 @@
         "thresholdValue": "0.016",
         "MultiTokenPaymasterOracleUsed": "chainlink",
         "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+    },
+    {
+        "chainId": 11155111,
+        "bundler": "https://testnet-rpc.etherspot.io/v3/11155111",
+        "contracts": {
+            "etherspotPaymasterAddress": "0xEd5371296A2030F53298a18a3Eb828cFc3dca73f"
+        },
+        "thresholdValue": "0.016",
+        "MultiTokenPaymasterOracleUsed": "chainlink",
+        "entryPoint": "0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108"
     }
 ]
