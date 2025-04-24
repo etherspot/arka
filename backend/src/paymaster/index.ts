@@ -125,7 +125,7 @@ export class Paymaster {
       const paymasterPostOpGasLimit = BigNumber.from("40000").toHexString();
       if (estimate) {
         userOp.paymaster = paymasterAddress;
-        userOp.paymasterVerificationGasLimit = this.EP7_PVGL;
+        userOp.paymasterVerificationGasLimit = this.EP7_PVGL.toHexString();
         userOp.paymasterPostOpGasLimit = paymasterPostOpGasLimit;
         const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
         const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
@@ -199,7 +199,7 @@ export class Paymaster {
       const paymasterPostOpGasLimit = BigNumber.from("40000").toHexString();
       if (estimate) {
         userOp.paymaster = paymasterAddress;
-        userOp.paymasterVerificationGasLimit = this.EP8_PVGL;
+        userOp.paymasterVerificationGasLimit = this.EP8_PVGL.toHexString();
         userOp.paymasterPostOpGasLimit = paymasterPostOpGasLimit;
         const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
         const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);

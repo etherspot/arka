@@ -267,6 +267,9 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 }
                 result = await paymaster.signV07(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
               } else {
+                if (!networkConfig.contracts.etherspotPaymasterAddress) {
+                  throw new Error('Please use useVP flag to use your deployed verifying paymaster as global paymaster is not defined');
+                }
                 result = await paymaster.signV08(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
               }
               break;
@@ -590,13 +593,13 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
 
   async function checkWhitelist(api_key: string, epVersion: EPVersions, senderAddress: string, policyId: number) {
     const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
-    if (!globalWhitelistRecord?.addresses.includes(senderAddress)) {
+    if (!globalWhitelistRecord?.addresses?.includes(senderAddress)) {
       const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
-      if (!existingWhitelistRecord?.addresses.includes(senderAddress)) {
+      if (!existingWhitelistRecord?.addresses?.includes(senderAddress)) {
         const existingEpWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion, policyId);
-        if (!existingEpWhitelistRecord?.addresses.includes(senderAddress)) {
+        if (!existingEpWhitelistRecord?.addresses?.includes(senderAddress)) {
           const existingEpWhitelistRecord2 = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, epVersion);
-          if (!existingEpWhitelistRecord2?.addresses.includes(senderAddress)) {
+          if (!existingEpWhitelistRecord2?.addresses?.includes(senderAddress)) {
             return false;
           }
         }
