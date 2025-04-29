@@ -13,6 +13,7 @@ import * as EtherspotAbi from "../abi/EtherspotAbi.js";
 import {abi as verifyingPaymasterAbi} from "../abi/VerifyingPaymasterAbi.js";
 import {abi as verifyingPaymasterV2Abi} from "../abi/VerifyingPaymasterAbiV2.js";
 import {abi as verifyingPaymastersV3Abi} from "../abi/VerifyingPaymasterAbiV3.js";
+import { getAddress } from "ethers/lib/utils";
 
 const metadataRoutes: FastifyPluginAsync = async (server) => {
 
@@ -92,16 +93,28 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       const signer = new Wallet(privateKey, provider)
       const sponsorWalletBalance = await signer.getBalance();
       const sponsorAddress = await signer.getAddress();
+      let sponsorBalance = 0;
 
-      //get native balance of the sponsor in the EtherSpotPaymaster-contract
-      const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
-      const sponsorBalance = await paymasterContract.getSponsorBalance(sponsorAddress);
+      if (networkConfig.contracts.etherspotPaymasterAddress) {
+        try {
+          //get native balance of the sponsor in the EtherSpotPaymaster-contract
+          const paymasterContract = new Contract(getAddress(networkConfig.contracts.etherspotPaymasterAddress), EtherspotAbi.default, provider);
+          sponsorBalance = await paymasterContract.getDeposit();
+        } catch (err) {
+          request.log.error(err);
+        }
+      }
 
       const verifyingPaymaster = apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId] : undefined;
-      let verifyingPaymasterDeposit;
+      let verifyingPaymasterDeposit = 0;
       if (verifyingPaymaster) {
-        const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterAbi ,provider);
-        verifyingPaymasterDeposit = await vpContract.getDeposit();
+        try {
+          // VerifyingPaymaster address is stored in the DB as checksummed address so no need to checksum it
+          const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterAbi ,provider);
+          verifyingPaymasterDeposit = await vpContract.getDeposit();
+        } catch (err) {
+          request.log.error(err);
+        }
       }
       const chainsSupported: { chainId: number, entryPoint: string }[] = [];
       SupportedNetworks.map(element => {
@@ -192,15 +205,26 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       const signer = new Wallet(privateKey, provider)
       const sponsorWalletBalance = await signer.getBalance();
       const sponsorAddress = await signer.getAddress();
-
-      //get native balance of the sponsor in the EtherSpotPaymaster-contract
-      const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
-      const sponsorBalance = await paymasterContract.getDeposit();
+      let sponsorBalance = 0;
+      if (networkConfig.contracts.etherspotPaymasterAddress) {
+        try {
+          //get native balance of the sponsor in the EtherSpotPaymaster-contract
+          const paymasterContract = new Contract(getAddress(networkConfig.contracts.etherspotPaymasterAddress), EtherspotAbi.default, provider);
+          sponsorBalance = await paymasterContract.getDeposit();
+        } catch (err) {
+          request.log.error(err);
+        }
+      }
       const verifyingPaymaster = apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2)[chainId] : undefined;
-      let verifyingPaymasterDeposit;
+      let verifyingPaymasterDeposit = 0;
       if (verifyingPaymaster) {
-        const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterV2Abi ,provider);
-        verifyingPaymasterDeposit = await vpContract.getDeposit();
+        try {
+          // VerifyingPaymaster address is stored in the DB as checksummed address so no need to checksum it
+          const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterV2Abi ,provider);
+          verifyingPaymasterDeposit = await vpContract.getDeposit();
+        } catch (err) {
+          request.log.error(err);
+        }
       }
       const chainsSupported: { chainId: number, entryPoint: string }[] = [];
       SupportedNetworks.map(element => {
@@ -213,7 +237,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(ReturnCode.SUCCESS).send({
         sponsorAddress: sponsorAddress,
         sponsorWalletBalance: sponsorWalletBalance,
-        sponsorBalance: sponsorBalance,
+        sponsorBalance: verifyingPaymasterDeposit ?? sponsorBalance,
         chainsSupported: chainsSupported,
         tokenPaymasters: tokenPaymasterAddresses,
         multiTokenPaymasters,
@@ -293,10 +317,14 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       const sponsorAddress = await signer.getAddress();
 
       const verifyingPaymaster = apiKeyEntity.verifyingPaymastersV3 ? JSON.parse(apiKeyEntity.verifyingPaymastersV3)[chainId] : undefined;
-      let verifyingPaymasterDeposit;
+      let verifyingPaymasterDeposit = 0;
       if (verifyingPaymaster) {
-        const vpContract = new Contract(verifyingPaymaster, verifyingPaymastersV3Abi ,provider);
-        verifyingPaymasterDeposit = await vpContract.getDeposit();
+        try {
+          const vpContract = new Contract(verifyingPaymaster, verifyingPaymastersV3Abi ,provider);
+          verifyingPaymasterDeposit = await vpContract.getDeposit();
+        } catch (err) {
+          request.log.error(err);
+        }
       }
       const chainsSupported: { chainId: number, entryPoint: string }[] = [];
       SupportedNetworks.map(element => {

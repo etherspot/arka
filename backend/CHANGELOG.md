@@ -1,4 +1,9 @@
 # Changelog
+## [4.0.2] - 2025-04-29
+### Fixes
+- Added oracle decimals as constants for multiTokenPaymaster as some rpc endpoints return error
+- Fixed bug in metadata fetching if the config doesnt have Paymaster address
+
 ## [4.0.1] - 2025-04-22
 ### Fixes
 - Removed 'entryPoint' params from `getAllCommonERC20PaymasterAddress`
