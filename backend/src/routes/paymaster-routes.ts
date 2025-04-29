@@ -256,7 +256,8 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
               }
               const isWhitelisted = await checkWhitelist(api_key, epVersion, userOp.sender, sponsorshipPolicy.id);
-              if (!isWhitelisted) {
+              // For EPV_06 we still use the old paymaster which whitelists the address on-chain if its verifyingPaymaster it goes to case vps for EPV_06 which checks on db
+              if (!isWhitelisted && epVersion !== EPVersions.EPV_06) {
                 throw new Error('This sender address has not been whitelisted yet');
               }
               if (epVersion === EPVersions.EPV_06)
