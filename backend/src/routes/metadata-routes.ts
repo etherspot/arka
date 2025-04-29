@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { FastifyPluginAsync } from "fastify";
-import { Contract, Wallet, providers } from "ethers";
+import { Contract, Wallet, providers, utils } from "ethers";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { getNetworkConfig, printRequest } from "../utils/common.js";
 import ReturnCode from "../constants/ReturnCode.js";
@@ -98,7 +98,8 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       if (networkConfig.contracts.etherspotPaymasterAddress) {
         try {
           //get native balance of the sponsor in the EtherSpotPaymaster-contract
-          const paymasterContract = new Contract(getAddress(networkConfig.contracts.etherspotPaymasterAddress), EtherspotAbi.default, provider);
+
+          const paymasterContract = new Contract(utils.getAddress(networkConfig.contracts.etherspotPaymasterAddress), EtherspotAbi.default, provider);
           sponsorBalance = await paymasterContract.getDeposit();
         } catch (err) {
           request.log.error(err);
@@ -209,7 +210,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       if (networkConfig.contracts.etherspotPaymasterAddress) {
         try {
           //get native balance of the sponsor in the EtherSpotPaymaster-contract
-          const paymasterContract = new Contract(getAddress(networkConfig.contracts.etherspotPaymasterAddress), EtherspotAbi.default, provider);
+          const paymasterContract = new Contract(utils.getAddress(networkConfig.contracts.etherspotPaymasterAddress), EtherspotAbi.default, provider);
           sponsorBalance = await paymasterContract.getDeposit();
         } catch (err) {
           request.log.error(err);
