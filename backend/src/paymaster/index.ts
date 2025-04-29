@@ -14,7 +14,7 @@ import ChainlinkOracleAbi from '../abi/ChainlinkOracleAbi.js';
 import ERC20PaymasterV07Abi from '../abi/ERC20PaymasterV07Abi.js';
 import ERC20Abi from '../abi/ERC20Abi.js';
 import EtherspotChainlinkOracleAbi from '../abi/EtherspotChainlinkOracleAbi.js';
-import { TokenDecimalsAndSymbol, UnaccountedCost } from '../constants/MultitokenPaymaster.js';
+import { OracleDecimals, TokenDecimalsAndSymbol, UnaccountedCost } from '../constants/MultitokenPaymaster.js';
 import { NativeOracleDecimals } from '../constants/ChainlinkOracles.js';
 import { CoingeckoTokensRepository } from '../repository/coingecko-token-repository.js';
 import { CoingeckoService } from '../services/coingecko.js';
@@ -433,6 +433,13 @@ export class Paymaster {
     return tokenContract.symbol();
   }
 
+  private async getChainlinkOracleDecimals(oracleAddress: string, chainId: number, oracleContract: Contract) {
+    if (OracleDecimals[chainId]?.[oracleAddress]) {
+      return OracleDecimals[chainId][oracleAddress]?.decimals;
+    }
+    return oracleContract.decimals();
+  }
+
   private async getEstimateUserOperationGas(
     provider: providers.JsonRpcProvider,
     userOp: any,
@@ -575,7 +582,7 @@ export class Paymaster {
     const promises = [
       this.getTokenDecimals(gasToken, chainId, provider),
       this.getTokenSymbol(gasToken, chainId, provider),
-      chainlinkContract.decimals(),
+      this.getChainlinkOracleDecimals(oracleAddress, chainId, chainlinkContract),
       chainlinkContract.latestAnswer()
     ];
 
