@@ -95,16 +95,24 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       let sponsorBalance = 0;
 
       if (networkConfig.contracts.etherspotPaymasterAddress) {
-        //get native balance of the sponsor in the EtherSpotPaymaster-contract
-        const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
-        sponsorBalance = await paymasterContract.getDeposit();
+        try {
+          //get native balance of the sponsor in the EtherSpotPaymaster-contract
+          const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
+          sponsorBalance = await paymasterContract.getDeposit();
+        } catch (err) {
+          request.log.error(err);
+        }
       }
 
       const verifyingPaymaster = apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId] : undefined;
       let verifyingPaymasterDeposit = 0;
       if (verifyingPaymaster) {
-        const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterAbi ,provider);
-        verifyingPaymasterDeposit = await vpContract.getDeposit();
+        try {
+          const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterAbi ,provider);
+          verifyingPaymasterDeposit = await vpContract.getDeposit();
+        } catch (err) {
+          request.log.error(err);
+        }
       }
       const chainsSupported: { chainId: number, entryPoint: string }[] = [];
       SupportedNetworks.map(element => {
@@ -197,15 +205,23 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       const sponsorAddress = await signer.getAddress();
       let sponsorBalance = 0;
       if (networkConfig.contracts.etherspotPaymasterAddress) {
-        //get native balance of the sponsor in the EtherSpotPaymaster-contract
-        const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
-        sponsorBalance = await paymasterContract.getDeposit();
+        try {
+          //get native balance of the sponsor in the EtherSpotPaymaster-contract
+          const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
+          sponsorBalance = await paymasterContract.getDeposit();
+        } catch (err) {
+          request.log.error(err);
+        }
       }
       const verifyingPaymaster = apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2)[chainId] : undefined;
       let verifyingPaymasterDeposit = 0;
       if (verifyingPaymaster) {
-        const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterV2Abi ,provider);
-        verifyingPaymasterDeposit = await vpContract.getDeposit();
+        try {
+          const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterV2Abi ,provider);
+          verifyingPaymasterDeposit = await vpContract.getDeposit();
+        } catch (err) {
+          request.log.error(err);
+        }
       }
       const chainsSupported: { chainId: number, entryPoint: string }[] = [];
       SupportedNetworks.map(element => {
@@ -298,10 +314,14 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       const sponsorAddress = await signer.getAddress();
 
       const verifyingPaymaster = apiKeyEntity.verifyingPaymastersV3 ? JSON.parse(apiKeyEntity.verifyingPaymastersV3)[chainId] : undefined;
-      let verifyingPaymasterDeposit;
+      let verifyingPaymasterDeposit = 0;
       if (verifyingPaymaster) {
-        const vpContract = new Contract(verifyingPaymaster, verifyingPaymastersV3Abi ,provider);
-        verifyingPaymasterDeposit = await vpContract.getDeposit();
+        try {
+          const vpContract = new Contract(verifyingPaymaster, verifyingPaymastersV3Abi ,provider);
+          verifyingPaymasterDeposit = await vpContract.getDeposit();
+        } catch (err) {
+          request.log.error(err);
+        }
       }
       const chainsSupported: { chainId: number, entryPoint: string }[] = [];
       SupportedNetworks.map(element => {
