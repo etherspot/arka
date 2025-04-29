@@ -13,6 +13,7 @@ import * as EtherspotAbi from "../abi/EtherspotAbi.js";
 import {abi as verifyingPaymasterAbi} from "../abi/VerifyingPaymasterAbi.js";
 import {abi as verifyingPaymasterV2Abi} from "../abi/VerifyingPaymasterAbiV2.js";
 import {abi as verifyingPaymastersV3Abi} from "../abi/VerifyingPaymasterAbiV3.js";
+import { getAddress } from "ethers/lib/utils";
 
 const metadataRoutes: FastifyPluginAsync = async (server) => {
 
@@ -97,7 +98,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       if (networkConfig.contracts.etherspotPaymasterAddress) {
         try {
           //get native balance of the sponsor in the EtherSpotPaymaster-contract
-          const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
+          const paymasterContract = new Contract(getAddress(networkConfig.contracts.etherspotPaymasterAddress), EtherspotAbi.default, provider);
           sponsorBalance = await paymasterContract.getDeposit();
         } catch (err) {
           request.log.error(err);
@@ -108,6 +109,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       let verifyingPaymasterDeposit = 0;
       if (verifyingPaymaster) {
         try {
+          // VerifyingPaymaster address is stored in the DB as checksummed address so no need to checksum it
           const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterAbi ,provider);
           verifyingPaymasterDeposit = await vpContract.getDeposit();
         } catch (err) {
@@ -207,7 +209,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       if (networkConfig.contracts.etherspotPaymasterAddress) {
         try {
           //get native balance of the sponsor in the EtherSpotPaymaster-contract
-          const paymasterContract = new Contract(networkConfig.contracts.etherspotPaymasterAddress, EtherspotAbi.default, provider);
+          const paymasterContract = new Contract(getAddress(networkConfig.contracts.etherspotPaymasterAddress), EtherspotAbi.default, provider);
           sponsorBalance = await paymasterContract.getDeposit();
         } catch (err) {
           request.log.error(err);
@@ -217,6 +219,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       let verifyingPaymasterDeposit = 0;
       if (verifyingPaymaster) {
         try {
+          // VerifyingPaymaster address is stored in the DB as checksummed address so no need to checksum it
           const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterV2Abi ,provider);
           verifyingPaymasterDeposit = await vpContract.getDeposit();
         } catch (err) {
