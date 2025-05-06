@@ -58,7 +58,7 @@ export async function getSkandhaGasFee(rpcUrl: string, log?: FastifyBaseLogger):
     const data = (await feeData.json()).result;
     if(data?.maxFeePerGas && data?.maxPriorityFeePerGas) {
       return {
-        maxFeePerGas: BigNumber.from(data.maxPriorityFeePerGas),
+        maxFeePerGas: BigNumber.from(data.maxFeePerGas),
         maxPriorityFeePerGas: BigNumber.from(data.maxPriorityFeePerGas),
         gasPrice: BigNumber.from(data.maxFeePerGas)
       }
