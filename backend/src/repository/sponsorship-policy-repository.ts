@@ -351,7 +351,6 @@ export class SponsorshipPolicyRepository {
             walletAddress: sponsorshipPolicy.walletAddress,
             name: sponsorshipPolicy.name,
             description: sponsorshipPolicy.description,
-            isPublic: sponsorshipPolicy.isPublic,
             isEnabled: sponsorshipPolicy.isEnabled,
             isApplicableToAllNetworks: sponsorshipPolicy.isApplicableToAllNetworks,
             enabledChains: sponsorshipPolicy.enabledChains,
@@ -492,8 +491,6 @@ export class SponsorshipPolicyRepository {
             existingSponsorshipPolicy.perOpMaximumUsd = null;
             existingSponsorshipPolicy.perOpMaximumNative = null;
         }
-
-        existingSponsorshipPolicy.isPublic = sponsorshipPolicy.isPublic;
 
         if (existingSponsorshipPolicy.addressAllowList && existingSponsorshipPolicy.addressAllowList.length > 0) {
             existingSponsorshipPolicy.addressAllowList = sponsorshipPolicy.addressAllowList as string[];

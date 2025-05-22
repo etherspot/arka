@@ -230,7 +230,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
 
               // get supported networks from sponsorshipPolicy
               const supportedNetworks: number[] | undefined | null = sponsorshipPolicy.enabledChains;
-              if (!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+              if ((!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) && !sponsorshipPolicy.isApplicableToAllNetworks) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
 
               if (txnMode) {
                 const signerAddress = await signer.getAddress();
@@ -255,11 +255,13 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 const contractWhitelistResult = await checkContractWhitelist(userOp.callData, chainId.chainId, signer.address);
                 if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
               }
+              /* Removed Whitelist for now
               const isWhitelisted = await checkWhitelist(api_key, epVersion, userOp.sender, sponsorshipPolicy.id);
               // For EPV_06 we still use the old paymaster which whitelists the address on-chain if its verifyingPaymaster it goes to case vps for EPV_06 which checks on db
               if (!isWhitelisted && epVersion !== EPVersions.EPV_06) {
                 throw new Error('This sender address has not been whitelisted yet');
               }
+              */
               if (epVersion === EPVersions.EPV_06)
                 result = await paymaster.signV06(userOp, str, str1, entryPoint, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, signer, estimate, server.log);
               else if (epVersion === EPVersions.EPV_07) {
@@ -363,7 +365,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
 
               // get supported networks from sponsorshipPolicy
               const supportedNetworks: number[] | undefined | null = sponsorshipPolicy.enabledChains;
-              if (!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+              if ((!supportedNetworks || !supportedNetworks.includes(chainId.chainId)) && !sponsorshipPolicy.isApplicableToAllNetworks) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
 
               if (txnMode) {
                 const signerAddress = await signer.getAddress();
@@ -389,10 +391,12 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
                 if (!contractWhitelistResult) throw new Error('Contract Method not whitelisted');
               }
 
+              /* Removed Whitelist 
               const isWhitelisted = await checkWhitelist(api_key, epVersion, userOp.sender, sponsorshipPolicy.id);
               if (!isWhitelisted) {
                 throw new Error('This sender address has not been whitelisted yet');
               }
+              */
 
               if (epVersion === EPVersions.EPV_06) {
                 if (!apiKeyEntity.verifyingPaymasters) {
@@ -592,6 +596,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
     return returnValue;
   }
 
+  /* Removed Whitelist
   async function checkWhitelist(api_key: string, epVersion: EPVersions, senderAddress: string, policyId: number) {
     const globalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key);
     if (!globalWhitelistRecord?.addresses?.includes(senderAddress)) {
@@ -607,7 +612,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
       }
     }
     return true;
-  }
+  } */
 };
 
 export default paymasterRoutes;
