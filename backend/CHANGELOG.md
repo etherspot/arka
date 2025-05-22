@@ -1,4 +1,9 @@
 # Changelog
+## [4.1.0] - 2025-05-22
+### Fixes
+- If `isApplicableTOAllChains` is true then dont check `enabledChains` on policy
+- Removed whitelist validation for now
+
 ## [4.0.2] - 2025-04-29
 ### Fixes
 - Added oracle decimals as constants for multiTokenPaymaster as some rpc endpoints return error

@@ -4,7 +4,6 @@ export interface SponsorshipPolicyDto {
     walletAddress: string;         // The wallet address associated with the API key
     name: string;                  // Name of the sponsorship policy
     description: string;           // Description of the sponsorship policy
-    isPublic: boolean;             // Flag to indicate if the policy is public
     isEnabled: boolean;            // Flag to indicate if the policy is enabled
     isApplicableToAllNetworks: boolean;          // Flag to indicate if the policy is universal
     enabledChains?: number[];      // Array of enabled chain IDs

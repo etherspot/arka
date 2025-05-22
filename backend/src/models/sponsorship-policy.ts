@@ -6,7 +6,6 @@ export class SponsorshipPolicy extends Model {
     public walletAddress!: string;
     public name!: string;
     public description!: string | null;
-    public isPublic: boolean = false;
     public isEnabled: boolean = false;
     public isApplicableToAllNetworks!: boolean;
     public enabledChains?: number[];
@@ -95,11 +94,6 @@ export function initializeSponsorshipPolicyModel(sequelize: Sequelize, schema: s
             type: DataTypes.TEXT,
             allowNull: true,
             field: 'DESCRIPTION'
-        },
-        isPublic: {
-            type: DataTypes.BOOLEAN,
-            defaultValue: false,
-            field: 'IS_PUBLIC'
         },
         isEnabled: {
             type: DataTypes.BOOLEAN,
