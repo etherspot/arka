@@ -1,4 +1,7 @@
 # Changelog
+## [4.1.1] - 2025-05-24
+- Fixed bug of comparing chainId as string for skipping type2 to legacy txn 
+
 ## [4.1.0] - 2025-05-22
 ### Fixes
 - If `isApplicableTOAllChains` is true then dont check `enabledChains` on policy
