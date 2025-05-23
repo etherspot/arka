@@ -50,6 +50,20 @@ interface CoingeckoPriceCache {
   expiry: number;
 }
 
+interface ConstructorParams {
+  feeMarkUp: string;
+  multiTokenMarkUp: string;
+  ep7TokenVGL: string;
+  ep7TokenPGL: string;
+  sequelize: Sequelize;
+  mtpVglMarkup: string;
+  ep7Pvgl: string;
+  mtpPvgl: string;
+  mtpPpgl: string;
+  ep8Pvgl: string;
+  skipType2Txns: string[];
+}
+
 export class Paymaster {
   feeMarkUp: BigNumber;
   multiTokenMarkUp: number;
@@ -65,20 +79,23 @@ export class Paymaster {
   coingeckoPrice: Map<string, CoingeckoPriceCache> = new Map();
   coingeckoService: CoingeckoService = new CoingeckoService();
   sequelize: Sequelize;
+  skipType2Txns: number[];
 
-  constructor(feeMarkUp: string, multiTokenMarkUp: string, ep7TokenVGL: string, ep7TokenPGL: string, sequelize: Sequelize, 
-    mtpVglMarkup: string, ep7Pvgl: string, mtpPvgl: string, mtpPpgl: string, ep8Pvgl: string) {
-    this.feeMarkUp = ethers.utils.parseUnits(feeMarkUp, 'gwei');
-    if (isNaN(Number(multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
-    else this.multiTokenMarkUp = Number(multiTokenMarkUp);
-    this.EP7_TOKEN_PGL = ep7TokenPGL;
-    this.EP7_TOKEN_VGL = ep7TokenVGL;
-    this.sequelize = sequelize;
-    this.MTP_VGL_MARKUP = mtpVglMarkup;
-    this.EP7_PVGL = BigNumber.from(ep7Pvgl);
-    this.EP8_PVGL = BigNumber.from(ep8Pvgl);
-    this.MTP_PVGL = mtpPvgl;
-    this.MTP_PPGL = mtpPpgl;
+  constructor(params: ConstructorParams) {
+    this.feeMarkUp = ethers.utils.parseUnits(params.feeMarkUp, 'gwei');
+    if (isNaN(Number(params.multiTokenMarkUp))) this.multiTokenMarkUp = 1150000 // 15% more of the actual cost. Can be anything between 1e6 to 2e6
+    else this.multiTokenMarkUp = Number(params.multiTokenMarkUp);
+    this.EP7_TOKEN_PGL = params.ep7TokenPGL;
+    this.EP7_TOKEN_VGL = params.ep7TokenVGL;
+    this.sequelize = params.sequelize;
+    this.MTP_VGL_MARKUP = params.mtpVglMarkup;
+    this.EP7_PVGL = BigNumber.from(params.ep7Pvgl);
+    this.EP8_PVGL = BigNumber.from(params.ep8Pvgl);
+    this.MTP_PVGL = params.mtpPvgl;
+    this.MTP_PPGL = params.mtpPpgl;
+    this.skipType2Txns = params.skipType2Txns.map(
+      (value) => Number(value)
+    ).filter((value) => !isNaN(value));
   }
 
   packUint(high128: BigNumberish, low128: BigNumberish): string {
@@ -1115,7 +1132,7 @@ export class Paymaster {
       }
 
       let tx: providers.TransactionResponse;
-      if (!feeData.maxFeePerGas) {
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId)) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
@@ -1168,7 +1185,7 @@ export class Paymaster {
       }
 
       let tx: providers.TransactionResponse;
-      if (!feeData.maxFeePerGas) {
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId)) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
@@ -1232,7 +1249,7 @@ export class Paymaster {
       }
 
       let tx: providers.TransactionResponse;
-      if (!feeData.maxFeePerGas) {
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId)) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
@@ -1295,7 +1312,7 @@ export class Paymaster {
       }
 
       let tx;
-      if (!feeData.maxFeePerGas) {
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId)) {
         tx = await contract.deploy(epAddr, signer.address, { gasPrice: feeData.gasPrice });
       } else {
         tx = await contract.deploy(
@@ -1342,7 +1359,7 @@ export class Paymaster {
       }
 
       let tx;
-      if (!feeData.maxFeePerGas) {
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId)) {
         tx = await contract.addStake("10", { value: ethers.utils.parseEther(amount), gasPrice: feeData.gasPrice });
       } else {
         tx = await contract.addStake(

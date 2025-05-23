@@ -12,8 +12,19 @@ import { APIKey } from "../models/api-key.js";
 import { EPVersions } from "../types/sponsorship-policy-dto.js";
 
 const depositRoutes: FastifyPluginAsync = async (server) => {
-    const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, 
-        server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL, server.config.MTP_PVGL, server.config.MTP_PPGL, server.config.EP8_PVGL);
+    const paymaster = new Paymaster({
+        feeMarkUp: server.config.FEE_MARKUP,
+        multiTokenMarkUp: server.config.MULTI_TOKEN_MARKUP,
+        ep7TokenVGL: server.config.EP7_TOKEN_VGL,
+        ep7TokenPGL: server.config.EP7_TOKEN_PGL,
+        sequelize: server.sequelize,
+        mtpVglMarkup: server.config.MTP_VGL_MARKUP,
+        ep7Pvgl: server.config.EP7_PVGL,
+        mtpPvgl: server.config.MTP_PVGL,
+        mtpPpgl: server.config.MTP_PPGL,
+        ep8Pvgl: server.config.EP8_PVGL,
+        skipType2Txns: server.config.ENFORCE_LEGACY_TRANSACTIONS_CHAINS
+    });
 
     const SUPPORTED_ENTRYPOINTS = {
         EPV_06: server.config.EPV_06,
@@ -55,8 +66,8 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
             const useVp = query['useVp'] ?? false;
             const chainId = query['chainId'] ?? body.params?.[1];
             const api_key = query['apiKey'] ?? body.params?.[2];
-            
-            if (!api_key || typeof(api_key) !== "string")
+
+            if (!api_key || typeof (api_key) !== "string")
                 return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
             let privateKey = '';
             let bundlerApiKey = api_key;
@@ -92,29 +103,29 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
             let vpAddr;
             if (EPVersions.EPV_06 == epVersion) {
                 networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
-                vpAddr = apiKeyEntity.verifyingPaymasters ? 
-                            JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId] :
-                            undefined;
+                vpAddr = apiKeyEntity.verifyingPaymasters ?
+                    JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId] :
+                    undefined;
             } else if (EPVersions.EPV_07 == epVersion) {
                 networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
-                vpAddr = apiKeyEntity.verifyingPaymastersV2 ? 
-                            JSON.parse(apiKeyEntity.verifyingPaymastersV2)[chainId] :
-                            undefined;
+                vpAddr = apiKeyEntity.verifyingPaymastersV2 ?
+                    JSON.parse(apiKeyEntity.verifyingPaymastersV2)[chainId] :
+                    undefined;
             } else if (EPVersions.EPV_08 == epVersion) {
                 networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_08);
-                vpAddr = apiKeyEntity.verifyingPaymastersV3 ? 
-                            JSON.parse(apiKeyEntity.verifyingPaymastersV3)[chainId] :
-                            undefined;
+                vpAddr = apiKeyEntity.verifyingPaymastersV3 ?
+                    JSON.parse(apiKeyEntity.verifyingPaymastersV3)[chainId] :
+                    undefined;
             }
             if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
             let bundlerUrl = networkConfig.bundler;
             if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
 
-            if(!useVp) {
+            if (!useVp) {
                 return await paymaster.deposit(amount, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, privateKey, chainId, true, server.log);
             }
-            if(!vpAddr) {
-                return reply.code(ReturnCode.FAILURE).send({error: ErrorMessage.VP_NOT_DEPLOYED})
+            if (!vpAddr) {
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.VP_NOT_DEPLOYED })
             }
 
             return await paymaster.deposit(amount, vpAddr, bundlerUrl, privateKey, chainId, false, server.log);
