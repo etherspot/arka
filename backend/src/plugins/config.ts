@@ -42,6 +42,7 @@ const ConfigSchema = Type.Strict(
     EP8_PVGL: Type.String(),
     MTP_PVGL: Type.String() || undefined,
     MTP_PPGL: Type.String() || undefined,
+    ENFORCE_LEGACY_TRANSACTIONS_CHAINS: Type.Array(Type.String()) || undefined,
   })
 );
 
@@ -88,6 +89,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     EP8_PVGL: process.env.EP8_PVGL ?? '30000',
     MTP_PVGL: process.env.MTP_PVGL ?? '50000',
     MTP_PPGL: process.env.MTP_PPGL ?? '70000',
+    ENFORCE_LEGACY_TRANSACTIONS_CHAINS: process.env.ENFORCE_LEGACY_TRANSACTIONS_CHAINS?.split(',') ?? []
   }
 
   const valid = validate(envVar);
@@ -130,6 +132,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     EP8_PVGL: process.env.EP8_PVGL ?? '30000',
     MTP_PVGL: process.env.MTP_PVGL ?? '50000',
     MTP_PPGL: process.env.MTP_PPGL ?? '70000',
+    ENFORCE_LEGACY_TRANSACTIONS_CHAINS: process.env.ENFORCE_LEGACY_TRANSACTIONS_CHAINS?.split(',') ?? []
   }
 
   server.log.info(config, "config:");

@@ -18,8 +18,19 @@ import { getNetworkConfig } from "../utils/common.js";
 import { Paymaster } from "../paymaster/index.js";
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
-  const paymaster = new Paymaster(server.config.FEE_MARKUP, server.config.MULTI_TOKEN_MARKUP, server.config.EP7_TOKEN_VGL, server.config.EP7_TOKEN_PGL, server.sequelize, 
-    server.config.MTP_VGL_MARKUP, server.config.EP7_PVGL, server.config.MTP_PVGL, server.config.MTP_PPGL, server.config.EP8_PVGL);
+  const paymaster = new Paymaster({
+    feeMarkUp: server.config.FEE_MARKUP, 
+    multiTokenMarkUp: server.config.MULTI_TOKEN_MARKUP, 
+    ep7TokenVGL: server.config.EP7_TOKEN_VGL, 
+    ep7TokenPGL: server.config.EP7_TOKEN_PGL, 
+    sequelize: server.sequelize, 
+    mtpVglMarkup: server.config.MTP_VGL_MARKUP, 
+    ep7Pvgl: server.config.EP7_PVGL, 
+    mtpPvgl: server.config.MTP_PVGL, 
+    mtpPpgl: server.config.MTP_PPGL, 
+    ep8Pvgl: server.config.EP8_PVGL,
+    skipType2Txns: server.config.ENFORCE_LEGACY_TRANSACTIONS_CHAINS
+  });
 
   const prefixSecretId = 'arka_';
 
