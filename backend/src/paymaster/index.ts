@@ -79,7 +79,7 @@ export class Paymaster {
   coingeckoPrice: Map<string, CoingeckoPriceCache> = new Map();
   coingeckoService: CoingeckoService = new CoingeckoService();
   sequelize: Sequelize;
-  skipType2Txns: number[];
+  skipType2Txns: string[];
 
   constructor(params: ConstructorParams) {
     this.feeMarkUp = ethers.utils.parseUnits(params.feeMarkUp, 'gwei');
@@ -93,9 +93,7 @@ export class Paymaster {
     this.EP8_PVGL = BigNumber.from(params.ep8Pvgl);
     this.MTP_PVGL = params.mtpPvgl;
     this.MTP_PPGL = params.mtpPpgl;
-    this.skipType2Txns = params.skipType2Txns.map(
-      (value) => Number(value)
-    ).filter((value) => !isNaN(value));
+    this.skipType2Txns = params.skipType2Txns;
   }
 
   packUint(high128: BigNumberish, low128: BigNumberish): string {
@@ -1132,7 +1130,7 @@ export class Paymaster {
       }
 
       let tx: providers.TransactionResponse;
-      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId)) {
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId.toString())) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
@@ -1185,7 +1183,7 @@ export class Paymaster {
       }
 
       let tx: providers.TransactionResponse;
-      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId)) {
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId.toString())) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
@@ -1249,7 +1247,7 @@ export class Paymaster {
       }
 
       let tx: providers.TransactionResponse;
-      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId)) {
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId.toString())) {
         tx = await signer.sendTransaction({
           to: paymasterAddress,
           data: encodedData,
@@ -1312,7 +1310,7 @@ export class Paymaster {
       }
 
       let tx;
-      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId)) {
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId.toString())) {
         tx = await contract.deploy(epAddr, signer.address, { gasPrice: feeData.gasPrice });
       } else {
         tx = await contract.deploy(
@@ -1359,7 +1357,7 @@ export class Paymaster {
       }
 
       let tx;
-      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId)) {
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId.toString())) {
         tx = await contract.addStake("10", { value: ethers.utils.parseEther(amount), gasPrice: feeData.gasPrice });
       } else {
         tx = await contract.addStake(
