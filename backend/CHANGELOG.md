@@ -1,4 +1,7 @@
 # Changelog
+## [4.1.2] - 2025-06-05
+- Fetch from coingecko only if coingecko-token-repository records are available else skip calling the api
+
 ## [4.1.1] - 2025-05-24
 - Fixed bug of comparing chainId as string for skipping type2 to legacy txn 
 

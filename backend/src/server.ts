@@ -91,6 +91,10 @@ const initializeServer = async (): Promise<void> => {
   const getAndSetCoingeckoPrice = async () => {
     const records = await coingeckoRepo.findAll();
     const tokenIds = records.map(record => record.coinId);
+    if (tokenIds.length === 0) {
+      server.log.info('No token ids found in coingecko tokens repository');
+      return;
+    }
     const coingecko = new CoingeckoService();
 
     const data = await coingecko.fetchPriceByCoinID(tokenIds, server.log);
