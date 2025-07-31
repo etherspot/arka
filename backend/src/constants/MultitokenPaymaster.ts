@@ -200,6 +200,9 @@ export const TokenDecimalsAndSymbol: Record<number, Record<string, TokenInfo>> =
         '0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD': { decimals: 6, symbol: 'EURC' },
         '0xB3fe5374F67D7a22886A0eE082b2E2f9d2651651': { decimals: 18, symbol: 'LINK' },
         '0x8eBAf22B6F053dFFeaf46f4Dd9eFA95D89ba8580': { decimals: 18, symbol: 'UNI.e' }
+    },
+    88888888: {
+        '0x97423A68BAe94b5De52d767a17aBCc54c157c0E5': { decimals: 6, symbol: 'USDC' }
     }
 }
 

@@ -9,17 +9,33 @@ export function printRequest(methodName: string, request: FastifyRequest, log: F
   log.info(request.body, "body passed: ");
 }
 
-export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint: string[]) {
+export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint?: string[]) {
   if (supportedNetworks !== '') {
     const buffer = Buffer.from(supportedNetworks, 'base64');
-    const SUPPORTED_NETWORKS = JSON.parse(buffer.toString())
+    const SUPPORTED_NETWORKS = JSON.parse(buffer.toString());
+    if (entryPoint === undefined || entryPoint === null || entryPoint.length === 0) {
+      const result = SUPPORTED_NETWORKS.find((chain: any) => chain["chainId"] == key);
+      if (!result) {
+        return SupportedNetworks.find((chain) => chain.chainId == key);
+      }
+      return result;
+    }
     const result = SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key && entryPoint.includes(chain["entryPoint"]) });
     if (!result) {
       return SupportedNetworks.find((chain) => chain.chainId == key && entryPoint.includes(chain.entryPoint));
     }
     return result
-  } else
-    return SupportedNetworks.find((chain) => chain.chainId == key && entryPoint.includes(chain.entryPoint));
+  } else {
+    if (entryPoint === undefined || entryPoint === null || entryPoint.length === 0) {
+      const result = SupportedNetworks.find((chain) => chain.chainId == key);
+      if (!result) {
+        return null;
+      }
+      return result;
+    }
+    const result = SupportedNetworks.find((chain) => { return chain.chainId == key && entryPoint.includes(chain.entryPoint) });
+    return result ? result : null;
+  }
 }
 
 export function getChainIdsFromDefaultSupportedNetworks() {
