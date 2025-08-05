@@ -398,20 +398,13 @@ const initializeServer = async (): Promise<void> => {
               const chainIds = Object.keys(multiTokenPaymasters);
 
               for (const chainId of chainIds) {
-                const networkConfig = getNetworkConfig(chainId, '');
-                if (!networkConfig) {
-                  server.log.error(`Network config not found for updateTokenOracleData chain id: ${chainId} continuing to next chain id`);
-                  continue;
-                }
-                let provider;
                 try {
-                  provider = new ethers.providers.JsonRpcProvider(networkConfig.bundler);
-                } catch (error) {
-                  server.log.error(`Failed to create provider for chain id: ${chainId}, ${error}`);
-                  provider = null;
-                  continue;
-                }
-                if (provider !== null) {
+                  const networkConfig = getNetworkConfig(chainId, '');
+                  if (!networkConfig) {
+                    server.log.error(`Network config not found for updateTokenOracleData chain id: ${chainId} continuing to next chain id`);
+                    continue;
+                  }
+                  const provider = new ethers.providers.JsonRpcProvider(networkConfig.bundler);
                   if (networkConfig.MultiTokenPaymasterOracleUsed === 'chainlink') {
                     paymaster.getLatestAnswerAndDecimals(
                       provider,
@@ -475,8 +468,8 @@ const initializeServer = async (): Promise<void> => {
                       });
                     }
                   }
-                } else {
-                  server.log.error(`Provider is null for chain id: ${chainId}`);
+                } catch (err) {
+                  server.log.error(`Error while running for chainId: ${chainId}, ${err}`)
                 }
               }
             } else {
