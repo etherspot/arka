@@ -28,7 +28,7 @@ import { CoingeckoTokensRepository } from './repository/coingecko-token-reposito
 import { Paymaster } from './paymaster/index.js';
 import { NativeOracles } from './constants/ChainlinkOracles.js';
 import { MultiTokenPaymaster } from './models/multiTokenPaymaster.js';
-import { MULTI_TOKEN_ORACLES, MULTI_TOKEN_PAYMASTERS } from 'constants/MultiTokenPaymasterCronJob.js';
+import { MULTI_TOKEN_ORACLES, MULTI_TOKEN_PAYMASTERS } from './constants/MultiTokenPaymasterCronJob.js';
 
 let server: FastifyInstance;
 
@@ -408,6 +408,7 @@ const initializeServer = async (): Promise<void> => {
                   provider = new ethers.providers.JsonRpcProvider(networkConfig.bundler);
                 } catch (error) {
                   server.log.error(`Failed to create provider for chain id: ${chainId}, ${error}`);
+                  provider = null;
                   continue;
                 }
                 if (provider !== null) {
