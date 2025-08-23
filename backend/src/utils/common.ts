@@ -1,5 +1,5 @@
 import { FastifyBaseLogger, FastifyRequest } from "fastify";
-import { BigNumber, ethers } from "ethers";
+import { parseUnits } from "viem";
 import SupportedNetworks from "../../config.json" assert { type: "json" };
 import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
 
@@ -74,9 +74,9 @@ export async function getSkandhaGasFee(rpcUrl: string, log?: FastifyBaseLogger):
     const data = (await feeData.json()).result;
     if(data?.maxFeePerGas && data?.maxPriorityFeePerGas) {
       return {
-        maxFeePerGas: BigNumber.from(data.maxFeePerGas),
-        maxPriorityFeePerGas: BigNumber.from(data.maxPriorityFeePerGas),
-        gasPrice: BigNumber.from(data.maxFeePerGas)
+        maxFeePerGas: BigInt(data.maxFeePerGas),
+        maxPriorityFeePerGas: BigInt(data.maxPriorityFeePerGas),
+        gasPrice: BigInt(data.maxFeePerGas)
       }
     }
     return null;
@@ -97,16 +97,16 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
         const response: EtherscanResponse = await data.json();
         if (response.result && typeof response.result === "object" && response.status === "1") {
           if(log) log.info('setting maxFeePerGas and maxPriorityFeePerGas as received')
-          const maxFeePerGas = ethers.utils.parseUnits(response.result.suggestBaseFee, 'gwei')
-          const fastGasPrice = ethers.utils.parseUnits(response.result.FastGasPrice, 'gwei')
+          const maxFeePerGas = parseUnits(response.result.suggestBaseFee, 9)
+          const fastGasPrice = parseUnits(response.result.FastGasPrice, 9)
           return { 
-            maxPriorityFeePerGas: fastGasPrice.sub(maxFeePerGas),
+            maxPriorityFeePerGas: fastGasPrice - maxFeePerGas,
             maxFeePerGas,
             gasPrice: maxFeePerGas,
           }
         }
         if (response.result && typeof response.result === "string" && response.jsonrpc) {
-          const gasPrice = BigNumber.from(response.result)
+          const gasPrice = BigInt(response.result)
           if(log) log.info('setting gas price as received')
           return {
             maxFeePerGas: gasPrice,

@@ -1,6 +1,6 @@
-import { BigNumber } from "ethers";
+import { toHex } from 'viem';
 
-export const UnaccountedCost = BigNumber.from("45000").toHexString();
+export const UnaccountedCost = toHex(45000n);
 
 interface TokenInfo {
     decimals: number;
