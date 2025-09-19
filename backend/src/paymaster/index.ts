@@ -1328,7 +1328,6 @@ export class Paymaster {
   ) {
     try {
       const chain = getViemChainDef(chainId, bundlerRpcUrl);
-      console.log("chain", chain);
       const account = privateKeyToAccount(privateKey as Hex);
       const publicClient = createPublicClient({ chain: chain, transport: http(bundlerRpcUrl) });
       const walletClient = createWalletClient({ chain: chain, transport: http(bundlerRpcUrl), account: privateKeyToAccount(privateKey as Hex) });
@@ -1358,8 +1357,6 @@ export class Paymaster {
         feeData.maxFeePerGas = gasPrice ? gasPrice + this.feeMarkUp : BigInt(0);
         feeData.maxPriorityFeePerGas = gasPrice ? gasPrice + this.feeMarkUp : BigInt(0);
       }
-
-      console.log('balance: ', await publicClient.getBalance({ address: account.address }));
 
       let tx;
       if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId.toString()) || feeData.maxFeePerGas === BigInt(0)) {
