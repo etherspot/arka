@@ -1364,17 +1364,17 @@ export class Paymaster {
           abi: verifyingPaymasterAbiCode,
           bytecode: bytecode as `0x${string}`,
           args: [epAddr, account.address],
-          // gasPrice: feeData.gasPrice ?? undefined,
-          // type: "legacy",
+          gasPrice: feeData.gasPrice ?? undefined,
+          type: "legacy",
         });
       } else {
         tx = await walletClient.deployContract({
           abi: verifyingPaymasterAbiCode,
           bytecode: bytecode as `0x${string}`,
           args: [epAddr, privateKeyToAccount(privateKey as Hex).address],
-          // maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-          // maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-          // type: "eip1559",
+          maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
+          type: "eip1559",
           
         });
       }
