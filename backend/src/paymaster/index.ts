@@ -22,6 +22,7 @@ import {
   getContract,
   type TransactionRequest,
   parseAbi,
+  stringToBytes,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { FastifyBaseLogger } from 'fastify';
@@ -118,7 +119,7 @@ export class Paymaster {
   }
 
   packUint(high128: bigint, low128: bigint): string {
-    return toHex((BigInt(high128) << 128n) + BigInt(low128), { size: 32 })
+    return toHex((high128 << 128n) + low128, { size: 32 })
   }
 
   packPaymasterData(paymaster: string, paymasterVerificationGasLimit: bigint, postOpGasLimit: bigint, paymasterData?: Hex): Hex {
@@ -554,7 +555,7 @@ export class Paymaster {
     const promises = [
       this.getTokenDecimals(gasToken, chainId, publicClient),
       this.getTokenSymbol(gasToken, chainId, publicClient),
-      oracleContract.read.getLatestData([1, bytesToHex(new Uint8Array([69, 84, 72])).padEnd(42, '0') as Hex])
+      oracleContract.read.getLatestData([1, toHex(stringToBytes('ETH')).padEnd(42, '0') as Hex])
     ];
 
     return await Promise.allSettled(promises).then((data) => {
