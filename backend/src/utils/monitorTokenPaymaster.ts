@@ -6,7 +6,7 @@ import EtherspotAbi from "../abi/EtherspotAbi.js";
 export async function checkDeposit(paymasterAddress: string, bundlerUrl: string, webhookUrl: string, thresholdValue: string, chainId: number, log: FastifyBaseLogger) {
   try {
     const publicClient = createPublicClient({ transport: http(bundlerUrl) });
-    const contract = getContract({ address: paymasterAddress as `0x${string}`, abi: EtherspotAbi, publicClient });
+    const contract = getContract({ address: paymasterAddress as `0x${string}`, abi: EtherspotAbi, client: publicClient });
     const currentDeposit = await contract.read.getDeposit();
     if (parseEther(thresholdValue) >= currentDeposit) {
       const body = { message: `Balance below threshold. Please deposit on tokenPaymasterAddress: ${paymasterAddress} chainId: ${chainId}`, currentDeposit: formatEther(currentDeposit) }
