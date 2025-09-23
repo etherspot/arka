@@ -28,9 +28,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { Sequelize } from 'sequelize';
 import EtherspotAbiV06 from '../abi/EtherspotAbi.js';
 import EtherspotAbiV07 from "../abi/EtherspotVerifyingSignerAbi.js";
-import { TokenPaymaster } from './token.js';
 import ErrorMessage from '../constants/ErrorMessage.js';
-import { PAYMASTER_ADDRESS } from '../constants/Token.js';
 import { getGasFee, getViemChainDef } from '../utils/common.js';
 import MultiTokenPaymasterAbi from '../abi/MultiTokenPaymasterAbi.js';
 import OrochiOracleAbi from '../abi/OrochiOracleAbi.js';
@@ -983,58 +981,6 @@ export class Paymaster {
     }
   }
 
-  async erc20Paymaster(userOp: any, bundlerRpc: string, entryPoint: string, PaymasterAddress: string, log?: FastifyBaseLogger) {
-    try {
-      const publicClient = createPublicClient({ transport: http(bundlerRpc) });
-      const erc20Paymaster = new TokenPaymaster(PaymasterAddress, publicClient)
-      if (!userOp.signature) userOp.signature = '0x';
-
-      // The minimum ABI to get the ERC20 Token balance
-      const minABI = [
-        // balanceOf
-        {
-          constant: true,
-
-          inputs: [{ name: '_owner', type: 'address' }],
-
-          name: 'balanceOf',
-
-          outputs: [{ name: 'balance', type: 'uint256' }],
-
-          type: 'function',
-        },
-      ]
-      const tokenAmountRequired = await erc20Paymaster.calculateTokenAmount(userOp);
-      const tokenContract = getContract({ address: await erc20Paymaster.tokenAddress as Address, abi: minABI, client: publicClient })
-      const tokenBalance = await tokenContract.read.balanceOf([userOp.sender]) as bigint;
-
-      if (tokenAmountRequired >= tokenBalance)
-        throw new Error(`The required token amount ${tokenAmountRequired.toString()} is more than what the sender has ${tokenBalance}`)
-
-      let paymasterAndData = await erc20Paymaster.generatePaymasterAndDataForTokenAmount(userOp, tokenAmountRequired)
-      userOp.paymasterAndData = paymasterAndData;
-
-      const response = await this.getEstimateUserOperationGas(publicClient, userOp, entryPoint);
-      userOp.verificationGasLimit = (BigInt((response as any).verificationGasLimit) + 100000n).toString();
-      userOp.preVerificationGas = (response as any).preVerificationGas;
-      userOp.callGasLimit = (response as any).callGasLimit;
-      paymasterAndData = await erc20Paymaster.generatePaymasterAndData(userOp);
-
-      return {
-        paymasterAndData,
-        verificationGasLimit: userOp.verificationGasLimit,
-        preVerificationGas: userOp.preVerificationGas,
-        callGasLimit: userOp.callGasLimit,
-      };
-    } catch (err: any) {
-      if (err.message.includes("Quota exceeded"))
-        throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
-      if (err.message.includes('The required token amount')) throw new Error(err.message);
-      if (log) log.error(err, 'erc20Paymaster');
-      throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg: ' + err.message)
-    }
-  }
-
   async ERC20PaymasterV07(userOp: any, bundlerRpc: string, entryPoint: string, paymasterAddress: string, estimate: boolean, log?: FastifyBaseLogger) {
     try {
       const publicClient = createPublicClient({ transport: http(bundlerRpc) });
@@ -1102,17 +1048,6 @@ export class Paymaster {
         throw new Error('Failed to process request to bundler since request Quota exceeded for the current apiKey')
       if (log) log.error(err, 'ERC20Paymaster');
       throw new Error('Failed to process request to bundler. Please contact support team RawErrorMsg:' + err.message)
-    }
-  }
-
-  async erc20PaymasterAddress(gasToken: string, chainId: number, log?: FastifyBaseLogger) {
-    try {
-      return {
-        message: PAYMASTER_ADDRESS[chainId][gasToken] ?? 'Requested Token Paymaster is not available/deployed',
-      }
-    } catch (err: any) {
-      if (log) log.error(err, 'ERC20PaymasterAddress');
-      throw new Error(err.message)
     }
   }
 

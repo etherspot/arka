@@ -94,7 +94,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
-        const validAddresses = address.every(isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         if(!useVp) {
           if(!chainId || isNaN(chainId)) {
@@ -207,7 +207,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
-        const validAddresses = address.every(isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
           if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         if(!useVp) {
           if(!chainId || isNaN(chainId)) {
@@ -399,7 +399,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const validAddresses = address.every(isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         const signer = privateKeyToAccount(privateKey as `0x${string}`);
         if (policyId) {
@@ -497,7 +497,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        const validAddresses = address.every(isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, EPVersions.EPV_07, policyId);
         const existingGlobalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
@@ -723,7 +723,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const validAddresses = address.every(isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         const signer = privateKeyToAccount(privateKey as `0x${string}`);
         if (policyId) {
@@ -822,7 +822,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_08);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        const validAddresses = address.every(isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, EPVersions.EPV_08, policyId);
         const existingGlobalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);

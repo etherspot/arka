@@ -16,7 +16,8 @@
     "migrate": "bun run scripts/migration.cjs",
     "dev": "tsx watch src/index.ts | pino-pretty --colorize",
     "pretest": "bun run build",
-    "test": "bun test"
+    "test": "bun test",
+    "postinstall": "node -e \"try { require('esbuild/install') } catch (e) { console.log('Using JS fallback for esbuild') }\""
   },
   "engines": {
     "bun": ">=1.0.0"

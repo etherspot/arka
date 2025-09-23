@@ -1,6 +1,7 @@
 FROM oven/bun:1-alpine AS deps
+RUN apk update && apk add --no-cache g++ nodejs npm musl make musl-dev python3 git py3-setuptools && rm -rf /var/cache/apk/*
 WORKDIR /app
-COPY package.json bun.lockb* ./
+COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 
 FROM oven/bun:1-alpine AS builder
@@ -17,7 +18,6 @@ COPY --from=builder /app/build ./build
 COPY ./migrations ./build/migrations
 COPY package.json ./
 COPY --from=builder /app/config.json.default /usr/app/config.json
-RUN bun install --production
 USER root
 ENV NODE_ENV="production"
 CMD ["bun", "start"]

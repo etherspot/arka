@@ -266,28 +266,6 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
               }
               break;
             }
-            /* decommissioned this mode and this is for future reference only since it uses old pimlico contracts
-            case 'erc20': {
-              if (epVersion === EPVersions.EPV_06) {
-                if (
-                  !(PAYMASTER_ADDRESS[chainId] && PAYMASTER_ADDRESS[chainId][gasToken]) &&
-                  !(customPaymasters[chainId] && customPaymasters[chainId][gasToken])
-                ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
-                let paymasterAddress: string;
-                if (customPaymasters[chainId] && customPaymasters[chainId][gasToken]) paymasterAddress = customPaymasters[chainId][gasToken];
-                else paymasterAddress = PAYMASTER_ADDRESS[chainId][gasToken]
-                result = await paymaster.erc20Paymaster(userOp, bundlerUrl, entryPoint, paymasterAddress, server.log);
-              } else if (epVersion === EPVersions.EPV_07) {
-                if (
-                  !(customPaymastersV2[chainId] && customPaymastersV2[chainId][gasToken])
-                ) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK_TOKEN })
-                const paymasterAddress = customPaymastersV2[chainId][gasToken];
-                result = await paymaster.ERC20PaymasterV07(userOp, bundlerUrl, entryPoint, paymasterAddress, estimate, server.log);
-              } else {
-                throw new Error(`Currently only ${SUPPORTED_ENTRYPOINTS.EPV_06} & ${SUPPORTED_ENTRYPOINTS.EPV_07} entryPoint addresses are supported`)
-              }
-              break;
-            }*/
             case 'multitoken': {
               if (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07)
                 throw new Error(ErrorMessage.MTP_EP_SUPPORT)

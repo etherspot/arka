@@ -142,50 +142,6 @@ export const CustomDeployedPaymasters: Record<number, Record<string, string>> = 
     }
 }
 
-export const PAYMASTER_ADDRESS: Record<number, Record<string, string>> = {
-    1: {
-        USDC: "0x0000000000fABFA8079AB313D1D14Dcf4D15582a"
-    },
-    56: {
-        USDC: "0x0000000000db7995889f54d72dac9d36a9f7f467"
-    },
-    100: {
-        USDC: "0x000000000034b78bfe02be30ae4d324c8702803d"
-    },
-    137: {
-        eUSDC: "0xa683b47e447De6c8A007d9e294e87B6Db333Eb18",
-        USDC: "0x00000000003011eef3f79892ba3d521e5ba5c5c0"
-    },
-    8453: {
-        USDC: "0x939263eafe57038a072cb4edd6b25dd81a8a6c56"
-    },
-    84532: {
-        USDC: "0x0000000000dd6dd248ab5487218e1c2d7fbb29c9"
-    },
-    42161: {
-        eUSDC: "0x49EE41bC335Fb36be46A17307dcFe536A3494644",
-        USDC: "0x000000000058e13d711bb4706bf822a79c35d8b1"
-    },
-    59144: {
-        USDC: "0x0000000000Cf745CB08EE7A6F0A2D74BB942E414"
-    },
-    10: {
-        USDC: "0x0000000000fce6614d3c6f679e48c9cdd09aa634"
-    },
-    11155111: {
-        USDC: "0x0000000000325602a77416a16136fdafd04b299f"
-    },
-    80001: {
-        USDC: "0x000000000009B901DeC1aaB9389285965F49D387"
-    },
-    114: {
-        USDT: "0xED35f8fa422Ba95A52A000236F1EAFd7e4fA4D52"
-    },
-    14: {
-        eUSDC: "0xA5589D278778Eaae346383dD710D7913d8A6a2aA"
-    }
-}
-
 /**
  * Example Structure for adding deployed multi-token paymasters on AWS secrets manager
  */
