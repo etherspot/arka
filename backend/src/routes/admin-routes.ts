@@ -435,11 +435,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         verifyingPaymasters = apiKeyEntity.verifyingPaymastersV3 ? JSON.parse(apiKeyEntity.verifyingPaymastersV3) : {};
         supportedEPs = SUPPORTED_ENTRYPOINTS.EPV_08;
       }
-      // if (verifyingPaymasters[chainId]) {
-      //   return reply.code(ReturnCode.FAILURE).send(
-      //     {error: `${ErrorMessage.VP_ALREADY_DEPLOYED} at ${verifyingPaymasters[chainId]}`}
-      //   );
-      // }
 
       let privateKey;
       let bundlerApiKey = apiKey;
@@ -486,7 +481,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
       }
 
-      console.log('epVersion and epAddress: ', epVersion, networkConfig.entryPoint);
       if (verifyingPaymasters[chainId]) {
         return reply.code(ReturnCode.FAILURE).send(
           {error: `${ErrorMessage.VP_ALREADY_DEPLOYED} at ${verifyingPaymasters[chainId]}`}
