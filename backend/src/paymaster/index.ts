@@ -118,14 +118,14 @@ export class Paymaster {
     this.skipType2Txns = params.skipType2Txns;
   }
 
-  packUint(high128: bigint, low128: bigint): string {
+  packUint(high128: bigint, low128: bigint): Hex {
     return toHex((high128 << 128n) + low128, { size: 32 })
   }
 
   packPaymasterData(paymaster: string, paymasterVerificationGasLimit: bigint, postOpGasLimit: bigint, paymasterData?: Hex): Hex {
     return concat([
       paymaster as Hex,
-      this.packUint(paymasterVerificationGasLimit, postOpGasLimit) as Hex,
+      this.packUint(paymasterVerificationGasLimit, postOpGasLimit),
       (paymasterData ?? '0x') as Hex
     ])
   }
