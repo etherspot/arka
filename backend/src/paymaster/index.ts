@@ -179,9 +179,9 @@ export class Paymaster {
         }
         userOp.paymasterData = await this.getPaymasterData(packedUserOp, validUntil, validAfter, paymasterContract, signer);
         const response = await publicClient.request({ method: 'eth_estimateUserOperationGas', params: [userOp, entryPoint] } as any) as any;
-        userOp.verificationGasLimit = (response as any).verificationGasLimit;
-        userOp.callGasLimit = (response as any).callGasLimit;
-        userOp.preVerificationGas = (response as any).preVerificationGas;
+        userOp.verificationGasLimit = response.verificationGasLimit;
+        userOp.callGasLimit = response.callGasLimit;
+        userOp.preVerificationGas = response.preVerificationGas;
       }
       const accountGasLimits = this.packUint(BigInt(userOp.verificationGasLimit), BigInt(userOp.callGasLimit))
       const gasFees = this.packUint(BigInt(userOp.maxPriorityFeePerGas), BigInt(userOp.maxFeePerGas));
@@ -258,9 +258,9 @@ export class Paymaster {
         }
         userOp.paymasterData = await this.getPaymasterData(packedUserOp, validUntil, validAfter, paymasterContract, signer);
         const response = await publicClient.request({ method: 'eth_estimateUserOperationGas', params: [userOp, entryPoint] } as any) as any;
-        userOp.verificationGasLimit = (response as any).verificationGasLimit;
-        userOp.callGasLimit = (response as any).callGasLimit;
-        userOp.preVerificationGas = (response as any).preVerificationGas;
+        userOp.verificationGasLimit = response.verificationGasLimit;
+        userOp.callGasLimit = response.callGasLimit;
+        userOp.preVerificationGas = response.preVerificationGas;
       }
       const accountGasLimits = this.packUint(BigInt(userOp.verificationGasLimit), BigInt(userOp.callGasLimit))
       const gasFees = this.packUint(BigInt(userOp.maxPriorityFeePerGas), BigInt(userOp.maxFeePerGas));
