@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "baseUrl": "./",
+        "resolvePackageJsonImports": true,
+        "rootDir": "./",
+        "module": "esnext",
+        "target": "es2017",
+        "moduleResolution": "Node",
+        "lib": ["esnext", "ES2022", "ES2017"],
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "sourceMap": true,
+        "skipLibCheck": true,
+        "strict": false
+    },
+    "include": [
+        "**/*.ts", "./*.ts",
+    ]
+}

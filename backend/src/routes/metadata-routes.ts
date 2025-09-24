@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { FastifyPluginAsync } from "fastify";
-import { Contract, Wallet, providers, utils } from "ethers";
-import SupportedNetworks from "../../config.json" assert { type: "json" };
-import { getNetworkConfig, printRequest } from "../utils/common.js";
+import { createPublicClient, http, getContract, getAddress, Address } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import SupportedNetworks from "../../config.json";
+import { getNetworkConfig, printRequest, getViemChainDef } from "../utils/common.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import { decode } from "../utils/crypto.js";
-import { PAYMASTER_ADDRESS } from "../constants/Token.js";
 import { APIKey } from "../models/api-key.js";
 import * as EtherspotAbi from "../abi/EtherspotAbi.js";
 import {abi as verifyingPaymasterAbi} from "../abi/VerifyingPaymasterAbi.js";
@@ -42,7 +42,6 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
       if (!chainId)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA })
-      let customPaymasters = [];
       let multiTokenPaymasters = [];
       let privateKey = '';
       let sponsorName = '', sponsorImage = '';
@@ -67,10 +66,6 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       } else {
         privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
       }
-      if (apiKeyEntity.erc20Paymasters) {
-        const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
-        customPaymasters = JSON.parse(buffer.toString());
-      }
       if (apiKeyEntity.multiTokenPaymasters) {
         const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
         multiTokenPaymasters = JSON.parse(buffer.toString());
@@ -88,29 +83,32 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
       let bundlerUrl = networkConfig.bundler;
       if (bundlerUrl.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-      const provider = new providers.JsonRpcProvider(bundlerUrl);
-      const signer = new Wallet(privateKey, provider)
-      const sponsorWalletBalance = await signer.getBalance();
-      const sponsorAddress = await signer.getAddress();
-      let sponsorBalance = 0;
+      const viemChain = getViemChainDef(chainId);
+      const publicClient = createPublicClient({ chain: viemChain, transport: http(bundlerUrl) });
+      const signer = privateKeyToAccount(privateKey as `0x${string}`);
+      const sponsorWalletBalance = await publicClient.getBalance({ address: signer.address });
+      const sponsorAddress = signer.address;
+      let sponsorBalance = '0';
 
       if (networkConfig.contracts.etherspotPaymasterAddress) {
         try {
           //get native balance of the sponsor in the EtherSpotPaymaster-contract
-          const paymasterContract = new Contract(utils.getAddress(networkConfig.contracts.etherspotPaymasterAddress), EtherspotAbi.default, provider);
-          sponsorBalance = await paymasterContract.getDeposit();
+          const paymasterContract = getContract({ address: getAddress(networkConfig.contracts.etherspotPaymasterAddress), abi: EtherspotAbi.default, client: publicClient });
+          sponsorBalance = (await paymasterContract.read.getDeposit()).toString();
         } catch (err) {
           request.log.error(err);
         }
       }
 
       const verifyingPaymaster = apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId] : undefined;
-      let verifyingPaymasterDeposit = 0;
+      let verifyingPaymasterDeposit;
       if (verifyingPaymaster) {
         try {
           // VerifyingPaymaster address is stored in the DB as checksummed address so no need to checksum it
-          const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterAbi ,provider);
-          verifyingPaymasterDeposit = await vpContract.getDeposit();
+          const vpContract = getContract({ address: verifyingPaymaster as Address, abi: verifyingPaymasterAbi, client: publicClient });
+          verifyingPaymasterDeposit = await vpContract.read.getDeposit();
+          if (verifyingPaymasterDeposit || (typeof(verifyingPaymasterDeposit) === 'bigint')) 
+            verifyingPaymasterDeposit = verifyingPaymasterDeposit.toString();
         } catch (err) {
           request.log.error(err);
         }
@@ -119,19 +117,14 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       SupportedNetworks.map(element => {
         chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
       })
-      const tokenPaymasterAddresses = {
-        ...PAYMASTER_ADDRESS,
-        ...customPaymasters,
-      }
       return reply.code(ReturnCode.SUCCESS).send({
         sponsorAddress: sponsorAddress,
-        sponsorWalletBalance: sponsorWalletBalance,
+        sponsorWalletBalance: sponsorWalletBalance.toString(),
         sponsorBalance: sponsorBalance,
         chainsSupported: chainsSupported,
-        tokenPaymasters: tokenPaymasterAddresses,
         multiTokenPaymasters,
         sponsorDetails: { name: sponsorName, icon: sponsorImage },
-        verifyingPaymaster: { address: verifyingPaymaster, deposit: verifyingPaymasterDeposit },
+        verifyingPaymaster: { address: verifyingPaymaster, deposit: verifyingPaymasterDeposit ?? 0 },
         verifyingPaymasters: apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : undefined,
         verifyingPaymastersV2: apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2) : undefined,
         verifyingPaymastersV3: apiKeyEntity.verifyingPaymastersV3 ? JSON.parse(apiKeyEntity.verifyingPaymastersV3) : undefined,
@@ -154,7 +147,6 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
       if (!chainId)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA })
-      let customPaymasters = [];
       let multiTokenPaymasters = [];
       let privateKey = '';
       let sponsorName = '', sponsorImage = '';
@@ -179,10 +171,6 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       } else {
         privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
       }
-      if (apiKeyEntity.erc20Paymasters) {
-        const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
-        customPaymasters = JSON.parse(buffer.toString());
-      }
       if (apiKeyEntity.multiTokenPaymasters) {
         const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
         multiTokenPaymasters = JSON.parse(buffer.toString());
@@ -200,27 +188,30 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
       let bundlerUrl = networkConfig.bundler;
       if (bundlerUrl.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-      const provider = new providers.JsonRpcProvider(bundlerUrl);
-      const signer = new Wallet(privateKey, provider)
-      const sponsorWalletBalance = await signer.getBalance();
-      const sponsorAddress = await signer.getAddress();
-      let sponsorBalance = 0;
+      const viemChain = getViemChainDef(chainId);
+      const publicClient = createPublicClient({ chain: viemChain, transport: http(bundlerUrl) });
+      const signer = privateKeyToAccount(privateKey as `0x${string}`);
+      const sponsorWalletBalance = await publicClient.getBalance({ address: signer.address });
+      const sponsorAddress = signer.address;
+      let sponsorBalance;
       if (networkConfig.contracts.etherspotPaymasterAddress) {
         try {
           //get native balance of the sponsor in the EtherSpotPaymaster-contract
-          const paymasterContract = new Contract(utils.getAddress(networkConfig.contracts.etherspotPaymasterAddress), EtherspotAbi.default, provider);
-          sponsorBalance = await paymasterContract.getDeposit();
+          const paymasterContract = getContract({ address: getAddress(networkConfig.contracts.etherspotPaymasterAddress), abi: EtherspotAbi.default, client: publicClient });
+          sponsorBalance = (await paymasterContract.read.getDeposit()).toString();
         } catch (err) {
           request.log.error(err);
         }
       }
       const verifyingPaymaster = apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2)[chainId] : undefined;
-      let verifyingPaymasterDeposit = 0;
+      let verifyingPaymasterDeposit;
       if (verifyingPaymaster) {
         try {
           // VerifyingPaymaster address is stored in the DB as checksummed address so no need to checksum it
-          const vpContract = new Contract(verifyingPaymaster, verifyingPaymasterV2Abi ,provider);
-          verifyingPaymasterDeposit = await vpContract.getDeposit();
+          const vpContract = getContract({ address: verifyingPaymaster as `0x${string}`, abi: verifyingPaymasterV2Abi, client: publicClient });
+          verifyingPaymasterDeposit = await vpContract.read.getDeposit();
+          if (verifyingPaymasterDeposit || (typeof(verifyingPaymasterDeposit) === 'bigint')) 
+            verifyingPaymasterDeposit = verifyingPaymasterDeposit.toString();
         } catch (err) {
           request.log.error(err);
         }
@@ -229,19 +220,14 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       SupportedNetworks.map(element => {
         chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
       })
-      const tokenPaymasterAddresses = {
-        ...PAYMASTER_ADDRESS,
-        ...customPaymasters,
-      }
       return reply.code(ReturnCode.SUCCESS).send({
         sponsorAddress: sponsorAddress,
-        sponsorWalletBalance: sponsorWalletBalance,
+        sponsorWalletBalance: sponsorWalletBalance.toString(),
         sponsorBalance: verifyingPaymasterDeposit ?? sponsorBalance,
         chainsSupported: chainsSupported,
-        tokenPaymasters: tokenPaymasterAddresses,
         multiTokenPaymasters,
         sponsorDetails: { name: sponsorName, icon: sponsorImage },
-        verifyingPaymaster: { address: verifyingPaymaster, deposit: verifyingPaymasterDeposit },
+        verifyingPaymaster: { address: verifyingPaymaster, deposit: verifyingPaymasterDeposit ?? 0 },
         verifyingPaymasters: apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : undefined,
         verifyingPaymastersV2: apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2) : undefined,
         verifyingPaymastersV3: apiKeyEntity.verifyingPaymastersV3 ? JSON.parse(apiKeyEntity.verifyingPaymastersV3) : undefined,
@@ -264,7 +250,6 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
       if (!chainId)
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA })
-      let customPaymasters = [];
       let multiTokenPaymasters = [];
       let privateKey = '';
       let sponsorName = '', sponsorImage = '';
@@ -289,10 +274,6 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       } else {
         privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
       }
-      if (apiKeyEntity.erc20Paymasters) {
-        const buffer = Buffer.from(apiKeyEntity.erc20Paymasters, 'base64');
-        customPaymasters = JSON.parse(buffer.toString());
-      }
       if (apiKeyEntity.multiTokenPaymasters) {
         const buffer = Buffer.from(apiKeyEntity.multiTokenPaymasters, 'base64');
         multiTokenPaymasters = JSON.parse(buffer.toString());
@@ -310,17 +291,20 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
       let bundlerUrl = networkConfig.bundler;
       if (bundlerUrl.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-      const provider = new providers.JsonRpcProvider(bundlerUrl);
-      const signer = new Wallet(privateKey, provider)
-      const sponsorWalletBalance = await signer.getBalance();
-      const sponsorAddress = await signer.getAddress();
+      const viemChain = getViemChainDef(chainId);
+      const publicClient = createPublicClient({ chain: viemChain, transport: http(bundlerUrl) });
+      const signer = privateKeyToAccount(privateKey as `0x${string}`);
+      const sponsorWalletBalance = await publicClient.getBalance({ address: signer.address });
+      const sponsorAddress = signer.address;
 
       const verifyingPaymaster = apiKeyEntity.verifyingPaymastersV3 ? JSON.parse(apiKeyEntity.verifyingPaymastersV3)[chainId] : undefined;
-      let verifyingPaymasterDeposit = 0;
+      let verifyingPaymasterDeposit;
       if (verifyingPaymaster) {
         try {
-          const vpContract = new Contract(verifyingPaymaster, verifyingPaymastersV3Abi ,provider);
-          verifyingPaymasterDeposit = await vpContract.getDeposit();
+          const vpContract = getContract({ address: verifyingPaymaster as `0x${string}`, abi: verifyingPaymastersV3Abi, client: publicClient });
+          verifyingPaymasterDeposit = await vpContract.read.getDeposit();
+          if (verifyingPaymasterDeposit || (typeof(verifyingPaymasterDeposit) === 'bigint')) 
+            verifyingPaymasterDeposit = verifyingPaymasterDeposit.toString();
         } catch (err) {
           request.log.error(err);
         }
@@ -329,19 +313,14 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
       SupportedNetworks.map(element => {
         chainsSupported.push({ chainId: element.chainId, entryPoint: element.entryPoint });
       })
-      const tokenPaymasterAddresses = {
-        ...PAYMASTER_ADDRESS,
-        ...customPaymasters,
-      }
       return reply.code(ReturnCode.SUCCESS).send({
         sponsorAddress: sponsorAddress,
-        sponsorWalletBalance: sponsorWalletBalance,
+        sponsorWalletBalance: sponsorWalletBalance.toString(),
         sponsorBalance: verifyingPaymasterDeposit ?? 0,
         chainsSupported: chainsSupported,
-        tokenPaymasters: tokenPaymasterAddresses,
         multiTokenPaymasters,
         sponsorDetails: { name: sponsorName, icon: sponsorImage },
-        verifyingPaymaster: { address: verifyingPaymaster, deposit: verifyingPaymasterDeposit },
+        verifyingPaymaster: { address: verifyingPaymaster, deposit: verifyingPaymasterDeposit ?? 0 },
         verifyingPaymasters: apiKeyEntity.verifyingPaymasters ? JSON.parse(apiKeyEntity.verifyingPaymasters) : undefined,
         verifyingPaymastersV2: apiKeyEntity.verifyingPaymastersV2 ? JSON.parse(apiKeyEntity.verifyingPaymastersV2) : undefined,
         verifyingPaymastersV3: apiKeyEntity.verifyingPaymastersV3 ? JSON.parse(apiKeyEntity.verifyingPaymastersV3) : undefined,

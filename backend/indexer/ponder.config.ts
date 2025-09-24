@@ -1,6 +1,6 @@
 import { createConfig } from "@ponder/core";
 import { http } from "viem";
-import SupportedNetworks from "../config.json" assert { type: "json" };
+import SupportedNetworks from "../config.json";
 import { EtherspotPaymasterAbi } from "./EtherspotAbi";
  
 export default createConfig({

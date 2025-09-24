@@ -1,11 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyPluginAsync } from "fastify";
 import { CronTime } from 'cron';
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  getAddress,
+  parseEther,
+  getContract
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { ethers } from "ethers";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { encode, decode, verifySignature } from "../utils/crypto.js";
-import SupportedNetworks from "../../config.json" assert { type: "json" };
+import SupportedNetworks from "../../config.json";
 import { APIKey } from "../models/api-key.js";
 import { ArkaConfigUpdateData } from "../types/arka-config-dto.js";
 import { ApiKeyDto } from "../types/apikey-dto.js";
@@ -14,7 +23,7 @@ import EtherspotAbi from "../abi/EtherspotAbi.js";
 import { AuthDto } from "../types/auth-dto.js";
 import { IncomingHttpHeaders } from "http";
 import { EPVersions } from "../types/sponsorship-policy-dto.js";
-import { getNetworkConfig } from "../utils/common.js";
+import { getNetworkConfig, getViemChainDef } from "../utils/common.js";
 import { Paymaster } from "../paymaster/index.js";
 
 const adminRoutes: FastifyPluginAsync = async (server) => {
@@ -57,7 +66,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       const body: any = JSON.parse(request.body as string);
       if (!body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
       if (!body.walletAddress) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
-      if (ethers.utils.getAddress(body.walletAddress) === ethers.utils.getAddress(server.config.ADMIN_WALLET_ADDRESS)) return reply.code(ReturnCode.SUCCESS).send({ error: null, message: "Successfully Logged in" });
+      if (getAddress(body.walletAddress) === getAddress(server.config.ADMIN_WALLET_ADDRESS)) return reply.code(ReturnCode.SUCCESS).send({ error: null, message: "Successfully Logged in" });
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
     } catch (err: any) {
       return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_USER });
@@ -298,26 +307,35 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         const nativeBalancePromiseArr = [];
         const nativePaymasterDepositPromiseArr = [];
         for(const network of supportedNetworks) {
-          const provider = new ethers.providers.JsonRpcProvider(network.bundler + '?api-key=' + bundlerApiKey);
-          const wallet = new ethers.Wallet(privateKey, provider)
-          nativeBalancePromiseArr.push(wallet.getBalance());
+          const viemChain = getViemChainDef(network.chainId);
+          const publicClient = createPublicClient({
+            chain: viemChain,
+            transport: http(network.bundler + '?api-key=' + bundlerApiKey),
+          });
+          const walletClient = createWalletClient({
+            chain: viemChain,
+            transport: http(network.bundler + '?api-key=' + bundlerApiKey),
+            account: privateKeyToAccount(privateKey as `0x${string}`),
+          });
 
-          const contract = new ethers.Contract(
-            network.contracts.etherspotPaymasterAddress,
-            EtherspotAbi,
-            wallet
-          );
-          nativePaymasterDepositPromiseArr.push(contract.getSponsorBalance(wallet.address));
+          nativeBalancePromiseArr.push(publicClient.getBalance({ address: walletClient.account.address }));
+
+          const contract = getContract({
+            address: network.contracts.etherspotPaymasterAddress as `0x${string}`,
+            abi: EtherspotAbi,
+            client: { public: publicClient, wallet: walletClient }
+          });
+          nativePaymasterDepositPromiseArr.push(contract.read.getSponsorBalance([walletClient.account.address]));
         }
 
         let error = false;
 
         await Promise.allSettled([...nativeBalancePromiseArr, ...nativePaymasterDepositPromiseArr]).then((data) => {
-          const threshold = ethers.utils.parseEther('0.0001');
+          const threshold = parseEther('0.0001');
           for(const item of data) {
             if(
               item.status === 'fulfilled' &&
-              item.value?.gt(threshold)
+              (item.value as bigint) > threshold
             ) {
               error = true;
               return;
@@ -417,11 +435,6 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         verifyingPaymasters = apiKeyEntity.verifyingPaymastersV3 ? JSON.parse(apiKeyEntity.verifyingPaymastersV3) : {};
         supportedEPs = SUPPORTED_ENTRYPOINTS.EPV_08;
       }
-      if (verifyingPaymasters[chainId]) {
-        return reply.code(ReturnCode.FAILURE).send(
-          {error: `${ErrorMessage.VP_ALREADY_DEPLOYED} at ${verifyingPaymasters[chainId]}`}
-        );
-      }
 
       let privateKey;
       let bundlerApiKey = apiKey;
@@ -466,6 +479,12 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       let bundlerUrl = networkConfig.bundler;
       if (networkConfig.bundler.includes('etherspot.io')) {
         bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+      }
+
+      if (verifyingPaymasters[chainId]) {
+        return reply.code(ReturnCode.FAILURE).send(
+          {error: `${ErrorMessage.VP_ALREADY_DEPLOYED} at ${verifyingPaymasters[chainId]}`}
+        );
       }
 
       const {address, hash} = await paymaster.deployVp(
