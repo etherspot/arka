@@ -631,8 +631,8 @@ export class Paymaster {
       let ethPrice = data[3].value;
       ethUsdPrice = formatUnits(ethUsdPrice, ethUsdPriceDecimal);
       ethPrice = formatUnits(ethPrice, ethPriceDecimal);
-      ethUsdPrice = parseEther(ethUsdPrice);
-      ethPrice = parseEther(ethPrice);
+      ethUsdPrice = parseEther(ethUsdPrice).toString();
+      ethPrice = parseEther(ethPrice).toString();
       ethPrice = parseUnits((ethUsdPrice / ethPrice).toFixed(decimals), decimals).toString();
 
       const priceAndMetadata: TokenPriceAndMetadata = {
