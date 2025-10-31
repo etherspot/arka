@@ -164,8 +164,8 @@ export class Paymaster {
         userOp.paymaster = paymasterAddress;
         userOp.paymasterVerificationGasLimit = toHex(this.EP7_PVGL);
         userOp.paymasterPostOpGasLimit = paymasterPostOpGasLimit;
-        const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
-        const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
+        const accountGasLimits = this.packUint(BigInt(userOp.verificationGasLimit), BigInt(userOp.callGasLimit))
+        const gasFees = this.packUint(BigInt(userOp.maxPriorityFeePerGas), BigInt(userOp.maxFeePerGas));
         const packedUserOp = {
           sender: userOp.sender,
           nonce: userOp.nonce,
@@ -243,8 +243,8 @@ export class Paymaster {
         userOp.paymaster = paymasterAddress;
         userOp.paymasterVerificationGasLimit = toHex(this.EP8_PVGL);
         userOp.paymasterPostOpGasLimit = paymasterPostOpGasLimit;
-        const accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
-        const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
+        const accountGasLimits = this.packUint(BigInt(userOp.verificationGasLimit), BigInt(userOp.callGasLimit))
+        const gasFees = this.packUint(BigInt(userOp.maxPriorityFeePerGas), BigInt(userOp.maxFeePerGas));
         const packedUserOp = {
           sender: userOp.sender,
           nonce: userOp.nonce,
@@ -925,10 +925,12 @@ export class Paymaster {
       if (userOp.factory && userOp.factoryData) userOp.initCode = concat([userOp.factory as Hex, userOp.factoryData ?? '0x'])
       if (!userOp.signature) userOp.signature = '0x';
       userOp.paymaster = paymasterAddress;
-      userOp.paymasterVerificationGasLimit = toHex(BigInt(this.MTP_PVGL)); // Paymaster specific gas limit
-      userOp.paymasterPostOpGasLimit = toHex(BigInt(this.MTP_PPGL)); // Paymaster specific gas limit for token transfer
-      let accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit)
-      const gasFees = this.packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas);
+      const paymasterVerificationGasLimit = BigInt(this.MTP_PVGL);
+      const paymasterPostOpGasLimit = BigInt(this.MTP_PPGL);
+      userOp.paymasterVerificationGasLimit = toHex(paymasterVerificationGasLimit); // Paymaster specific gas limit
+      userOp.paymasterPostOpGasLimit = toHex(paymasterPostOpGasLimit); // Paymaster specific gas limit for token transfer
+      let accountGasLimits = this.packUint(BigInt(userOp.verificationGasLimit), BigInt(userOp.callGasLimit))
+      const gasFees = this.packUint(BigInt(userOp.maxPriorityFeePerGas), BigInt(userOp.maxFeePerGas));
       let packedUserOp = {
         sender: userOp.sender,
         nonce: userOp.nonce,
@@ -937,19 +939,19 @@ export class Paymaster {
         accountGasLimits: accountGasLimits,
         preVerificationGas: userOp.preVerificationGas,
         gasFees: gasFees,
-        paymasterAndData: this.packPaymasterData(paymasterAddress, userOp.paymasterVerificationGasLimit, userOp.paymasterPostOpGasLimit, "0x"),
+        paymasterAndData: this.packPaymasterData(paymasterAddress, paymasterVerificationGasLimit, paymasterPostOpGasLimit, "0x"),
         signature: userOp.signature
       }
       userOp.paymaster = paymasterAddress;
       let paymasterData = await this.getPaymasterAndDataForMultiTokenPaymasterV07(packedUserOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
       userOp.paymasterData = paymasterData
-      userOp.paymasterAndData = this.packPaymasterData(paymasterAddress, userOp.paymasterVerificationGasLimit, userOp.paymasterPostOpGasLimit, paymasterData);
+      userOp.paymasterAndData = this.packPaymasterData(paymasterAddress, paymasterVerificationGasLimit, paymasterPostOpGasLimit, paymasterData);
       const response = await this.getEstimateUserOperationGas(publicClient, userOp, entryPoint);
       if (BigInt(userOp.verificationGasLimit) < 45000n) userOp.verificationGasLimit = toHex(45000n); // This is to counter the unaccounted cost(45000)
       userOp.verificationGasLimit = (response as any).verificationGasLimit;
       userOp.preVerificationGas = (response as any).preVerificationGas;
       userOp.callGasLimit = (response as any).callGasLimit;
-      accountGasLimits = this.packUint(userOp.verificationGasLimit, userOp.callGasLimit);
+      accountGasLimits = this.packUint(BigInt(userOp.verificationGasLimit), BigInt(userOp.callGasLimit));
       packedUserOp = {
         sender: userOp.sender,
         nonce: userOp.nonce,
@@ -958,7 +960,7 @@ export class Paymaster {
         accountGasLimits: accountGasLimits,
         preVerificationGas: userOp.preVerificationGas,
         gasFees: gasFees,
-        paymasterAndData: this.packPaymasterData(paymasterAddress, userOp.paymasterVerificationGasLimit, userOp.paymasterPostOpGasLimit, paymasterData),
+        paymasterAndData: this.packPaymasterData(paymasterAddress, paymasterVerificationGasLimit, paymasterPostOpGasLimit, paymasterData),
         signature: userOp.signature
       }
       paymasterData = await this.getPaymasterAndDataForMultiTokenPaymasterV07(packedUserOp, validUntil, validAfter, feeToken, ethPrice, paymasterContract, signer);
