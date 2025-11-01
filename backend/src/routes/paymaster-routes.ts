@@ -393,7 +393,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
               break;
             }
             case 'commonerc20': {
-              if (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07)
+              if (epVersion !== EPVersions.EPV_06 && epVersion !== EPVersions.EPV_07 && epVersion !== EPVersions.EPV_08)
                 throw new Error(ErrorMessage.MTP_EP_SUPPORT)
               const multiTokenRec = await server.multiTokenPaymasterRepository.findOneByChainIdEPVersionAndTokenAddress(chainId, gasToken, epVersion)
               if (multiTokenRec) {
