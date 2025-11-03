@@ -15,7 +15,8 @@ FROM oven/bun:1-alpine AS runner
 WORKDIR /usr/app
 ARG APP_ENV
 COPY --from=builder /app/build ./build
-COPY ./migrations ./build/migrations
+COPY ./migrations ./migrations
+COPY ./scripts ./scripts
 COPY package.json ./
 COPY --from=builder /app/config.json.default /usr/app/config.json
 USER root
