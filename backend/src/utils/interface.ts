@@ -1,5 +1,3 @@
-import { BigNumber } from "ethers";
-
 export interface EtherscanResponse {
   jsonrpc?: string;
   id?: string;
@@ -16,7 +14,7 @@ export interface EtherscanResponse {
 }
 
 export interface getEtherscanFeeResponse {
-  maxFeePerGas: BigNumber;
-  maxPriorityFeePerGas: BigNumber;
-  gasPrice: BigNumber;
+  maxFeePerGas: bigint;
+  maxPriorityFeePerGas: bigint;
+  gasPrice: bigint;
 }

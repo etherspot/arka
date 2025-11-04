@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyPluginAsync } from "fastify";
-import { ethers, providers, Wallet } from "ethers";
+import { isAddress } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { Paymaster } from "../paymaster/index.js";
-import SupportedNetworks from "../../config.json" assert { type: "json" };
+import SupportedNetworks from "../../config.json";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
@@ -93,7 +94,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
-        const validAddresses = address.every(ethers.utils.isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         if(!useVp) {
           if(!chainId || isNaN(chainId)) {
@@ -113,7 +114,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.SUCCESS).send(result);
         } else {
           if (policyId) {
-            const signer = new Wallet(privateKey);
+            const signer = privateKeyToAccount(privateKey as `0x${string}`);
             const policyRecord = await server.sponsorshipPolicyRepository.findOneById(policyId);
             if (!policyRecord || (policyRecord?.walletAddress !== signer.address)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_SPONSORSHIP_POLICY_ID })
           }
@@ -206,7 +207,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         ) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
-        const validAddresses = address.every(ethers.utils.isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
           if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         if(!useVp) {
           if(!chainId || isNaN(chainId)) {
@@ -225,7 +226,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.SUCCESS).send(result);
         } else {
           if (policyId) {
-            const signer = new Wallet(privateKey);
+            const signer = privateKeyToAccount(privateKey as `0x${string}`);
             const policyRecord = await server.sponsorshipPolicyRepository.findOneById(policyId);
             if (
               !policyRecord ||
@@ -288,7 +289,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           chainId = query['chainId'] ?? body.params?.[2];
           api_key = query['apiKey'] ?? body.params?.[3];
         }
-        if (!accountAddress || !ethers.utils.isAddress(accountAddress)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+        if (!accountAddress || !isAddress(accountAddress)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
@@ -314,7 +315,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !accountAddress ||
-          !ethers.utils.isAddress(accountAddress)
+          !isAddress(accountAddress)
         ) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
@@ -398,9 +399,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const validAddresses = address.every(ethers.utils.isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
-        const signer = new Wallet(privateKey)
+        const signer = privateKeyToAccount(privateKey as `0x${string}`);
         if (policyId) {
           const policyRecord = await server.sponsorshipPolicyRepository.findOneById(policyId);
           if (!policyRecord || (policyRecord?.walletAddress !== signer.address)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_SPONSORSHIP_POLICY_ID })
@@ -496,7 +497,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        const validAddresses = address.every(ethers.utils.isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, EPVersions.EPV_07, policyId);
         const existingGlobalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
@@ -561,7 +562,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const chainId = query['chainId'] ?? body.params?.[2];
         const api_key = query['apiKey'] ?? body.params?.[3];
-        if (!accountAddress || !ethers.utils.isAddress(accountAddress)) {
+        if (!accountAddress || !isAddress(accountAddress)) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
         if (!api_key || typeof(api_key) !== "string")
@@ -585,7 +586,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !accountAddress ||
-          !ethers.utils.isAddress(accountAddress) ||
+          !isAddress(accountAddress) ||
           !chainId ||
           isNaN(chainId)
         ) {
@@ -722,9 +723,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         }
-        const validAddresses = address.every(ethers.utils.isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
-        const signer = new Wallet(privateKey)
+        const signer = privateKeyToAccount(privateKey as `0x${string}`);
         if (policyId) {
           const policyRecord = await server.sponsorshipPolicyRepository.findOneById(policyId);
           if (!policyRecord || (policyRecord?.walletAddress !== signer.address)) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_SPONSORSHIP_POLICY_ID })
@@ -821,7 +822,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_08);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        const validAddresses = address.every(ethers.utils.isAddress);
+        const validAddresses = address.every((value) => isAddress(value));
         if (!validAddresses) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_ADDRESS_PASSSED });
         const existingWhitelistRecord = await server.whitelistRepository.findOneByApiKeyEPVersionAndPolicyId(api_key, EPVersions.EPV_08, policyId);
         const existingGlobalWhitelistRecord = await server.whitelistRepository.findOneByApiKeyAndPolicyId(api_key, policyId);
@@ -886,7 +887,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const chainId = query['chainId'] ?? body.params?.[2];
         const api_key = query['apiKey'] ?? body.params?.[3];
-        if (!accountAddress || !ethers.utils.isAddress(accountAddress)) {
+        if (!accountAddress || !isAddress(accountAddress)) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
         }
         if (!api_key || typeof(api_key) !== "string")
@@ -910,7 +911,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (
           !accountAddress ||
-          !ethers.utils.isAddress(accountAddress) ||
+          !isAddress(accountAddress) ||
           !chainId ||
           isNaN(chainId)
         ) {
@@ -1044,8 +1045,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
         if (networkConfig.bundler.includes('etherspot.io')) networkConfig.bundler = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-        const provider = new providers.JsonRpcProvider(networkConfig.bundler);
-        const signer = new Wallet(privateKey, provider)
+        const signer = privateKeyToAccount(privateKey as `0x${string}`);
 
         const existingRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, signer.address, contractWhitelistDto.contractAddress);
         if (existingRecord) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_ALREADY_EXISTS_CONTRACT_WHITELIST })
@@ -1079,7 +1079,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
-        let bundlerApiKey = api_key;
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
@@ -1095,7 +1094,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
         }
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        if (apiKeyEntity.bundlerApiKey) bundlerApiKey = apiKeyEntity.bundlerApiKey;
         const supportedNetworks = apiKeyEntity.supportedNetworks;
         if (
           !chainId ||
@@ -1108,10 +1106,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        let bundlerUrl = networkConfig.bundler;
-        if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-        const provider = new providers.JsonRpcProvider(bundlerUrl);
-        const signer = new Wallet(privateKey, provider)
+        const signer = privateKeyToAccount(privateKey as `0x${string}`);
 
         const existingRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, signer.address, contractWhitelistDto.contractAddress);
         if (!existingRecord) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_CONTRACT_WHITELIST_FOUND })
@@ -1146,7 +1141,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         if (!api_key || typeof(api_key) !== "string")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         let privateKey = '';
-        let bundlerApiKey = api_key;
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
@@ -1162,9 +1156,6 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
           privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
         }
         if (!privateKey) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
-        if (apiKeyEntity.bundlerApiKey) {
-          bundlerApiKey = apiKeyEntity.bundlerApiKey;
-        }
         const supportedNetworks = apiKeyEntity.supportedNetworks;
         if (
           !chainId ||
@@ -1177,10 +1168,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         }
         const networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
         if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
-        let bundlerUrl = networkConfig.bundler;
-        if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
-        const provider = new providers.JsonRpcProvider(bundlerUrl);
-        const signer = new Wallet(privateKey, provider)
+        const signer = privateKeyToAccount(privateKey as `0x${string}`);
 
         const existingRecord = await server.contractWhitelistRepository.findOneByChainIdContractAddressAndWalletAddress(chainId, signer.address, contractWhitelistDto.contractAddress);
         if (!existingRecord) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.NO_CONTRACT_WHITELIST_FOUND })

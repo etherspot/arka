@@ -1,25 +1,24 @@
-FROM node:18-alpine AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
+FROM oven/bun:1-alpine AS deps
+RUN apk update && apk add --no-cache g++ nodejs npm musl make musl-dev python3 git py3-setuptools && rm -rf /var/cache/apk/*
 WORKDIR /app
-COPY package.json ./
-RUN npm install
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
 
-FROM node:18-alpine AS builder
+FROM oven/bun:1-alpine AS builder
 ARG APP_ENV
 WORKDIR /app
 COPY . .
 COPY --from=deps /app/node_modules ./node_modules
-RUN npm run build
+RUN bun run build
 
-FROM node:18-alpine AS runner
+FROM oven/bun:1-alpine AS runner
 WORKDIR /usr/app
 ARG APP_ENV
 COPY --from=builder /app/build ./build
-COPY ./migrations ./build/migrations
+COPY ./migrations ./migrations
+COPY ./scripts ./scripts
 COPY package.json ./
 COPY --from=builder /app/config.json.default /usr/app/config.json
-RUN npm install
 USER root
 ENV NODE_ENV="production"
-CMD ["npm", "start"]
+CMD ["bun", "start"]

@@ -1,12 +1,36 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyBaseLogger, FastifyRequest } from "fastify";
-import { BigNumber, ethers } from "ethers";
-import SupportedNetworks from "../../config.json" assert { type: "json" };
+import { createPublicClient, defineChain, http, parseUnits } from "viem";
+import SupportedNetworks from "../../config.json";
 import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
+import * as chains from 'viem/chains'
 
 export function printRequest(methodName: string, request: FastifyRequest, log: FastifyBaseLogger) {
   log.info(methodName, "called: ");
   log.info(request.query, "query passed: ");
   log.info(request.body, "body passed: ");
+}
+
+export function getViemChainDef(chainId: number, rpcUrl?: string): chains.Chain {
+  const chainsDefs = Object.values(chains);
+  for (const chain of chainsDefs) {
+    if (chain.id == chainId) return chain;
+  }
+  const customChain = defineChain({
+    id: Number(chainId),
+    name: "",
+    nativeCurrency: {
+      name: "Ether",
+      symbol: "ETH",
+      decimals: 18,
+    },
+    rpcUrls: {
+      default: {
+        http: [rpcUrl ? rpcUrl : ''],
+      },
+    },
+  });
+  return customChain;
 }
 
 export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint?: string[]) {
@@ -63,20 +87,26 @@ export async function getGasFee(chainId: number, rpcUrl: string, log?: FastifyBa
 
 export async function getSkandhaGasFee(rpcUrl: string, log?: FastifyBaseLogger): Promise<getEtherscanFeeResponse | null> {
   try {
-    const body = JSON.stringify({
-      method: "skandha_getGasPrice"
+    const publicClient = createPublicClient({
+      transport: http(rpcUrl), 
     });
-    const options = {
-      method: "POST",
-      body,
-    }
-    const feeData = await fetch(rpcUrl, options);
-    const data = (await feeData.json()).result;
-    if(data?.maxFeePerGas && data?.maxPriorityFeePerGas) {
+    const feeData = await publicClient.request({
+      method: 'skandha_getGasPrice',
+      params: [],
+    } as any);
+
+    if (
+      typeof feeData === 'object' &&
+      feeData !== null &&
+      'maxFeePerGas' in feeData &&
+      'maxPriorityFeePerGas' in feeData &&
+      feeData.maxFeePerGas &&
+      feeData.maxPriorityFeePerGas
+    ) {
       return {
-        maxFeePerGas: BigNumber.from(data.maxFeePerGas),
-        maxPriorityFeePerGas: BigNumber.from(data.maxPriorityFeePerGas),
-        gasPrice: BigNumber.from(data.maxFeePerGas)
+        maxFeePerGas: BigInt((feeData as any).maxFeePerGas),
+        maxPriorityFeePerGas: BigInt((feeData as any).maxPriorityFeePerGas),
+        gasPrice: BigInt((feeData as any).maxFeePerGas)
       }
     }
     return null;
@@ -97,16 +127,16 @@ export async function getEtherscanFee(chainId: number, log?: FastifyBaseLogger):
         const response: EtherscanResponse = await data.json();
         if (response.result && typeof response.result === "object" && response.status === "1") {
           if(log) log.info('setting maxFeePerGas and maxPriorityFeePerGas as received')
-          const maxFeePerGas = ethers.utils.parseUnits(response.result.suggestBaseFee, 'gwei')
-          const fastGasPrice = ethers.utils.parseUnits(response.result.FastGasPrice, 'gwei')
+          const maxFeePerGas = parseUnits(response.result.suggestBaseFee, 9)
+          const fastGasPrice = parseUnits(response.result.FastGasPrice, 9)
           return { 
-            maxPriorityFeePerGas: fastGasPrice.sub(maxFeePerGas),
+            maxPriorityFeePerGas: fastGasPrice - maxFeePerGas,
             maxFeePerGas,
             gasPrice: maxFeePerGas,
           }
         }
         if (response.result && typeof response.result === "string" && response.jsonrpc) {
-          const gasPrice = BigNumber.from(response.result)
+          const gasPrice = BigInt(response.result)
           if(log) log.info('setting gas price as received')
           return {
             maxFeePerGas: gasPrice,

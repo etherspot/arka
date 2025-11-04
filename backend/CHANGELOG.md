@@ -1,4 +1,12 @@
 # Changelog
+## [4.2.0] - 2025-09-19
+- Removed unused code in the repository
+- Removed the mode 'erc20' on paymaster routes since it used pimlico paymaster(v1)
+- Removed the usage on ethers for the paymaster routes and the usage on ethers is limited to only utils section
+- Added viem package to replace ethers
+- Changed the build version to use bun instead of node.js
+- Changed the docker file to use bun image and build the arka backend
+
 ## [4.1.2] - 2025-06-05
 - Fetch from coingecko only if coingecko-token-repository records are available else skip calling the api
 
