@@ -5,7 +5,7 @@ import SupportedNetworks from "../../config.json";
 import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
 import * as chains from 'viem/chains'
 
-export function printRequest(methodName: string, request: FastifyRequest, log: FastifyBaseLogger) {
+export function printRequest(methodName: string, request: FastifyRequest, log: FastifyBaseLogger): void {
   log.info(methodName, "called: ");
   log.info(request.query, "query passed: ");
   log.info(request.body, "body passed: ");
@@ -33,7 +33,7 @@ export function getViemChainDef(chainId: number, rpcUrl?: string): chains.Chain 
   return customChain;
 }
 
-export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint?: string[]) {
+export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint?: string[]): any {
   if (supportedNetworks !== '') {
     const buffer = Buffer.from(supportedNetworks, 'base64');
     const SUPPORTED_NETWORKS = JSON.parse(buffer.toString());
@@ -62,16 +62,16 @@ export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint?: 
   }
 }
 
-export function getChainIdsFromDefaultSupportedNetworks() {
+export function getChainIdsFromDefaultSupportedNetworks(): number[] {
   return SupportedNetworks.map((chain) => chain.chainId);
 }
 
-export function decodeSupportedNetworks(supportedNetworksForDecode: string) {
+export function decodeSupportedNetworks(supportedNetworksForDecode: string): any {
   const buffer = Buffer.from(supportedNetworksForDecode, "base64");
   return JSON.parse(buffer.toString());
 }
 
-export function getChainIdsFromSupportedNetworks(supportedNetworksForDecode: string) {
+export function getChainIdsFromSupportedNetworks(supportedNetworksForDecode: string): number[] {
   const decodedSupportedNetworks = decodeSupportedNetworks(supportedNetworksForDecode);
   if(!decodedSupportedNetworks)
     return [];
