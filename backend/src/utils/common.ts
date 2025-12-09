@@ -2,7 +2,7 @@
 import { FastifyBaseLogger, FastifyRequest } from "fastify";
 import { createPublicClient, defineChain, http, parseUnits } from "viem";
 import SupportedNetworks from "../../config.json";
-import { EtherscanResponse, getEtherscanFeeResponse } from "./interface.js";
+import { EtherscanResponse, getEtherscanFeeResponse, NetworkConfig } from "./interface.js";
 import * as chains from 'viem/chains'
 
 export function printRequest(methodName: string, request: FastifyRequest, log: FastifyBaseLogger): void {
@@ -33,20 +33,20 @@ export function getViemChainDef(chainId: number, rpcUrl?: string): chains.Chain 
   return customChain;
 }
 
-export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint?: string[]): any {
+export function getNetworkConfig(key: any, supportedNetworks: any, entryPoint?: string[]): NetworkConfig | null {
   if (supportedNetworks !== '') {
     const buffer = Buffer.from(supportedNetworks, 'base64');
     const SUPPORTED_NETWORKS = JSON.parse(buffer.toString());
     if (entryPoint === undefined || entryPoint === null || entryPoint.length === 0) {
       const result = SUPPORTED_NETWORKS.find((chain: any) => chain["chainId"] == key);
       if (!result) {
-        return SupportedNetworks.find((chain) => chain.chainId == key);
+        return SupportedNetworks.find((chain) => chain.chainId == key) || null;
       }
       return result;
     }
     const result = SUPPORTED_NETWORKS.find((chain: any) => { return chain["chainId"] == key && entryPoint.includes(chain["entryPoint"]) });
     if (!result) {
-      return SupportedNetworks.find((chain) => chain.chainId == key && entryPoint.includes(chain.entryPoint));
+      return SupportedNetworks.find((chain) => chain.chainId == key && entryPoint.includes(chain.entryPoint)) || null;
     }
     return result
   } else {
@@ -66,7 +66,7 @@ export function getChainIdsFromDefaultSupportedNetworks(): number[] {
   return SupportedNetworks.map((chain) => chain.chainId);
 }
 
-export function decodeSupportedNetworks(supportedNetworksForDecode: string): any {
+export function decodeSupportedNetworks(supportedNetworksForDecode: string): NetworkConfig[] {
   const buffer = Buffer.from(supportedNetworksForDecode, "base64");
   return JSON.parse(buffer.toString());
 }

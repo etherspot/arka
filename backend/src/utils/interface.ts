@@ -18,3 +18,14 @@ export interface getEtherscanFeeResponse {
   maxPriorityFeePerGas: bigint;
   gasPrice: bigint;
 }
+
+export interface NetworkConfig {
+  chainId: number;
+  bundler: string;
+  contracts: {
+    etherspotPaymasterAddress: string;
+  };
+  thresholdValue: string;
+  MultiTokenPaymasterOracleUsed: string;
+  entryPoint: string;
+}

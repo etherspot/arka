@@ -6,6 +6,7 @@ import EtherspotAbi from "../abi/EtherspotAbi.js";
 export async function checkDeposit(paymasterAddress: string, bundlerUrl: string, webhookUrl: string, thresholdValue: string, chainId: number, log: FastifyBaseLogger) {
   try {
     if (bundlerUrl.includes('testnet')) {
+      log.info(`Skipping deposit check for testnet on chainId ${chainId} address: ${paymasterAddress} bunderUrl: ${bundlerUrl}`);
       return;
     }
     const publicClient = createPublicClient({ transport: http(bundlerUrl) });
