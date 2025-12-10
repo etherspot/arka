@@ -18,7 +18,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.0.1
       - name: Get frontend package version
         id: get_frontend_version
         run: echo frontend_version=$(bun run -e "console.log(require('./frontend/package.json').version)") >> $GITHUB_OUTPUT
@@ -50,7 +50,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.0.1
       - name: Get admin_frontend package version
         id: get_admin_frontend_version
         run: echo admin_frontend_version=$(bun run -e "console.log(require('./admin_frontend/package.json').version)") >> $GITHUB_OUTPUT
@@ -82,7 +82,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.0.1
       - name: Get backend package version
         id: get_backend_version
         run: echo backend_version=$(bun run -e "console.log(require('./backend/package.json').version)") >> $GITHUB_OUTPUT
