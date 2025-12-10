@@ -28,7 +28,7 @@ jobs:
         run: 'echo "Yayy!! Version change found in commit ${{ steps.check.outputs.commit }}! New version: ${{ steps.check.outputs.version }} (${{ steps.check.outputs.type }})"'
 
       - name: Dry run Arka build
-        run: cd backend && bun install && bun run build
+        run: cd backend && cp config.json.default config.json && bun install && bun run build
 
       - name: Log when unchanged
         if: steps.check.outputs.changed == 'false'
