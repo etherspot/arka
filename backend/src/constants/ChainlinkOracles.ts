@@ -19,7 +19,6 @@ export const NativeOracles: Record<number, string> = {
   534351: "0x59F1ec1f10bD7eD9B938431086bC1D9e233ECf41", // Scroll Sepolia
 
   // Yet to Support on Arka
-  44787: "0x022F9dCC73C5Fb43F2b4eF2EF9ad3eDD1D853946", // Celo Alfajores testnet
   42220: "0x0568fD19986748cEfF3301e55c0eb1E729E0Ab7e", // Celo Mainnet
   1088: "0xD4a5Bb03B5D66d9bf81507379302Ac2C2DFDFa6D", // Metis Mainnet
   1284: "0x4497B606be93e773bbA5eaCFCb2ac5E2214220Eb", // Moonbeam Mainnet
