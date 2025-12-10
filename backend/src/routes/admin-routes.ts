@@ -170,7 +170,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           apiKey: body.apiKey,
           walletAddress: publicAddress,
           privateKey: encode(privateKey, server.config.HMAC_SECRET),
-          supportedNetworks: body.supportedNetworks,
+          supportedNetworks: null, // By Default all networks given in config.json will be supported
           erc20Paymasters: body.erc20Paymasters,
           multiTokenPaymasters: body.multiTokenPaymasters ?? null,
           multiTokenOracles: body.multiTokenOracles ?? null,
@@ -192,7 +192,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           apiKey: body.apiKey,
           walletAddress: publicAddress,
           privateKey: encode(privateKey, server.config.HMAC_SECRET),
-          supportedNetworks: body.supportedNetworks,
+          supportedNetworks: null, // By Default all networks given in config.json will be supported
           erc20Paymasters: body.erc20Paymasters,
           multiTokenPaymasters: body.multiTokenPaymasters ?? null,
           multiTokenOracles: body.multiTokenOracles ?? null,
@@ -229,7 +229,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
 
       await apiKeyInstance.update({
-        supportedNetworks: body.supportedNetworks,
+        supportedNetworks: null, // By Default all networks given in config.json will be supported
         erc20Paymasters: body.erc20Paymasters,
         transactionLimit: body.transactionLimit ?? 0,
         noOfTransactionsInAMonth: body.noOfTransactionsInAMonth ?? 10,

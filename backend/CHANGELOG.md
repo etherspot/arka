@@ -1,4 +1,8 @@
 # Changelog
+## [4.2.2] - 2025-12-09
+- Default all the apiKey which would be saved hereafter and update the supportedNetworks to null to make the system only use config.json as default
+- skips the getDeposit call from cronJob if the network is testnet
+
 ## [4.2.0] - 2025-09-19
 - Removed unused code in the repository
 - Removed the mode 'erc20' on paymaster routes since it used pimlico paymaster(v1)

@@ -40,7 +40,7 @@ import { MultiTokenPaymaster } from './models/multiTokenPaymaster.js';
 import { MULTI_TOKEN_ORACLES, MULTI_TOKEN_PAYMASTERS } from './constants/MultiTokenPaymasterCronJob.js';
 
 let server: FastifyInstance;
-const defaultThrustholdValue = '0.001'; // in ETH
+const defaultThresholdValue = '0.001'; // in ETH
 const defaultTokenOracleDecimals = 8; // Standard oracle decimal
 
 const initializeServer = async (): Promise<void> => {
@@ -314,7 +314,7 @@ const initializeServer = async (): Promise<void> => {
                       const thresholdValue = network.thresholdValue ?? networkConfig.thresholdValue;
                       const bundler = network.bundler ?? networkConfig.bundler;
                       if (network.contracts?.etherspotPaymasterAddress) {
-                        checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? defaultThrustholdValue, Number(network.chainId), server.log);
+                        checkDeposit(network.contracts.etherspotPaymasterAddress, bundler, process.env.WEBHOOK_URL, thresholdValue ?? defaultThresholdValue, Number(network.chainId), server.log);
                       }
                     }
                   }
@@ -335,7 +335,7 @@ const initializeServer = async (): Promise<void> => {
                     if (networkConfig) {
                       const bundler = networkConfig.bundler;
                       for (const symbol in customPaymasters[chainId]) {
-                        checkDeposit(customPaymasters[chainId][symbol], bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? defaultThrustholdValue, Number(chainId), server.log)
+                        checkDeposit(customPaymasters[chainId][symbol], bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? defaultThresholdValue, Number(chainId), server.log)
                       }
                     }
                   }
@@ -349,7 +349,7 @@ const initializeServer = async (): Promise<void> => {
                     if (networkConfig) {
                       const bundler = networkConfig.bundler;
                       for (const symbol in customPaymastersV2[chainId]) {
-                        checkDeposit(customPaymastersV2[chainId][symbol], bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? defaultThrustholdValue, Number(chainId), server.log);
+                        checkDeposit(customPaymastersV2[chainId][symbol], bundler, process.env.WEBHOOK_URL, networkConfig.thresholdValue ?? defaultThresholdValue, Number(chainId), server.log);
                       }
                     }
                   }
@@ -359,7 +359,7 @@ const initializeServer = async (): Promise<void> => {
               // checking deposit for epv6 native paymasters from default config.json.
               for (const network of SupportedNetworks) {
                 if (network.contracts?.etherspotPaymasterAddress) {
-                  checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? defaultThrustholdValue, Number(network.chainId), server.log);
+                  checkDeposit(network.contracts.etherspotPaymasterAddress, network.bundler, process.env.WEBHOOK_URL, network.thresholdValue ?? defaultThresholdValue, Number(network.chainId), server.log);
                 }
               }
 
@@ -368,7 +368,7 @@ const initializeServer = async (): Promise<void> => {
               result.forEach((record: MultiTokenPaymaster) => {
                 const networkConfig = getNetworkConfig(record.chainId, '', server.config.EPV_06);
                 if (networkConfig)
-                  checkDeposit(getAddress(record.paymasterAddress), networkConfig.bundler, process.env.WEBHOOK_URL ?? '', networkConfig.thresholdValue ?? defaultThrustholdValue, record.chainId, server.log);
+                  checkDeposit(getAddress(record.paymasterAddress), networkConfig.bundler, process.env.WEBHOOK_URL ?? '', networkConfig.thresholdValue ?? defaultThresholdValue, record.chainId, server.log);
               })
             }
           } catch (err) {

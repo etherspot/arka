@@ -149,7 +149,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_DATA });
       }
 
-      const result = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndChain(walletAddress, chainId);
+      const result = await server.sponsorshipPolicyRepository.findOneByWalletAddressAndChain(walletAddress, Number(chainId));
       if (!result) {
         return reply.code(ReturnCode.NOT_FOUND).send({ error: ErrorMessage.SPONSORSHIP_POLICY_NOT_FOUND });
       }

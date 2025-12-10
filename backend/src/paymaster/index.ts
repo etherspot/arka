@@ -1,17 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { 
-  createPublicClient, 
-  createWalletClient, 
-  http, 
-  parseEther, 
-  parseUnits, 
-  formatUnits, 
-  getAddress, 
-  keccak256, 
-  toHex, 
-  concat, 
-  hexToBytes, 
-  bytesToHex,
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  parseEther,
+  parseUnits,
+  formatUnits,
+  getAddress,
+  keccak256,
+  toHex,
+  concat,
+  hexToBytes,
   encodeAbiParameters,
   Address,
   Hex,
@@ -53,7 +52,7 @@ const nativePriceCacheTtl = parseInt(process.env.NATIVE_PRICE_CACHE_TTL || "6000
 interface TokenPriceAndMetadata {
   decimals: number;
   symbol: string;
-  ethPrice: any;
+  ethPrice: string;
   gasToken: string
 }
 
@@ -62,7 +61,7 @@ interface TokenPriceAndMetadataCache {
   expiry: number
 }
 
-interface NativeCurrencyPricyCache {
+interface NativeCurrencyPriceCache {
   data: any;
   expiry: number;
 }
@@ -97,7 +96,7 @@ export class Paymaster {
   MTP_PVGL: string;
   MTP_PPGL: string;
   priceAndMetadata: Map<string, TokenPriceAndMetadataCache> = new Map();
-  nativeCurrencyPrice: Map<string, NativeCurrencyPricyCache> = new Map();
+  nativeCurrencyPrice: Map<string, NativeCurrencyPriceCache> = new Map();
   coingeckoPrice: Map<string, CoingeckoPriceCache> = new Map();
   coingeckoService: CoingeckoService = new CoingeckoService();
   sequelize: Sequelize;
@@ -680,7 +679,7 @@ export class Paymaster {
       const priceAndMetadata: TokenPriceAndMetadata = {
         decimals: Number(data[0].value),
         symbol: data[1].value as any,
-        ethPrice: data[2].value,
+        ethPrice: data[2].value as string,
         gasToken
       }
       this.priceAndMetadata.set(cacheKey, { data: priceAndMetadata, expiry: Date.now() + ttl });
@@ -920,7 +919,7 @@ export class Paymaster {
       } else {
         const ecContract = getContract({ address: oracleAggregator as Address, abi: EtherspotChainlinkOracleAbi, client: publicClient });
         const ETHprice = await ecContract.read.cachedPrice();
-        ethPrice = ETHprice
+        ethPrice = ETHprice as string;
       }
       if (userOp.factory && userOp.factoryData) userOp.initCode = concat([userOp.factory as Hex, userOp.factoryData ?? '0x'])
       if (!userOp.signature) userOp.signature = '0x';

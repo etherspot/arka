@@ -100,6 +100,7 @@ declare module "fastify" {
         sponsorshipPolicyRepository: SponsorshipPolicyRepository;
         whitelistRepository: WhitelistRepository;
         contractWhitelistRepository: ContractWhitelistRepository;
+        coingeckoRepo: CoingeckoTokensRepository;
         multiTokenPaymasterRepository: MultiTokenPaymasterRepository;
     }
 }
