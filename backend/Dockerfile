@@ -9,6 +9,7 @@ ARG APP_ENV
 WORKDIR /app
 COPY . .
 COPY --from=deps /app/node_modules ./node_modules
+RUN cp config.json.default config.json
 RUN bun run build
 
 FROM oven/bun:1-alpine AS runner
