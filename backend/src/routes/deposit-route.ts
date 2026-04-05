@@ -2,6 +2,7 @@
 import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
+import { isAddress } from "viem";
 import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json";
 import ErrorMessage from "../constants/ErrorMessage.js";
@@ -137,6 +138,97 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
         }
     }
 
+    async function withdrawDeposit(request: FastifyRequest, reply: FastifyReply, epVersion: EPVersions) {
+        try {
+            const body: any = request.body;
+            if (!body) {
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY })
+            }
+            const query: any = request.query;
+            const withdrawAddress = body.withdrawAddress;
+            const withdrawAmount = body.withdrawAmount;
+            const useVp = query['useVp'] ?? false;
+            const chainId = query['chainId'] ?? body.params?.[1];
+            const api_key = query['apiKey'] ?? body.params?.[2];
+
+            if (!withdrawAddress || !isAddress(withdrawAddress)) {
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_WITHDRAW_ADDRESS });
+            }
+            if (
+                withdrawAmount === undefined ||
+                withdrawAmount === null ||
+                withdrawAmount === '' ||
+                isNaN(Number(withdrawAmount)) ||
+                !chainId ||
+                isNaN(chainId)
+            ) {
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_DATA });
+            }
+            if (!api_key || typeof (api_key) !== "string")
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+
+            let privateKey = '';
+            let bundlerApiKey = api_key;
+            const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
+            if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+            if (!unsafeMode) {
+                const AWSresponse = await client.send(
+                    new GetSecretValueCommand({
+                        SecretId: prefixSecretId + api_key,
+                    })
+                );
+                const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+                if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
+                privateKey = secrets['PRIVATE_KEY'];
+            } else {
+                privateKey = decode(apiKeyEntity.privateKey, server.config.HMAC_SECRET);
+            }
+            const supportedNetworks = apiKeyEntity.supportedNetworks;
+            if (apiKeyEntity.bundlerApiKey) {
+                bundlerApiKey = apiKeyEntity.bundlerApiKey;
+            }
+            if (server.config.SUPPORTED_NETWORKS == '' && !SupportedNetworks) {
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+            }
+
+            let networkConfig;
+            let vpAddr;
+            if (EPVersions.EPV_06 == epVersion) {
+                networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_06);
+                vpAddr = apiKeyEntity.verifyingPaymasters ?
+                    JSON.parse(apiKeyEntity.verifyingPaymasters)[chainId] :
+                    undefined;
+            } else if (EPVersions.EPV_07 == epVersion) {
+                networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_07);
+                vpAddr = apiKeyEntity.verifyingPaymastersV2 ?
+                    JSON.parse(apiKeyEntity.verifyingPaymastersV2)[chainId] :
+                    undefined;
+            } else if (EPVersions.EPV_08 == epVersion) {
+                networkConfig = getNetworkConfig(chainId, supportedNetworks ?? '', SUPPORTED_ENTRYPOINTS.EPV_08);
+                vpAddr = apiKeyEntity.verifyingPaymastersV3 ?
+                    JSON.parse(apiKeyEntity.verifyingPaymastersV3)[chainId] :
+                    undefined;
+            }
+            if (!networkConfig) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.UNSUPPORTED_NETWORK });
+            let bundlerUrl = networkConfig.bundler;
+            if (networkConfig.bundler.includes('etherspot.io')) bundlerUrl = `${networkConfig.bundler}?api-key=${bundlerApiKey}`;
+
+            if (!useVp) {
+                return await paymaster.withdrawDeposit(withdrawAddress, withdrawAmount, networkConfig.contracts.etherspotPaymasterAddress, bundlerUrl, privateKey, chainId, server.log);
+            }
+            if (!vpAddr) {
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.VP_NOT_DEPLOYED })
+            }
+
+            return await paymaster.withdrawDeposit(withdrawAddress, withdrawAmount, vpAddr, bundlerUrl, privateKey, chainId, server.log);
+        } catch (err: any) {
+            request.log.error(err);
+            if (err.name == "ResourceNotFoundException")
+                return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
+            return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS })
+        }
+    }
+
     server.post("/deposit",
         ResponseSchema,
         async function (request, reply) {
@@ -158,6 +250,30 @@ const depositRoutes: FastifyPluginAsync = async (server) => {
         async function (request, reply) {
             printRequest("/deposit/v3", request, server.log);
             return await deposit(request, reply, EPVersions.EPV_08);
+        }
+    )
+
+    server.post("/withdrawDeposit",
+        ResponseSchema,
+        async function (request, reply) {
+            printRequest("/withdrawDeposit", request, server.log);
+            return await withdrawDeposit(request, reply, EPVersions.EPV_06);
+        }
+    )
+
+    server.post("/withdrawDeposit/v2",
+        ResponseSchema,
+        async function (request, reply) {
+            printRequest("/withdrawDeposit/v2", request, server.log);
+            return await withdrawDeposit(request, reply, EPVersions.EPV_07);
+        }
+    )
+
+    server.post("/withdrawDeposit/v3",
+        ResponseSchema,
+        async function (request, reply) {
+            printRequest("/withdrawDeposit/v3", request, server.log);
+            return await withdrawDeposit(request, reply, EPVersions.EPV_08);
         }
     )
 };

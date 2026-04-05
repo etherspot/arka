@@ -1255,6 +1255,67 @@ export class Paymaster {
     }
   }
 
+  async withdrawDeposit(
+    withdrawAddress: string,
+    amount: string,
+    paymasterAddress: string,
+    bundlerRpc: string,
+    relayerKey: string,
+    chainId: number,
+    log?: FastifyBaseLogger
+  ) {
+    try {
+      const viemChain = getViemChainDef(chainId);
+      const publicClient = createPublicClient({ chain: viemChain, transport: http(bundlerRpc) });
+      const walletClient = createWalletClient({ chain: viemChain, transport: http(bundlerRpc), account: privateKeyToAccount(relayerKey as Hex) });
+      const amountInWei = parseEther(amount.toString());
+      const encodedData = encodeFunctionData({
+        abi: parseAbi(['function withdrawTo(address withdrawAddress, uint256 amount)']),
+        functionName: 'withdrawTo',
+        args: [withdrawAddress as Address, amountInWei]
+      });
+
+      const etherscanFeeData = await getGasFee(chainId, bundlerRpc, log);
+      const feeData = { gasPrice: BigInt(0), maxFeePerGas: BigInt(0), maxPriorityFeePerGas: BigInt(0) };
+      if (etherscanFeeData) {
+        const response = etherscanFeeData;
+        feeData.gasPrice = response.gasPrice ? response.gasPrice + this.feeMarkUp : BigInt(0);
+        feeData.maxFeePerGas = response.maxFeePerGas ? response.maxFeePerGas + this.feeMarkUp : BigInt(0);
+        feeData.maxPriorityFeePerGas = response.maxPriorityFeePerGas ? response.maxPriorityFeePerGas + this.feeMarkUp : BigInt(0);
+      } else {
+        const gasPrice = await publicClient.getGasPrice();
+        feeData.gasPrice = gasPrice ? gasPrice + this.feeMarkUp : BigInt(0);
+        feeData.maxFeePerGas = gasPrice ? gasPrice + this.feeMarkUp : BigInt(0);
+        feeData.maxPriorityFeePerGas = gasPrice ? gasPrice + this.feeMarkUp : BigInt(0);
+      }
+
+      let tx;
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId.toString()) || feeData.maxFeePerGas === BigInt(0)) {
+        tx = await walletClient.sendTransaction({
+          to: paymasterAddress as Address,
+          data: encodedData,
+          gasPrice: feeData.gasPrice ?? undefined,
+          type: 'legacy',
+        } as TransactionRequest);
+      } else {
+        tx = await walletClient.sendTransaction({
+          to: paymasterAddress as Address,
+          data: encodedData,
+          maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
+          type: 'eip1559',
+        });
+      }
+
+      return {
+        message: `Successfully withdrew deposit with transaction Hash ${tx}`
+      };
+    } catch (error) {
+      log?.error(`error while withdrawing deposit from paymaster ${error}`);
+      throw new Error(ErrorMessage.FAILED_TO_WITHDRAW_DEPOSIT);
+    }
+  }
+
   async deployVp(
     privateKey: string,
     bundlerRpcUrl: string,
@@ -1384,6 +1445,63 @@ export class Paymaster {
     } catch (error) {
       log?.error(`error while adding stake to verifying paymaster ${error}`);
       throw new Error(ErrorMessage.FAILED_TO_ADD_STAKE);
+    }
+  }
+
+  async withdrawStake(
+    privateKey: string,
+    bundlerRpcUrl: string,
+    withdrawAddress: string,
+    paymasterAddress: string,
+    chainId: number,
+    log?: FastifyBaseLogger
+  ) {
+    try {
+      const viemChain = getViemChainDef(chainId)
+      const publicClient = createPublicClient({ chain: viemChain, transport: http(bundlerRpcUrl) });
+      const walletClient = createWalletClient({ chain: viemChain, transport: http(bundlerRpcUrl), account: privateKeyToAccount(privateKey as Hex) });
+
+      const etherscanFeeData = await getGasFee(chainId, bundlerRpcUrl, log);
+      const feeData = { gasPrice: BigInt(0), maxFeePerGas: BigInt(0), maxPriorityFeePerGas: BigInt(0) };
+      if (etherscanFeeData) {
+        const response = etherscanFeeData;
+        feeData.gasPrice = response.gasPrice ? response.gasPrice + this.feeMarkUp : BigInt(0);
+        feeData.maxFeePerGas = response.maxFeePerGas ? response.maxFeePerGas + this.feeMarkUp : BigInt(0);
+        feeData.maxPriorityFeePerGas = response.maxPriorityFeePerGas ? response.maxPriorityFeePerGas + this.feeMarkUp : BigInt(0);
+      } else {
+        const gasPrice = await publicClient.getGasPrice();
+        feeData.gasPrice = gasPrice ? gasPrice + this.feeMarkUp : BigInt(0);
+        feeData.maxFeePerGas = gasPrice ? gasPrice + this.feeMarkUp : BigInt(0);
+        feeData.maxPriorityFeePerGas = gasPrice ? gasPrice + this.feeMarkUp : BigInt(0);
+      }
+
+      let tx;
+      if (!feeData.maxFeePerGas || this.skipType2Txns.includes(chainId.toString())) {
+        tx = await walletClient.writeContract({
+          address: paymasterAddress as Address,
+          abi: verifyingPaymasterAbi,
+          functionName: 'withdrawStake',
+          args: [withdrawAddress],
+          type: "legacy",
+          gasPrice: feeData.gasPrice ?? undefined,
+        });
+      } else {
+        tx = await walletClient.writeContract({
+          address: paymasterAddress as Address,
+          abi: verifyingPaymasterAbi,
+          functionName: 'withdrawStake',
+          args: [withdrawAddress],
+          maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
+          type: "eip1559"
+        });
+      }
+      return {
+        message: `Successfully withdrew stake with transaction Hash ${tx}`
+      };
+    } catch (error) {
+      log?.error(`error while withdrawing stake from verifying paymaster ${error}`);
+      throw new Error(ErrorMessage.FAILED_TO_WITHDRAW_STAKE);
     }
   }
 

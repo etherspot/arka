@@ -1,4 +1,7 @@
 # Changelog
+## [4.2.3] - 2026-04-05
+- Added endpoints to withdraw stake and deposit.
+
 ## [4.2.2] - 2025-12-09
 - Default all the apiKey which would be saved hereafter and update the supportedNetworks to null to make the system only use config.json as default
 - skips the getDeposit call from cronJob if the network is testnet
