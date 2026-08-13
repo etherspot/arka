@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { FastifyPluginAsync } from "fastify";
 import { createPublicClient, http, getContract, getAddress, Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -13,8 +12,10 @@ import * as EtherspotAbi from "../abi/EtherspotAbi.js";
 import {abi as verifyingPaymasterAbi} from "../abi/VerifyingPaymasterAbi.js";
 import {abi as verifyingPaymasterV2Abi} from "../abi/VerifyingPaymasterAbiV2.js";
 import {abi as verifyingPaymastersV3Abi} from "../abi/VerifyingPaymasterAbiV3.js";
+import { SecretManagerRoutesOpts } from "../types/arka-config-dto.js";
 
-const metadataRoutes: FastifyPluginAsync = async (server) => {
+const metadataRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (server, options) => {
+  const { secretManager } = options;
 
   const prefixSecretId = 'arka_';
 
@@ -24,13 +25,9 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
     EPV_08: server.config.EPV_08
   }
 
-  let client: SecretsManagerClient;
-
   const unsafeMode: boolean = process.env.UNSAFE_MODE == "true" ? true : false;
 
-  if (!unsafeMode) {
-    client = new SecretsManagerClient();
-  }
+  const getApiKeySecret = (apiKey: string) => secretManager.getSecret<Record<string, string>>(prefixSecretId + apiKey);
 
   server.get('/metadata', async function (request, reply) {
     try {
@@ -52,12 +49,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
       }
       if (!unsafeMode) {
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + api_key,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        const secrets = await getApiKeySecret(api_key);
         if (!secrets['PRIVATE_KEY']) {
           server.log.info("Invalid Api Key provided")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -157,12 +149,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
       }
       if (!unsafeMode) {
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + api_key,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        const secrets = await getApiKeySecret(api_key);
         if (!secrets['PRIVATE_KEY']) {
           server.log.info("Invalid Api Key provided")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
@@ -260,12 +247,7 @@ const metadataRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
       }
       if (!unsafeMode) {
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + api_key,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        const secrets = await getApiKeySecret(api_key);
         if (!secrets['PRIVATE_KEY']) {
           server.log.info("Invalid Api Key provided")
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })

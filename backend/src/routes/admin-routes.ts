@@ -17,9 +17,8 @@ import ReturnCode from "../constants/ReturnCode.js";
 import { encode, decode, verifySignature } from "../utils/crypto.js";
 import SupportedNetworks from "../../config.json";
 import { APIKey } from "../models/api-key.js";
-import { ArkaConfigUpdateData } from "../types/arka-config-dto.js";
+import { ArkaConfigUpdateData, SecretManagerRoutesOpts } from "../types/arka-config-dto.js";
 import { ApiKeyDto } from "../types/apikey-dto.js";
-import { CreateSecretCommand, DeleteSecretCommand, GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import EtherspotAbi from "../abi/EtherspotAbi.js";
 import { AuthDto } from "../types/auth-dto.js";
 import { IncomingHttpHeaders } from "http";
@@ -27,7 +26,8 @@ import { EPVersions } from "../types/sponsorship-policy-dto.js";
 import { getNetworkConfig, getViemChainDef } from "../utils/common.js";
 import { Paymaster } from "../paymaster/index.js";
 
-const adminRoutes: FastifyPluginAsync = async (server) => {
+const adminRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (server, options) => {
+  const { secretManager } = options;
   const paymaster = new Paymaster({
     feeMarkUp: server.config.FEE_MARKUP, 
     multiTokenMarkUp: server.config.MULTI_TOKEN_MARKUP, 
@@ -44,13 +44,9 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
 
   const prefixSecretId = 'arka_';
 
-  let client: SecretsManagerClient;
-
   const unsafeMode: boolean = process.env.UNSAFE_MODE == "true" ? true : false;
 
-  if (!unsafeMode) {
-      client = new SecretsManagerClient();
-  }
+  const getApiKeySecret = (apiKey: string) => secretManager.getSecret<Record<string, string>>(prefixSecretId + apiKey);
 
   const SUPPORTED_ENTRYPOINTS = {
     EPV_06: server.config.EPV_06,
@@ -147,25 +143,19 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
         if(!verifySignature(signature, request.body as string, timestamp, server.config.HMAC_SECRET))
           return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.INVALID_SIGNATURE_OR_TIMESTAMP });
 
-        const command = new GetSecretValueCommand({SecretId: prefixSecretId + body.apiKey})
-        const secrets = await client.send(command).catch((err) => err);
+        const secrets = await getApiKeySecret(body.apiKey).catch((err) => err);
 
         if(!(secrets instanceof Error)) {
           request.log.error('Duplicate record found');
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.DUPLICATE_RECORD });
         }
 
-        const createCommand = new CreateSecretCommand({
-          Name: prefixSecretId + body.apiKey,
-          SecretString: JSON.stringify({
-            PRIVATE_KEY: privateKey,
-            PUBLIC_ADDRESS: publicAddress,
-            MNEMONIC: mnemonic,
-            BUNDLER_API_KEY: server.config.DEFAULT_BUNDLER_API_KEY
-          }),
+        await secretManager.createSecret(prefixSecretId + body.apiKey, {
+          PRIVATE_KEY: privateKey,
+          PUBLIC_ADDRESS: publicAddress,
+          MNEMONIC: mnemonic,
+          BUNDLER_API_KEY: server.config.DEFAULT_BUNDLER_API_KEY
         });
-
-        await client.send(createCommand);
 
         await server.apiKeyRepository.create({
           apiKey: body.apiKey,
@@ -281,12 +271,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.INVALID_SIGNATURE_OR_TIMESTAMP });
         if(!verifySignature(signature, request.body as string, timestamp, server.config.HMAC_SECRET))
           return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.INVALID_SIGNATURE_OR_TIMESTAMP });
-        const getSecretCommand = new GetSecretValueCommand({SecretId: prefixSecretId + body.apiKey});
-        const secretValue = await client.send(getSecretCommand)
-        if(secretValue instanceof Error)
-          return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.RECORD_NOT_FOUND });
-
-        const secrets = JSON.parse(secretValue.SecretString ?? '{}');
+        const secrets = await getApiKeySecret(body.apiKey);
         
         if (!secrets['PRIVATE_KEY']) {
           server.log.info("Invalid Api Key provided")
@@ -353,12 +338,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
           return reply.code(400).send({error: ErrorMessage.BALANCE_EXCEEDS_THRESHOLD });
         }
 
-        const deleteCommand = new DeleteSecretCommand({
-          SecretId: prefixSecretId + body.apiKey,
-          RecoveryWindowInDays: server.config.DELETE_KEY_RECOVER_WINDOW,
-        });
-
-        await client.send(deleteCommand);
+        await secretManager.destroySecret(prefixSecretId + body.apiKey, server.config.DELETE_KEY_RECOVER_WINDOW);
 
         await server.apiKeyRepository.delete(body.apiKey);
       } else {
@@ -442,12 +422,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       let supportedNetworks;
 
       if (!unsafeMode) {
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + apiKey,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        const secrets = await getApiKeySecret(apiKey);
         if (!secrets['PRIVATE_KEY']) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
         }
@@ -556,12 +531,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       let supportedNetworks;
 
       if (!unsafeMode) {
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + apiKey,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        const secrets = await getApiKeySecret(apiKey);
         if (!secrets['PRIVATE_KEY']) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
         }
@@ -659,12 +629,7 @@ const adminRoutes: FastifyPluginAsync = async (server) => {
       let supportedNetworks;
 
       if (!unsafeMode) {
-        const AWSresponse = await client.send(
-          new GetSecretValueCommand({
-            SecretId: prefixSecretId + apiKey,
-          })
-        );
-        const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+        const secrets = await getApiKeySecret(apiKey);
         if (!secrets['PRIVATE_KEY']) {
           return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY });
         }

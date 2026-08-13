@@ -1,4 +1,5 @@
 import { Paymaster } from "../paymaster/index.js";
+import type { SecretManager } from "../services/secrets-manager/interface.js";
 
 export interface ArkaConfigUpdateData {
     deployedErc20Paymasters: string;
@@ -12,6 +13,10 @@ export interface ArkaConfigUpdateData {
     coingeckoApiUrl: string;
 }
 
-export interface PaymasterRoutesOpts {
+export interface SecretManagerRoutesOpts {
+    secretManager: SecretManager;
+}
+
+export interface PaymasterRoutesOpts extends SecretManagerRoutesOpts {
     paymaster: Paymaster;
 }

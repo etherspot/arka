@@ -2,7 +2,6 @@
 import { FastifyPluginAsync } from "fastify";
 import { isAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { Paymaster } from "../paymaster/index.js";
 import SupportedNetworks from "../../config.json";
 import ErrorMessage from "../constants/ErrorMessage.js";
@@ -12,8 +11,10 @@ import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
 import { ContractWhitelistDto } from "../types/contractWhitelist-dto.js";
 import { EPVersions } from "../types/sponsorship-policy-dto.js";
+import { SecretManagerRoutesOpts } from "../types/arka-config-dto.js";
 
-const whitelistRoutes: FastifyPluginAsync = async (server) => {
+const whitelistRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (server, options) => {
+  const { secretManager } = options;
   const paymaster = new Paymaster({
     feeMarkUp: server.config.FEE_MARKUP, 
     multiTokenMarkUp: server.config.MULTI_TOKEN_MARKUP, 
@@ -36,13 +37,9 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
 
   const prefixSecretId = 'arka_';
 
-  let client: SecretsManagerClient;
-
   const unsafeMode: boolean = process.env.UNSAFE_MODE == "true" ? true : false;
 
-  if (!unsafeMode) {
-    client = new SecretsManagerClient();
-  }
+  const getApiKeySecret = (apiKey: string) => secretManager.getSecret<Record<string, string>>(prefixSecretId + apiKey);
 
   server.post("/whitelist",
     async function (request, reply) {
@@ -72,12 +69,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -181,12 +173,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           if (secrets['BUNDLER_API_KEY']) bundlerApiKey = secrets['BUNDLER_API_KEY'];
           privateKey = secrets['PRIVATE_KEY'];
@@ -297,12 +284,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           if (secrets['BUNDLER_API_KEY']) bundlerApiKey = secrets['BUNDLER_API_KEY'];
           privateKey = secrets['PRIVATE_KEY'];
@@ -378,12 +360,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -471,12 +448,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -571,12 +543,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -636,12 +603,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -702,12 +664,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -796,12 +753,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -896,12 +848,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -961,12 +908,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -1019,12 +961,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -1082,12 +1019,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
@@ -1144,12 +1076,7 @@ const whitelistRoutes: FastifyPluginAsync = async (server) => {
         const apiKeyEntity: APIKey | null = await server.apiKeyRepository.findOneByApiKey(api_key);
         if (!apiKeyEntity) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })
           privateKey = secrets['PRIVATE_KEY'];
         } else {
