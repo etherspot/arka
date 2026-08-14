@@ -1,5 +1,6 @@
 import fetch from "node-fetch";
 import { SecretManager, JsonObject } from "./interface.js";
+import { server } from "server.js";
 
 type OpenBaoKvV2Response<T> = {
   request_id: string;
@@ -36,12 +37,16 @@ export type OpenBaoWriteResponse = {
   warnings: string[] | null;
 };
 
-const OPENBAO_ADDR = process.env.OPENBAO_ADDR ?? "";
-const OPENBAO_TOKEN = process.env.OPENBAO_TOKEN ?? "";
-
 export class OpenBaoSecretManager implements SecretManager {
+  private readonly openbaoAddr: string;
+  private readonly openbaoToken: string;
+
+  constructor() {
+    this.openbaoAddr = server.config.OPENBAO_ADDR;
+    this.openbaoToken = server.config.OPENBAO_TOKEN;
+  }
   async getSecret<T>(secretName: string, mount = "arka"): Promise<T> {
-    const url = `${OPENBAO_ADDR.replace(/\/$/, "")}/v1/${mount}/data/${this.encodeSecretPath(
+    const url = `${this.openbaoAddr.replace(/\/$/, "")}/v1/${mount}/data/${this.encodeSecretPath(
       secretName,
     )}`;
 
@@ -49,7 +54,7 @@ export class OpenBaoSecretManager implements SecretManager {
       method: "GET",
       headers: {
         Accept: "application/json",
-        "X-Vault-Token": OPENBAO_TOKEN,
+        "X-Vault-Token": this.openbaoToken,
       },
     });
 
@@ -70,7 +75,7 @@ export class OpenBaoSecretManager implements SecretManager {
     mount = "arka"
   ): Promise<boolean> {
 
-    const url = `${OPENBAO_ADDR.replace(/\/+$/, "")}/v1/${this.encodeSecretPath(
+    const url = `${this.openbaoAddr.replace(/\/+$/, "")}/v1/${this.encodeSecretPath(
       mount,
     )}/data/${this.encodeSecretPath(secretName)}`;
 
@@ -79,7 +84,7 @@ export class OpenBaoSecretManager implements SecretManager {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        "X-Vault-Token": OPENBAO_TOKEN,
+        "X-Vault-Token": this.openbaoToken,
       },
       body: JSON.stringify({
         data: secretData,
@@ -100,7 +105,8 @@ export class OpenBaoSecretManager implements SecretManager {
     _recoveryWindowInDays?: number,
     mount = "arka"
   ): Promise<boolean> {
-    const url = `${OPENBAO_ADDR.replace(/\/+$/, "")}/v1/${this.encodeSecretPath(
+    console.log(`Destroying secret ${secretName} in mount ${mount}`);
+    const url = `${this.openbaoAddr.replace(/\/+$/, "")}/v1/${this.encodeSecretPath(
       mount,
     )}/data/${this.encodeSecretPath(secretName)}`;
 
@@ -108,7 +114,7 @@ export class OpenBaoSecretManager implements SecretManager {
       method: "DELETE",
       headers: {
         Accept: "application/json",
-        "X-Vault-Token": OPENBAO_TOKEN,
+        "X-Vault-Token": this.openbaoToken,
       },
     });
 
