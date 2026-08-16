@@ -43,8 +43,8 @@ const ConfigSchema = Type.Strict(
     MTP_PVGL: Type.String() || undefined,
     MTP_PPGL: Type.String() || undefined,
     ENFORCE_LEGACY_TRANSACTIONS_CHAINS: Type.Array(Type.String()) || undefined,
-    OPENBAO_ADDR: Type.String() || undefined,
-    OPENBAO_TOKEN: Type.String() || undefined,
+    OPENBAO_ADDR: Type.String(),
+    OPENBAO_TOKEN: Type.String(),
   })
 );
 
@@ -57,6 +57,22 @@ const ajv = new Ajv({
 });
 
 export type ArkaConfig = Static<typeof ConfigSchema>;
+
+const REDACTED_CONFIG_KEYS = new Set([
+  "DATABASE_URL",
+  "DEFAULT_BUNDLER_API_KEY",
+  "HMAC_SECRET",
+  "OPENBAO_TOKEN",
+]);
+
+function redactConfigForLogging(config: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(config).map(([key, value]) => [
+      key,
+      REDACTED_CONFIG_KEYS.has(key) && value ? "[redacted]" : value,
+    ]),
+  );
+}
 
 const configPlugin: FastifyPluginAsync = async (server) => {
   const validate = ajv.compile(ConfigSchema);
@@ -92,8 +108,8 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     MTP_PVGL: process.env.MTP_PVGL ?? '50000',
     MTP_PPGL: process.env.MTP_PPGL ?? '70000',
     ENFORCE_LEGACY_TRANSACTIONS_CHAINS: process.env.ENFORCE_LEGACY_TRANSACTIONS_CHAINS?.split(',') ?? [],
-    OPENBAO_ADDR: process.env.OPENBAO_ADDR,
-    OPENBAO_TOKEN: process.env.OPENBAO_TOKEN,
+    OPENBAO_ADDR: process.env.OPENBAO_ADDR ?? '',
+    OPENBAO_TOKEN: process.env.OPENBAO_TOKEN ?? '',
   }
 
   const valid = validate(envVar);
@@ -141,7 +157,7 @@ const configPlugin: FastifyPluginAsync = async (server) => {
     OPENBAO_TOKEN: process.env.OPENBAO_TOKEN ?? '',
   }
 
-  server.log.info(config, "config:");
+  server.log.info(redactConfigForLogging(config), "config:");
 
   server.decorate("config", config);
 };

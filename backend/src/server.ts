@@ -86,7 +86,7 @@ const initializeServer = async (): Promise<void> => {
     ep8Pvgl: server.config.EP8_PVGL,
     skipType2Txns: server.config.ENFORCE_LEGACY_TRANSACTIONS_CHAINS
   });
-  const secretManager = getSecretManager();
+  const secretManager = getSecretManager(server.config.OPENBAO_ADDR, server.config.OPENBAO_TOKEN);
 
   // Synchronize all models
   await server.sequelize.sync();

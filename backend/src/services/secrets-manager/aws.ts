@@ -22,11 +22,7 @@ export class AwsSecretManager implements SecretManager {
         ? Buffer.from(response.SecretBinary).toString("utf-8")
         : undefined);
 
-    if (!secretString) {
-      throw new Error(`AWS secret '${secretName}' did not contain a secret value.`);
-    }
-
-    return JSON.parse(secretString) as T;
+    return JSON.parse(secretString ?? "{}") as T;
   }
 
   async createSecret(

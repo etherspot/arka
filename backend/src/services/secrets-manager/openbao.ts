@@ -1,6 +1,5 @@
 import fetch from "node-fetch";
 import { SecretManager, JsonObject } from "./interface.js";
-import { server } from "server.js";
 
 type OpenBaoKvV2Response<T> = {
   request_id: string;
@@ -38,13 +37,11 @@ export type OpenBaoWriteResponse = {
 };
 
 export class OpenBaoSecretManager implements SecretManager {
-  private readonly openbaoAddr: string;
-  private readonly openbaoToken: string;
+  constructor(
+    private readonly openbaoAddr: string,
+    private readonly openbaoToken: string,
+  ) {}
 
-  constructor() {
-    this.openbaoAddr = server.config.OPENBAO_ADDR;
-    this.openbaoToken = server.config.OPENBAO_TOKEN;
-  }
   async getSecret<T>(secretName: string, mount = "arka"): Promise<T> {
     const url = `${this.openbaoAddr.replace(/\/$/, "")}/v1/${mount}/data/${this.encodeSecretPath(
       secretName,
@@ -87,6 +84,9 @@ export class OpenBaoSecretManager implements SecretManager {
         "X-Vault-Token": this.openbaoToken,
       },
       body: JSON.stringify({
+        options: {
+          cas: 0,
+        },
         data: secretData,
       }),
     });
@@ -105,10 +105,11 @@ export class OpenBaoSecretManager implements SecretManager {
     _recoveryWindowInDays?: number,
     mount = "arka"
   ): Promise<boolean> {
-    console.log(`Destroying secret ${secretName} in mount ${mount}`);
+    // KV v2 metadata delete removes the secret and all versions immediately.
+    // OpenBao does not support AWS-style recovery windows here.
     const url = `${this.openbaoAddr.replace(/\/+$/, "")}/v1/${this.encodeSecretPath(
       mount,
-    )}/data/${this.encodeSecretPath(secretName)}`;
+    )}/metadata/${this.encodeSecretPath(secretName)}`;
 
     const response = await fetch(url, {
       method: "DELETE",
