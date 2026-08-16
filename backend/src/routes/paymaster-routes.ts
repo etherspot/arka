@@ -4,7 +4,6 @@ import { createPublicClient, http, getAddress, isAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ethers } from "ethers";
 import { gql, request as GLRequest } from "graphql-request";
-import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import SupportedNetworks from "../../config.json";
 import ErrorMessage, { generateErrorMessage } from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
@@ -17,7 +16,7 @@ import { PaymasterRoutesOpts } from "../types/arka-config-dto.js";
 
 const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, options: PaymasterRoutesOpts) => {
 
-  const { paymaster } = options;
+  const { paymaster, secretManager } = options;
 
   const SUPPORTED_ENTRYPOINTS = {
     EPV_06: server.config.EPV_06,
@@ -27,13 +26,9 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
 
   const prefixSecretId = 'arka_';
 
-  let client: SecretsManagerClient;
-
   const unsafeMode: boolean = process.env.UNSAFE_MODE == "true" ? true : false;
 
-  if (!unsafeMode) {
-    client = new SecretsManagerClient();
-  }
+  const getApiKeySecret = (apiKey: string) => secretManager.getSecret<Record<string, string>>(prefixSecretId + apiKey);
 
   server.post("/",
     async function (request, reply) {
@@ -113,12 +108,7 @@ const paymasterRoutes: FastifyPluginAsync<PaymasterRoutesOpts> = async (server, 
         }
 
         if (!unsafeMode) {
-          const AWSresponse = await client.send(
-            new GetSecretValueCommand({
-              SecretId: prefixSecretId + api_key,
-            })
-          );
-          const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+          const secrets = await getApiKeySecret(api_key);
           if (!secrets['PRIVATE_KEY']) {
             server.log.info("Invalid Api Key provided")
             return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_API_KEY })

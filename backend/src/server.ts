@@ -13,7 +13,6 @@ import {
   encodeFunctionData,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import fetch from 'node-fetch';
 import sequelizePlugin from './plugins/sequelizePlugin.js';
 import config from './plugins/config.js';
@@ -38,6 +37,7 @@ import { Paymaster } from './paymaster/index.js';
 import { NativeOracles } from './constants/ChainlinkOracles.js';
 import { MultiTokenPaymaster } from './models/multiTokenPaymaster.js';
 import { MULTI_TOKEN_ORACLES, MULTI_TOKEN_PAYMASTERS } from './constants/MultiTokenPaymasterCronJob.js';
+import { getSecretManager } from './services/secrets-manager/index.js';
 
 let server: FastifyInstance;
 const defaultThresholdValue = '0.001'; // in ETH
@@ -86,17 +86,18 @@ const initializeServer = async (): Promise<void> => {
     ep8Pvgl: server.config.EP8_PVGL,
     skipType2Txns: server.config.ENFORCE_LEGACY_TRANSACTIONS_CHAINS
   });
+  const secretManager = getSecretManager(server.config.OPENBAO_ADDR, server.config.OPENBAO_TOKEN);
 
   // Synchronize all models
   await server.sequelize.sync();
 
   server.log.info('registered sequelizePlugin...')
 
-  await server.register(paymasterRoutes, { paymaster });
+  await server.register(paymasterRoutes, { paymaster, secretManager });
 
-  await server.register(adminRoutes);
+  await server.register(adminRoutes, { secretManager });
 
-  await server.register(metadataRoutes);
+  await server.register(metadataRoutes, { secretManager });
 
   const coingeckoRepo = new CoingeckoTokensRepository(server.sequelize);
 
@@ -127,11 +128,11 @@ const initializeServer = async (): Promise<void> => {
     server.log.error('Error caught on getAndSetCoingeckoPrice: ', err);
   }
 
-  await server.register(depositRoutes);
+  await server.register(depositRoutes, { secretManager });
 
   await server.register(tokenRoutes);
 
-  await server.register(whitelistRoutes);
+  await server.register(whitelistRoutes, { secretManager });
 
   await server.register(sponsorshipPolicyRoutes);
 
@@ -153,15 +154,9 @@ const initializeServer = async (): Promise<void> => {
           if (process.env.CRON_PRIVATE_KEY) {
             const unsafeMode = process.env.UNSAFE_MODE === "true" ? true : false;
             if (!unsafeMode) {
-              const client = new SecretsManagerClient();
               const api_key = process.env.DEFAULT_API_KEY;
               const prefixSecretId = "arka_";
-              const AWSresponse = await client.send(
-                new GetSecretValueCommand({
-                  SecretId: prefixSecretId + api_key,
-                })
-              );
-              const secrets = JSON.parse(AWSresponse.SecretString ?? '{}');
+              const secrets = await secretManager.getSecret<Record<string, string>>(prefixSecretId + api_key);
               configData = {
                 coingeckoApiUrl: secrets["COINGECKO_API_URL"],
                 coingeckoIds: secrets["COINGECKO_IDS"],
@@ -172,7 +167,6 @@ const initializeServer = async (): Promise<void> => {
                 pythTestnetChainIds: secrets["PYTH_TESTNET_CHAINIDS"],
                 pythTestnetUrl: secrets["PYTH_TESTNET_URL"]
               }
-              client.destroy();
             } else {
               const configDatas = await arkaConfigRepository.findAll();
               configData = configDatas.length > 0 ? configDatas[0] : null;

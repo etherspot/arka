@@ -1,4 +1,9 @@
 # Changelog
+
+## [4.2.4] - 2026-08-14
+
+- Added support for OpenBao vault as an additional secrets manager.
+
 ## [4.2.3] - 2026-04-05
 - Added endpoints to withdraw stake and deposit.
 
