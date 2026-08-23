@@ -29,6 +29,13 @@ const metadataRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (serve
 
   const getApiKeySecret = (apiKey: string) => secretManager.getSecret<Record<string, string>>(prefixSecretId + apiKey);
 
+
+  const sendUnsupportedMetadataMethod = async (_request: any, reply: any) => {
+    return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.UNSUPPORTED_METHOD });
+  };
+
+  server.route({ method: ['POST', 'PUT', 'PATCH', 'DELETE'], url: '/metadata', handler: sendUnsupportedMetadataMethod })
+
   server.get('/metadata', async function (request, reply) {
     try {
       printRequest('/metadata', request, server.log);
@@ -129,6 +136,8 @@ const metadataRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (serve
     }
   })
 
+  server.route({ method: ['POST', 'PUT', 'PATCH', 'DELETE'], url: '/metadata/v2', handler: sendUnsupportedMetadataMethod })
+
   server.get('/metadata/v2', async function (request, reply) {
     try {
       printRequest('/metadata/v2', request, server.log);
@@ -226,6 +235,8 @@ const metadataRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (serve
       return reply.code(ReturnCode.FAILURE).send({ error: err.message ?? ErrorMessage.FAILED_TO_PROCESS });
     }
   })
+
+  server.route({ method: ['POST', 'PUT', 'PATCH', 'DELETE'], url: '/metadata/v3', handler: sendUnsupportedMetadataMethod })
 
   server.get('/metadata/v3', async function (request, reply) {
     try {
