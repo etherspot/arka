@@ -214,25 +214,30 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
   })
 
   // Middleware to validate API key and wallet address
-  async function validateRequestHeader(request: any, reply: any, server: FastifyInstance, walletAddress: string) {
+  async function validateRequestHeader(request: any, reply: any, server: FastifyInstance, walletAddress: string): Promise<boolean> {
 
     // extract the apiKey from the header    
     const apiKeyHeaderValue = request.headers['apikey'];
 
     if (!apiKeyHeaderValue) {
-      return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.API_KEY_IS_REQUIRED_IN_HEADER });
+      reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.API_KEY_IS_REQUIRED_IN_HEADER });
+      return false;
     }
 
     // Retrieve the wallet address associated with the API key
     const apiKey = await server.apiKeyRepository.findOneByApiKey(apiKeyHeaderValue);
     if (!apiKey) {
-      return reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_API_KEY });
+      reply.code(ReturnCode.BAD_REQUEST).send({ error: ErrorMessage.INVALID_API_KEY });
+      return false;
     }
 
     // Compare wallet addresses
     if (apiKey.walletAddress !== walletAddress) {
-      return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.WALLET_ADDRESS_DOES_NOT_MATCH_FOR_THE_API_KEY });
+      reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.WALLET_ADDRESS_DOES_NOT_MATCH_FOR_THE_API_KEY });
+      return false;
     }
+
+    return true;
   }
 
   // create a new policy
@@ -249,7 +254,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.INVALID_SPONSORSHIP_POLICY });
       }
 
-      await validateRequestHeader(request, reply, server, sponsorshipPolicyDto.walletAddress);
+      if (!(await validateRequestHeader(request, reply, server, sponsorshipPolicyDto.walletAddress))) return reply;
 
       // verify if api key exists for the given wallet address
       const apiKey = await server.apiKeyRepository.findOneByWalletAddress(sponsorshipPolicyDto.walletAddress);
@@ -328,7 +333,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.WALLET_ADDRESS_DOES_NOT_MATCH_FOR_THE_API_KEY });
       }
 
-      validateRequestHeader(request, reply, server, apiKey.walletAddress);
+      if (!(await validateRequestHeader(request, reply, server, apiKey.walletAddress))) return reply;
 
       await server.whitelistRepository.deleteAllBySponsorshipPolicies(id);
 
@@ -366,7 +371,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.WALLET_ADDRESS_DOES_NOT_MATCH_FOR_THE_API_KEY });
       }
 
-      validateRequestHeader(request, reply, server, apiKey.walletAddress);
+      if (!(await validateRequestHeader(request, reply, server, apiKey.walletAddress))) return reply;
 
       // cannot update a disabled policy
       if (!existingSponsorshipPolicy.isEnabled) {
@@ -406,7 +411,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.WALLET_ADDRESS_DOES_NOT_MATCH_FOR_THE_API_KEY });
       }
 
-      validateRequestHeader(request, reply, server, apiKey.walletAddress);
+      if (!(await validateRequestHeader(request, reply, server, apiKey.walletAddress))) return reply;
 
       await server.sponsorshipPolicyRepository.enableSponsorshipPolicy(id);
       return reply.code(ReturnCode.SUCCESS).send({ message: `Successfully enabled policy with id ${id}` });
@@ -442,7 +447,7 @@ const sponsorshipPolicyRoutes: FastifyPluginAsync = async (server) => {
         return reply.code(ReturnCode.NOT_AUTHORIZED).send({ error: ErrorMessage.WALLET_ADDRESS_DOES_NOT_MATCH_FOR_THE_API_KEY });
       }
 
-      validateRequestHeader(request, reply, server, apiKey.walletAddress);
+      if (!(await validateRequestHeader(request, reply, server, apiKey.walletAddress))) return reply;
 
       await server.sponsorshipPolicyRepository.disableSponsorshipPolicy(id);
       return reply.code(ReturnCode.SUCCESS).send({ message: `Successfully disabled policy with id ${id}` });
