@@ -38,6 +38,7 @@ import { NativeOracles } from './constants/ChainlinkOracles.js';
 import { MultiTokenPaymaster } from './models/multiTokenPaymaster.js';
 import { MULTI_TOKEN_ORACLES, MULTI_TOKEN_PAYMASTERS } from './constants/MultiTokenPaymasterCronJob.js';
 import { getSecretManager } from './services/secrets-manager/index.js';
+import { captureRawJsonBody } from './utils/treasury-auth.js';
 
 let server: FastifyInstance;
 const defaultThresholdValue = '0.001'; // in ETH
@@ -58,6 +59,8 @@ const initializeServer = async (): Promise<void> => {
       level: process.env.LOG_LEVEL,
     },
   });
+
+  captureRawJsonBody(server);
 
   await server.register(config);
 

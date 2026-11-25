@@ -7,6 +7,7 @@ import SupportedNetworks from "../../config.json";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { decode } from "../utils/crypto.js";
+import { authorizeTreasuryRequest } from "../utils/treasury-auth.js";
 import { printRequest, getNetworkConfig } from "../utils/common.js";
 import { APIKey } from "../models/api-key.js";
 import { EPVersions } from "../types/sponsorship-policy-dto.js";
@@ -55,6 +56,7 @@ const depositRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (server
 
     async function deposit(request: FastifyRequest, reply: FastifyReply, epVersion: EPVersions) {
         try {
+            if (!authorizeTreasuryRequest(request, reply, server.config.UNSAFE_MODE, server.config.HMAC_SECRET)) return;
             const body: any = request.body;
             if (!body) {
                 return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY })
@@ -132,6 +134,7 @@ const depositRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (server
 
     async function withdrawDeposit(request: FastifyRequest, reply: FastifyReply, epVersion: EPVersions) {
         try {
+            if (!authorizeTreasuryRequest(request, reply, server.config.UNSAFE_MODE, server.config.HMAC_SECRET)) return;
             const body: any = request.body;
             if (!body) {
                 return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.EMPTY_BODY })

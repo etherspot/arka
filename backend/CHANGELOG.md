@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.2.5] - 2026-11-25
+
+- Require the server HMAC (`x-signature` and `x-timestamp` over the raw body, using `HMAC_SECRET`) on sponsor-wallet treasury routes when `UNSAFE_MODE` is off. This covers `/deposit`, `/deposit/v2`, `/deposit/v3`, `/withdrawDeposit`, `/withdrawDeposit/v2`, `/withdrawDeposit/v3`, `/deployVerifyingPaymaster`, `/addStake`, and `/withdrawStake`. The sponsorship `apiKey` remains the credential for paymaster data only.
+
 ## [4.2.4] - 2026-08-14
 
 - Added support for OpenBao vault as an additional secrets manager.

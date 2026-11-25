@@ -156,7 +156,21 @@ If you want to contribute,
 
 
 ## Available endpoints -
-## Note: All the below urls has two parameters as queryString i.e apiKey and chainId as default 
+## Note: All the below urls has two parameters as queryString i.e apiKey and chainId as default
+
+### Sponsor-wallet treasury routes
+
+These routes sign with the sponsor wallet created for that `apiKey` (`sponsorAddress`). They do not spend the bundler or relayer.
+
+When `UNSAFE_MODE` is not `true`, they require the same HMAC as `/saveKey` and `/deleteKey`:
+
+- `x-timestamp`: current unix time in milliseconds. The server rejects timestamps more than 10 seconds old, or in the future.
+- `x-signature`: hex HMAC-SHA256 of the raw request body concatenated with `x-timestamp`, keyed with `HMAC_SECRET`.
+
+The sponsorship `apiKey` is not enough. Routes: `/deposit`, `/deposit/v2`, `/deposit/v3`, `/withdrawDeposit`, `/withdrawDeposit/v2`, `/withdrawDeposit/v3`, `/deployVerifyingPaymaster`, `/addStake`, `/withdrawStake`.
+
+`UNSAFE_MODE=true` (local SQLite) skips this check, matching `/saveKey`.
+
 - `/` - This url accepts three parameters in body as array and returns the paymasterData, verificationGasLimit, callGasLimit and preVerificationGas
 Parameters:
   1. userOp object itself in JSON format
