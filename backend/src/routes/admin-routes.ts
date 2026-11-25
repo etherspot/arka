@@ -15,6 +15,7 @@ import { ethers } from "ethers";
 import ErrorMessage from "../constants/ErrorMessage.js";
 import ReturnCode from "../constants/ReturnCode.js";
 import { encode, decode, verifySignature } from "../utils/crypto.js";
+import { authorizeTreasuryRequest } from "../utils/treasury-auth.js";
 import SupportedNetworks from "../../config.json";
 import { APIKey } from "../models/api-key.js";
 import { ArkaConfigUpdateData, SecretManagerRoutesOpts } from "../types/arka-config-dto.js";
@@ -384,6 +385,7 @@ const adminRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (server, 
 
   server.post('/deployVerifyingPaymaster', async (request, reply) => {
     try {
+      if (!authorizeTreasuryRequest(request, reply, server.config.UNSAFE_MODE, server.config.HMAC_SECRET)) return;
       if (!request.body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
 
       const body: any = request.body;
@@ -483,6 +485,7 @@ const adminRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (server, 
 
   server.post('/addStake', async (request, reply) => {
     try {
+      if (!authorizeTreasuryRequest(request, reply, server.config.UNSAFE_MODE, server.config.HMAC_SECRET)) return;
       if (!request.body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
 
       const body: any = request.body;
@@ -581,6 +584,7 @@ const adminRoutes: FastifyPluginAsync<SecretManagerRoutesOpts> = async (server, 
 
   server.post('/withdrawStake', async (request, reply) => {
     try {
+      if (!authorizeTreasuryRequest(request, reply, server.config.UNSAFE_MODE, server.config.HMAC_SECRET)) return;
       if (!request.body) return reply.code(ReturnCode.FAILURE).send({ error: ErrorMessage.MISSING_PARAMS });
 
       const body: any = request.body;

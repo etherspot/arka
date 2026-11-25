@@ -63,14 +63,17 @@ export async function decodeSafe(value: string, hmacSecret: string) {
 }
 
 export function verifySignature(signature: string, data: string, timestamp: string, hmacSecret: string) {
-  // unauthorize signature if signed before 10s or signed in future.
+  // Digits only, so values such as "Infinity" cannot skip the freshness check.
+  if (!/^\d{1,15}$/.test(timestamp)) return false;
+  const issuedAt = Number(timestamp);
   const now = Date.now();
-  if(
-    now < parseInt(timestamp) ||
-    now - parseInt(timestamp) > 10000
-  ) {
+  if (!Number.isSafeInteger(issuedAt) || now < issuedAt || now - issuedAt > 10000) {
     return false;
   }
+  if (!/^[0-9a-fA-F]{64}$/.test(signature)) return false;
   const computedSignature = createDigest(data + timestamp, 'hex', hmacSecret);
-  return signature === computedSignature;
+  return crypto.timingSafeEqual(
+    Uint8Array.from(Buffer.from(signature, 'hex')),
+    Uint8Array.from(Buffer.from(computedSignature, 'hex')),
+  );
 }
