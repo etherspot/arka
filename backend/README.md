@@ -164,8 +164,19 @@ These routes sign with the sponsor wallet created for that `apiKey` (`sponsorAdd
 
 When `UNSAFE_MODE` is not `true`, they require the same HMAC as `/saveKey` and `/deleteKey`:
 
-- `x-timestamp`: current unix time in milliseconds. The server rejects timestamps more than 10 seconds old, or in the future.
-- `x-signature`: hex HMAC-SHA256 of the raw request body concatenated with `x-timestamp`, keyed with `HMAC_SECRET`.
+- `x-timestamp`: current unix time in milliseconds, digits only. The server rejects timestamps more than 10 seconds old, or in the future.
+- `x-signature`: hex HMAC-SHA256 of the text below concatenated with `x-timestamp`, keyed with `HMAC_SECRET`.
+
+```
+POST
+/withdrawDeposit
+apiKey
+chainId
+useVp
+<raw request body>
+```
+
+The second line is the route path. The next three lines are the `apiKey`, `chainId`, and `useVp` query values. An omitted query value is an empty line. The raw body keeps the bytes the client sent.
 
 The sponsorship `apiKey` is not enough. Routes: `/deposit`, `/deposit/v2`, `/deposit/v3`, `/withdrawDeposit`, `/withdrawDeposit/v2`, `/withdrawDeposit/v3`, `/deployVerifyingPaymaster`, `/addStake`, `/withdrawStake`.
 
